@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Text?>
+
+<VBox fx:id="root" xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="org.example.geoapp.controller.LoginController"
+      alignment="CENTER" spacing="20" style="-fx-background-color: #f4f4f4;">
+
+    <padding>
+        <Insets top="40" right="40" bottom="40" left="40"/>
+    </padding>
+
+    <Text text="Вход в систему" style="-fx-font-size: 24px; -fx-font-weight: bold;"/>
+
+    <GridPane hgap="10" vgap="10" alignment="CENTER">
+        <Label text="Логин:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+        <TextField fx:id="usernameField" GridPane.rowIndex="0" GridPane.columnIndex="1" prefWidth="200"/>
+
+        <Label text="Пароль:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+        <PasswordField fx:id="passwordField" GridPane.rowIndex="1" GridPane.columnIndex="1" prefWidth="200"/>
+    </GridPane>
+
+    <HBox alignment="CENTER" spacing="10">
+        <Button fx:id="loginButton" text="Войти" onAction="#onLogin" prefWidth="100"/>
+        <ProgressIndicator fx:id="progressIndicator" prefWidth="25" prefHeight="25"/>
+    </HBox>
+
+    <Label fx:id="errorLabel" textFill="red" wrapText="true" maxWidth="300"/>
+</VBox>

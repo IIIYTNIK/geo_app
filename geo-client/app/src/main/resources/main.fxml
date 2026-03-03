@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="org.example.geoapp.controller.MainController"
+      prefWidth="1200" prefHeight="600">
+
+    <HBox spacing="10" alignment="CENTER_LEFT" style="-fx-padding: 10;">
+        <Label text="Поиск:"/>
+        <TextField fx:id="searchField" promptText="Введите текст..." HBox.hgrow="ALWAYS"/>
+    </HBox>
+
+    <StackPane VBox.vgrow="ALWAYS">
+
+        <VBox>
+            <HBox fx:id="filterRow"/>
+            <TableView fx:id="workingsTable" VBox.vgrow="ALWAYS">
+                <columns>
+                    <TableColumn fx:id="colRowNumber" text="№ п/п" prefWidth="50"/>
+                    <TableColumn fx:id="colName" text="Наименование" prefWidth="120"/>
+                    <TableColumn fx:id="colArea" text="Участок" prefWidth="120"/>
+                    <TableColumn fx:id="colWorkType" text="Тип" prefWidth="100"/>
+                    <TableColumn fx:id="colDepth" text="Глубина" prefWidth="80"/>
+                    <TableColumn fx:id="colGeologist" text="Геолог" prefWidth="120"/>
+                    <TableColumn fx:id="colContractor" text="Подрядчик" prefWidth="120"/>
+                    <TableColumn fx:id="colPlannedX" text="X план" prefWidth="70"/>
+                    <TableColumn fx:id="colPlannedY" text="Y план" prefWidth="70"/>
+                    <TableColumn fx:id="colPlannedZ" text="Z план" prefWidth="70"/>
+                    <TableColumn fx:id="colActualX" text="X факт" prefWidth="70"/>
+                    <TableColumn fx:id="colActualY" text="Y факт" prefWidth="70"/>
+                    <TableColumn fx:id="colActualZ" text="Z факт" prefWidth="70"/>
+                    <TableColumn fx:id="colDeltaX" text="ΔX" prefWidth="70"/>
+                    <TableColumn fx:id="colDeltaY" text="ΔY" prefWidth="70"/>
+                    <TableColumn fx:id="colCoreRecovery" text="Керн,%" prefWidth="70"/>
+                    <TableColumn fx:id="colCasing" text="Обсад" prefWidth="80"/>
+                    <TableColumn fx:id="colClosureStage" text="Этап закрытия" prefWidth="100"/>
+                    <TableColumn fx:id="colStartDate" text="Дата нач" prefWidth="90"/>
+                    <TableColumn fx:id="colEndDate" text="Дата оконч" prefWidth="90"/>
+                    <TableColumn fx:id="colAdditionalInfo" text="Примечание" prefWidth="150"/>
+                </columns>
+            </TableView>
+        </VBox>
+
+    </StackPane>
+    
+
+    <HBox spacing="10" alignment="CENTER_RIGHT" style="-fx-padding: 10;">
+        <Button fx:id="addButton" text="Добавить" onAction="#onAdd"/>
+        <Button fx:id="editButton" text="Редактировать" onAction="#onEdit"/>
+        <Button fx:id="deleteButton" text="Удалить" onAction="#onDelete"/>
+    </HBox>
+</VBox>
