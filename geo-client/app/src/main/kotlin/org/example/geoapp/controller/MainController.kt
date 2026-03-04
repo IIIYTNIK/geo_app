@@ -2,39 +2,27 @@ package org.example.geoapp.controller
 
 import com.example.geoapp.api.GeoApi
 import com.example.geoapp.api.Working
-import javafx.application.Platform
 import javafx.collections.FXCollections
 import javafx.collections.ObservableList
-import javafx.collections.transformation.FilteredList
 import javafx.fxml.FXML
 import javafx.fxml.FXMLLoader
-import javafx.geometry.Orientation
 import javafx.scene.control.*
 import javafx.scene.control.cell.PropertyValueFactory
 import javafx.scene.layout.VBox
-import javafx.scene.layout.HBox
 import javafx.stage.Modality
 import javafx.stage.Stage
 import org.example.geoapp.MainApp
 import org.example.geoapp.util.runOnFx
 import org.example.geoapp.util.await
 import org.example.geoapp.util.awaitVoid
-import org.example.geoapp.util.AutoFilterRow
 import javafx.scene.Scene
+import org.controlsfx.control.table.TableFilter
+import org.example.geoapp.util.FilterParser
 
 class MainController {
 
     @FXML
-    private lateinit var searchField: TextField
-
-    @FXML
     private lateinit var workingsTable: TableView<Working>
-
-    @FXML
-    private lateinit var filterRow: HBox  // Добавлено
-
-    @FXML
-    private lateinit var filterScrollPane: ScrollPane
 
     // Колонки таблицы
     @FXML
@@ -73,13 +61,13 @@ class MainController {
     private lateinit var colCasing: TableColumn<Working, String?>
     @FXML
     private lateinit var colClosureStage: TableColumn<Working, String?>
-
     @FXML
     private lateinit var colStartDate: TableColumn<Working, String>
     @FXML
     private lateinit var colEndDate: TableColumn<Working, String>
     @FXML
     private lateinit var colAdditionalInfo: TableColumn<Working, String>
+
     @FXML
     private lateinit var addButton: Button
     @FXML
@@ -90,9 +78,8 @@ class MainController {
     private lateinit var token: String
     private val api: GeoApi = MainApp.api
     private val workingsList: ObservableList<Working> = FXCollections.observableArrayList()
-    private val filteredList = FilteredList(workingsList)
 
-    private lateinit var autoFilterRow: AutoFilterRow<Working>
+    private var tableFilter: TableFilter<Working>? = null
 
     fun setToken(token: String) {
         this.token = token
@@ -101,11 +88,12 @@ class MainController {
 
     @FXML
     fun initialize() {
+        // Настройка колонок
         colRowNumber.setCellValueFactory { cellData ->
             val index = workingsTable.items.indexOf(cellData.value) + 1
             javafx.beans.property.SimpleIntegerProperty(index)
         }
-        colName.setCellValueFactory { cellData -> javafx.beans.property.SimpleStringProperty(cellData.value.number ?: "") }
+        colName.setCellValueFactory { cellData -> javafx.beans.property.SimpleStringProperty(cellData.value.number) }
         colArea.setCellValueFactory { cellData -> javafx.beans.property.SimpleStringProperty(cellData.value.area?.name ?: "") }
         colWorkType.setCellValueFactory { cellData -> javafx.beans.property.SimpleStringProperty(cellData.value.workType?.name ?: "") }
         colDepth.setCellValueFactory { cellData -> javafx.beans.property.SimpleObjectProperty(cellData.value.depth) }
@@ -132,58 +120,43 @@ class MainController {
         colEndDate.setCellValueFactory { cellData -> javafx.beans.property.SimpleStringProperty(cellData.value.endDate ?: "") }
         colAdditionalInfo.setCellValueFactory { cellData -> javafx.beans.property.SimpleStringProperty(cellData.value.additionalInfo ?: "") }
 
-        workingsTable.items = filteredList
+        workingsTable.items = workingsList
 
-        // Создаём AutoFilterRow и добавляем его в filterRow
-        autoFilterRow = AutoFilterRow(workingsTable, filteredList) { }
-        filterRow.children.add(autoFilterRow.node)
-        
-        filterRow.prefWidthProperty().bind(workingsTable.widthProperty())
-
-        // Синхронизация горизонтальной прокрутки
-        Platform.runLater {
-            val tableScrollBar = findHorizontalScrollBar(workingsTable)
-            val filterScrollBar = filterScrollPane.hvalueProperty()
-
-            if (tableScrollBar != null) {
-                // При прокрутке таблицы двигаем ScrollPane фильтра
-                tableScrollBar.valueProperty().addListener { _, _, newValue ->
-                    filterScrollPane.hvalue = newValue.toDouble()
-                }
-                // При прокрутке фильтра двигаем таблицу (двусторонняя синхронизация)
-                filterScrollBar.addListener { _, _, newValue ->
-                    tableScrollBar.value = newValue.toDouble()
-                }
-            }
-        }
-
-        // Поиск (если используется)
-        searchField.textProperty().addListener { _, _, _ ->
-            autoFilterRow.applyFilters()
-        }
+        // Кнопки
+        editButton.disableProperty().bind(workingsTable.selectionModel.selectedItemProperty().isNull())
+        deleteButton.disableProperty().bind(workingsTable.selectionModel.selectedItemProperty().isNull())
     }
 
-    
-    // Вспомогательная функция для поиска горизонтального ScrollBar в TableView
-    private fun findHorizontalScrollBar(tableView: TableView<*>): ScrollBar? {
-        return tableView.lookupAll(".scroll-bar").firstOrNull {
-            it is ScrollBar && it.orientation == Orientation.HORIZONTAL
-        } as? ScrollBar
-    }
-
-    
     fun loadWorkings() {
         runOnFx {
             try {
                 val workings = api.getWorkings("Bearer $token").await()
                 workingsList.setAll(workings)
-                autoFilterRow.applyFilters()  
+
+                // Создаём TableFilter один раз
+                if (tableFilter == null) {
+
+                    val tf = TableFilter
+                        .forTableView(workingsTable)
+                        .lazy(false)
+                        .apply()   // ← создаём TableFilter
+
+                    // Устанавливаем кастомную стратегию поиска
+                    tf.setSearchStrategy { input: String, target: String ->
+                        FilterParser.parse(input, target)
+                    }
+
+                    tableFilter = tf
+                }
+
             } catch (e: Exception) {
-                showAlert("Ошибка загрузки", "Не удалось загрузить список выработок: ${e.message}")
+                showAlert(
+                    "Ошибка загрузки",
+                    "Не удалось загрузить список выработок: ${e.message}"
+                )
             }
         }
     }
-
 
     @FXML
     fun onAdd() {
@@ -211,7 +184,7 @@ class MainController {
                 runOnFx {
                     try {
                         api.deleteWorking("Bearer $token", selected.id).awaitVoid()
-                        loadWorkings() // обновить список
+                        loadWorkings()
                     } catch (e: Exception) {
                         showAlert("Ошибка удаления", e.message ?: "Неизвестная ошибка")
                     }
