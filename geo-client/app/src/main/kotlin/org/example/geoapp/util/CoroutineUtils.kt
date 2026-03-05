@@ -30,6 +30,22 @@ fun runOnFx(block: suspend CoroutineScope.() -> Unit): Job {
     }
 }
 
+suspend fun Call<Void>.awaitUnit(): Unit = suspendCancellableCoroutine { continuation ->
+    enqueue(object : retrofit2.Callback<Void> {
+        override fun onResponse(call: Call<Void>, response: retrofit2.Response<Void>) {
+            if (response.isSuccessful) {
+                continuation.resume(Unit)
+            } else {
+                continuation.resumeWithException(RuntimeException("HTTP ${response.code()}"))
+            }
+        }
+        override fun onFailure(call: Call<Void>, t: Throwable) {
+            continuation.resumeWithException(t)
+        }
+    })
+    continuation.invokeOnCancellation { cancel() }
+}
+
 // Общая версия await для Call<T>
 suspend fun <T> Call<T>.await(): T = suspendCancellableCoroutine { continuation ->
     enqueue(object : retrofit2.Callback<T> {

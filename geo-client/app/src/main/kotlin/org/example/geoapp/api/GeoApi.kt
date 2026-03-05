@@ -55,7 +55,7 @@ data class RefDrillingRig(val id: Long, val name: String)
 data class RefGeologist(val id: Long, val name: String)
 data class RefWorkType(val id: Long, val name: String)
 
-// Модель выработки (Working, упрощённо)
+// Модель выработки (Working) - основная сущность, с которой будем работать в приложении
 data class Working(
     val id: Long = 0,
     val area: RefArea? = null,
@@ -68,7 +68,7 @@ data class Working(
     val actualY: Double? = null,
     val actualZ: Double? = null,
     val depth: Double? = null,
-    val startDate: String? = null,  // "yyyy-MM-dd"
+    val startDate: String? = null,  
     val endDate: String? = null,
     val geologist: RefGeologist? = null,
     val contractor: RefContractor? = null,
@@ -76,5 +76,18 @@ data class Working(
     val additionalInfo: String? = null,
     val coreRecovery: Double? = null,          
     val casing: String? = null,       
-    val closureStage: String? = null
+    val closureStage: String? = null,
+    val mmg1Top: Double? = null,
+    val mmg1Bottom: Double? = null,
+    val mmg2Top: Double? = null,
+    val mmg2Bottom: Double? = null,
+    val gwAppearLog: Double? = null,
+    val gwStableLog: Double? = null,
+    val gwStableAbs: Double? = null,
+    val gwStableRel: Double? = null,
+    val gwStableAbsFinal: Double? = null,
+    val contractorExtraIndex: String? = null,
+    val act: String? = null,
+    val actNumber: String? = null,
+    val thermalTube: String? = null
 )

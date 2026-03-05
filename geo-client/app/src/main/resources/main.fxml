@@ -15,7 +15,6 @@
             <TableColumn fx:id="colName" text="Наименование" prefWidth="120"/>
             <TableColumn fx:id="colArea" text="Участок" prefWidth="120"/>
             <TableColumn fx:id="colWorkType" text="Тип" prefWidth="100"/>
-            <TableColumn fx:id="colDepth" text="Глубина" prefWidth="80"/>
             <TableColumn fx:id="colGeologist" text="Геолог" prefWidth="120"/>
             <TableColumn fx:id="colContractor" text="Подрядчик" prefWidth="120"/>
             <TableColumn fx:id="colPlannedX" text="X план" prefWidth="70"/>
@@ -26,11 +25,25 @@
             <TableColumn fx:id="colActualZ" text="Z факт" prefWidth="70"/>
             <TableColumn fx:id="colDeltaX" text="ΔX" prefWidth="70"/>
             <TableColumn fx:id="colDeltaY" text="ΔY" prefWidth="70"/>
+            <TableColumn fx:id="colDepth" text="Глубина" prefWidth="80"/>
             <TableColumn fx:id="colCoreRecovery" text="Керн,%" prefWidth="70"/>
             <TableColumn fx:id="colCasing" text="Обсад" prefWidth="80"/>
             <TableColumn fx:id="colClosureStage" text="Этап закрытия" prefWidth="100"/>
             <TableColumn fx:id="colStartDate" text="Дата нач" prefWidth="90"/>
             <TableColumn fx:id="colEndDate" text="Дата оконч" prefWidth="90"/>
+            <TableColumn fx:id="colMmg1Top" text="ММГ1 кровля" prefWidth="80"/>
+            <TableColumn fx:id="colMmg1Bottom" text="ММГ1 подошва" prefWidth="80"/>
+            <TableColumn fx:id="colMmg2Top" text="ММГ2 кровля" prefWidth="80"/>
+            <TableColumn fx:id="colMmg2Bottom" text="ММГ2 подошва" prefWidth="80"/>
+            <TableColumn fx:id="colGwAppearLog" text="УГВ появ журнал" prefWidth="90"/>
+            <TableColumn fx:id="colGwStableLog" text="УГВ устан журнал" prefWidth="90"/>
+            <TableColumn fx:id="colGwStableAbs" text="УГВ устан абс" prefWidth="80"/>
+            <TableColumn fx:id="colGwStableRel" text="УГВ устан отн" prefWidth="80"/>
+            <TableColumn fx:id="colGwStableAbsFinal" text="УГВ устан абс финал" prefWidth="100"/>
+            <TableColumn fx:id="colContractorExtraIndex" text="Допиндекс подрядчика" prefWidth="120"/>
+            <TableColumn fx:id="colAct" text="Акт" prefWidth="60"/>
+            <TableColumn fx:id="colActNumber" text="Номер акта" prefWidth="80"/>
+            <TableColumn fx:id="colThermalTube" text="Термотрубка" prefWidth="80"/>
             <TableColumn fx:id="colAdditionalInfo" text="Примечание" prefWidth="150"/>
         </columns>
     </TableView>

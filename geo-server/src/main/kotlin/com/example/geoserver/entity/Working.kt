@@ -65,5 +65,50 @@ data class Working(
     val createdAt: java.time.Instant = java.time.Instant.now(),
 
     @Column(name = "updated_at")
-    val updatedAt: java.time.Instant? = null
+    val updatedAt: java.time.Instant? = null,
+
+    @Column(name = "coreRecovery")
+    val coreRecovery: Double? = null,
+
+    @Column(name = "casing")
+    val casing: Double? = null,
+
+    @Column(name = "mmg1_top")
+    val mmg1Top: Double? = null,
+    
+    @Column(name = "mmg1_bottom")
+    val mmg1Bottom: Double? = null,
+    
+    @Column(name = "mmg2_top")
+    val mmg2Top: Double? = null,
+    
+    @Column(name = "mmg2_bottom")
+    val mmg2Bottom: Double? = null,
+    
+    @Column(name = "gw_appear_log")
+    val gwAppearLog: Double? = null,
+    
+    @Column(name = "gw_stable_log")
+    val gwStableLog: Double? = null,
+    
+    @Column(name = "gw_stable_abs")
+    val gwStableAbs: Double? = null,
+    
+    @Column(name = "gw_stable_rel")
+    val gwStableRel: Double? = null,
+    
+    @Column(name = "gw_stable_abs_final")
+    val gwStableAbsFinal: Double? = null,
+    
+    @Column(name = "contractor_extra_index")
+    val contractorExtraIndex: String? = null,
+    
+    @Column(name = "act")
+    val act: String? = null,
+    
+    @Column(name = "act_number")
+    val actNumber: String? = null,
+    
+    @Column(name = "thermal_tube")
+    val thermalTube: String? = null
 )

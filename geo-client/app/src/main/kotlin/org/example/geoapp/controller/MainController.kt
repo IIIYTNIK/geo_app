@@ -6,25 +6,30 @@ import javafx.collections.FXCollections
 import javafx.collections.ObservableList
 import javafx.fxml.FXML
 import javafx.fxml.FXMLLoader
+import javafx.scene.Scene
 import javafx.scene.control.*
 import javafx.scene.control.cell.PropertyValueFactory
+import javafx.scene.input.KeyCode
+import javafx.scene.input.KeyCodeCombination
+import javafx.scene.input.KeyCombination
 import javafx.scene.layout.VBox
 import javafx.stage.Modality
 import javafx.stage.Stage
+import org.controlsfx.control.table.TableFilter
+import org.controlsfx.control.table.ColumnFilter
+import org.controlsfx.control.table.FilterPanel
 import org.example.geoapp.MainApp
-import org.example.geoapp.util.runOnFx
+import org.example.geoapp.util.FilterParser
 import org.example.geoapp.util.await
 import org.example.geoapp.util.awaitVoid
-import javafx.scene.Scene
-import org.controlsfx.control.table.TableFilter
-import org.example.geoapp.util.FilterParser
+import org.example.geoapp.util.awaitUnit
+import org.example.geoapp.util.runOnFx
 
 class MainController {
 
     @FXML
     private lateinit var workingsTable: TableView<Working>
 
-    // Колонки таблицы
     @FXML
     private lateinit var colRowNumber: TableColumn<Working, Number>
     @FXML
@@ -69,6 +74,33 @@ class MainController {
     private lateinit var colAdditionalInfo: TableColumn<Working, String>
 
     @FXML
+    private lateinit var colMmg1Top: TableColumn<Working, Double?>
+    @FXML
+    private lateinit var colMmg1Bottom: TableColumn<Working, Double?>
+    @FXML
+    private lateinit var colMmg2Top: TableColumn<Working, Double?>
+    @FXML
+    private lateinit var colMmg2Bottom: TableColumn<Working, Double?>
+    @FXML
+    private lateinit var colGwAppearLog: TableColumn<Working, Double?>
+    @FXML
+    private lateinit var colGwStableLog: TableColumn<Working, Double?>
+    @FXML
+    private lateinit var colGwStableAbs: TableColumn<Working, Double?>
+    @FXML
+    private lateinit var colGwStableRel: TableColumn<Working, Double?>
+    @FXML
+    private lateinit var colGwStableAbsFinal: TableColumn<Working, Double?>
+    @FXML
+    private lateinit var colContractorExtraIndex: TableColumn<Working, String?>
+    @FXML
+    private lateinit var colAct: TableColumn<Working, String?>
+    @FXML
+    private lateinit var colActNumber: TableColumn<Working, String?>
+    @FXML
+    private lateinit var colThermalTube: TableColumn<Working, String?>
+
+    @FXML
     private lateinit var addButton: Button
     @FXML
     private lateinit var editButton: Button
@@ -79,7 +111,7 @@ class MainController {
     private val api: GeoApi = MainApp.api
     private val workingsList: ObservableList<Working> = FXCollections.observableArrayList()
 
-    private var tableFilter: TableFilter<Working>? = null
+    private lateinit var tableFilter: TableFilter<Working>
 
     fun setToken(token: String) {
         this.token = token
@@ -88,7 +120,7 @@ class MainController {
 
     @FXML
     fun initialize() {
-        // Настройка колонок
+        // Существующие колонки
         colRowNumber.setCellValueFactory { cellData ->
             val index = workingsTable.items.indexOf(cellData.value) + 1
             javafx.beans.property.SimpleIntegerProperty(index)
@@ -120,40 +152,61 @@ class MainController {
         colEndDate.setCellValueFactory { cellData -> javafx.beans.property.SimpleStringProperty(cellData.value.endDate ?: "") }
         colAdditionalInfo.setCellValueFactory { cellData -> javafx.beans.property.SimpleStringProperty(cellData.value.additionalInfo ?: "") }
 
+        // Новые колонки
+        colMmg1Top.setCellValueFactory { cellData -> javafx.beans.property.SimpleObjectProperty(cellData.value.mmg1Top) }
+        colMmg1Bottom.setCellValueFactory { cellData -> javafx.beans.property.SimpleObjectProperty(cellData.value.mmg1Bottom) }
+        colMmg2Top.setCellValueFactory { cellData -> javafx.beans.property.SimpleObjectProperty(cellData.value.mmg2Top) }
+        colMmg2Bottom.setCellValueFactory { cellData -> javafx.beans.property.SimpleObjectProperty(cellData.value.mmg2Bottom) }
+        colGwAppearLog.setCellValueFactory { cellData -> javafx.beans.property.SimpleObjectProperty(cellData.value.gwAppearLog) }
+        colGwStableLog.setCellValueFactory { cellData -> javafx.beans.property.SimpleObjectProperty(cellData.value.gwStableLog) }
+        colGwStableAbs.setCellValueFactory { cellData -> javafx.beans.property.SimpleObjectProperty(cellData.value.gwStableAbs) }
+        colGwStableRel.setCellValueFactory { cellData -> javafx.beans.property.SimpleObjectProperty(cellData.value.gwStableRel) }
+        colGwStableAbsFinal.setCellValueFactory { cellData -> javafx.beans.property.SimpleObjectProperty(cellData.value.gwStableAbsFinal) }
+        colContractorExtraIndex.setCellValueFactory { cellData -> javafx.beans.property.SimpleStringProperty(cellData.value.contractorExtraIndex) }
+        colAct.setCellValueFactory { cellData -> javafx.beans.property.SimpleStringProperty(cellData.value.act) }
+        colActNumber.setCellValueFactory { cellData -> javafx.beans.property.SimpleStringProperty(cellData.value.actNumber) }
+        colThermalTube.setCellValueFactory { cellData -> javafx.beans.property.SimpleStringProperty(cellData.value.thermalTube) }
+
         workingsTable.items = workingsList
 
         // Кнопки
         editButton.disableProperty().bind(workingsTable.selectionModel.selectedItemProperty().isNull())
         deleteButton.disableProperty().bind(workingsTable.selectionModel.selectedItemProperty().isNull())
+
+        // Горячие клавиши
+        workingsTable.sceneProperty().addListener { _, _, newScene ->
+            if (newScene != null) {
+                // F2
+                newScene.accelerators[KeyCodeCombination(KeyCode.F2)] = Runnable {
+                    if (!editButton.isDisable) onEdit()
+                }
+                // Ctrl+E
+                newScene.accelerators[KeyCodeCombination(KeyCode.E, KeyCombination.CONTROL_DOWN)] = Runnable {
+                    if (!editButton.isDisable) onEdit()
+                }
+            }
+        }
     }
 
     fun loadWorkings() {
         runOnFx {
             try {
                 val workings = api.getWorkings("Bearer $token").await()
+                    .sortedBy { it.id }
                 workingsList.setAll(workings)
 
-                // Создаём TableFilter один раз
-                if (tableFilter == null) {
-
-                    val tf = TableFilter
+                if (!::tableFilter.isInitialized) {
+                    tableFilter = TableFilter
                         .forTableView(workingsTable)
                         .lazy(false)
-                        .apply()   // ← создаём TableFilter
+                        .apply()
 
-                    // Устанавливаем кастомную стратегию поиска
-                    tf.setSearchStrategy { input: String, target: String ->
+                    tableFilter.setSearchStrategy { input: String, target: String ->
                         FilterParser.parse(input, target)
                     }
-
-                    tableFilter = tf
                 }
-
             } catch (e: Exception) {
-                showAlert(
-                    "Ошибка загрузки",
-                    "Не удалось загрузить список выработок: ${e.message}"
-                )
+                showAlert("Ошибка загрузки", "Не удалось загрузить список выработок: ${e.message}")
             }
         }
     }
@@ -183,7 +236,7 @@ class MainController {
             if (result.isPresent && result.get() == ButtonType.OK) {
                 runOnFx {
                     try {
-                        api.deleteWorking("Bearer $token", selected.id).awaitVoid()
+                        api.deleteWorking("Bearer $token", selected.id).awaitUnit()
                         loadWorkings()
                     } catch (e: Exception) {
                         showAlert("Ошибка удаления", e.message ?: "Неизвестная ошибка")
