@@ -20,19 +20,22 @@ class AuthController(
 ) {
 
     data class LoginRequest(val username: String, val password: String)
-    data class LoginResponse(val token: String)
+    // ДОБАВИЛИ ROLE СЮДА
+    data class LoginResponse(val token: String, val role: String)
 
     @PostMapping("/login")
-    fun login(@RequestBody request: LoginRequest): ResponseEntity<LoginResponse> {
+    fun login(@RequestBody request: LoginRequest): ResponseEntity<Any> {
         try {
             authenticationManager.authenticate(
                 UsernamePasswordAuthenticationToken(request.username, request.password)
             )
             val user = userService.loadUserByUsername(request.username)
             val token = jwtService.generateToken(user)
-            return ResponseEntity.ok(LoginResponse(token))
+            val role = user.authorities.firstOrNull()?.authority ?: "ROLE_USER"
+            
+            return ResponseEntity.ok(LoginResponse(token, role))
         } catch (e: BadCredentialsException) {
-            return ResponseEntity.status(401).body(LoginResponse("Invalid credentials"))
+            return ResponseEntity.status(401).body(mapOf("error" to "Invalid credentials"))
         }
     }
 }

@@ -43,10 +43,16 @@ interface GeoApi {
 
     @DELETE("api/workings/{id}")
     fun deleteWorking(@Header("Authorization") token: String, @Path("id") id: Long): Call<Void>
+
+    @GET("api/references/geologists/by-contractor/{contractorId}")
+    fun getGeologistsByContractor(
+        @Header("Authorization") token: String,
+        @Path("contractorId") contractorId: Long
+    ): Call<List<RefGeologist>>
 }
 
 data class LoginRequest(val username: String, val password: String)
-data class LoginResponse(val token: String)
+data class LoginResponse(val token: String, val role: String)
 
 // Модели справочников (копируем из сервера, но упрощённо)
 data class RefArea(val id: Long, val name: String)

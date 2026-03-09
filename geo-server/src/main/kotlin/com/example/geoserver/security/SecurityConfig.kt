@@ -11,8 +11,8 @@ import org.springframework.security.config.http.SessionCreationPolicy
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
-import com.example.geoserver.security.JwtFilter
 import com.example.geoserver.service.UserService
+import org.springframework.http.HttpMethod
 
 @Configuration
 class SecurityConfig(
@@ -24,7 +24,6 @@ class SecurityConfig(
     fun passwordEncoder() = BCryptPasswordEncoder()
 
     @Bean
-    @Suppress("DEPRECATION")
     fun authenticationProvider(): AuthenticationProvider {
         val provider = DaoAuthenticationProvider()
         provider.setUserDetailsService(userService)
@@ -42,13 +41,16 @@ class SecurityConfig(
         http
             .csrf { it.disable() }
             .authorizeHttpRequests {
-                it.requestMatchers(org.springframework.http.HttpMethod.POST, "/api/auth/**").permitAll()
-                    .requestMatchers(org.springframework.http.HttpMethod.GET, "/hello").permitAll()
-                    .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/references/**").permitAll()
-                    .requestMatchers(org.springframework.http.HttpMethod.GET, "/actuator/**").permitAll()
-                    .requestMatchers("/api/users/**").authenticated()
-                    .requestMatchers("/api/workings/**").authenticated()
-                    .anyRequest().authenticated()
+                it.requestMatchers(HttpMethod.POST, "/api/auth/**").permitAll()
+                
+                it.requestMatchers(HttpMethod.GET, "/api/references/**").permitAll()
+                it.requestMatchers(HttpMethod.POST, "/api/references/**").hasAuthority("ROLE_ADMIN")
+                it.requestMatchers(HttpMethod.PUT, "/api/references/**").hasAuthority("ROLE_ADMIN")
+                it.requestMatchers(HttpMethod.DELETE, "/api/references/**").hasAuthority("ROLE_ADMIN")
+                
+                it.requestMatchers("/api/users/**").authenticated()
+                it.requestMatchers("/api/workings/**").authenticated()
+                it.anyRequest().authenticated()
             }
             .exceptionHandling { it.authenticationEntryPoint(org.springframework.security.web.authentication.HttpStatusEntryPoint(org.springframework.http.HttpStatus.UNAUTHORIZED)) }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }

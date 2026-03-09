@@ -27,7 +27,7 @@ class DataInitializer(
             val admin = User(
                 username = "admin",
                 password = passwordEncoder.encode("secret123"),
-                role = "ROLE_SUPER_USER"
+                role = "ROLE_ADMIN"
             )
             userRepository.save(admin)
             println("Создан тестовый пользователь: admin / secret123")
@@ -40,6 +40,15 @@ class DataInitializer(
             )
             userRepository.save(user)
         }
+        // if (userRepository.findByUsername("admin").isEmpty) {
+        //     val admin = User(
+        //         username = "admin",
+        //         password = passwordEncoder.encode("secret123"),
+        //         role = "ROLE_ADMIN"
+        //     )
+        //     userRepository.save(admin)
+        //     println("Создан тестовый пользователь: admin / secret123")
+        // }
         println("Тестовые пользователи созданы")
     }
 }

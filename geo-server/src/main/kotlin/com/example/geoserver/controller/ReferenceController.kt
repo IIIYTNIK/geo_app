@@ -3,6 +3,7 @@ package com.example.geoserver.controller
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
 
 import com.example.geoserver.entity.*
 import com.example.geoserver.repository.*
@@ -31,4 +32,9 @@ class ReferenceController(
 
     @GetMapping("/work-types")
     fun getWorkTypes(): List<RefWorkType> = workTypeRepo.findAll()
+
+    @GetMapping("/geologists/by-contractor/{contractorId}")
+    fun getGeologistsByContractor(@PathVariable contractorId: Long): List<RefGeologist> {
+        return geologistRepo.findByContractorId(contractorId)
+    }
 }

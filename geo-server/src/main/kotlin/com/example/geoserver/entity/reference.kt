@@ -1,6 +1,7 @@
 package com.example.geoserver.entity
 
 import jakarta.persistence.*
+import com.fasterxml.jackson.annotation.JsonIgnore
 
 @Entity
 @Table(name = "ref_areas")
@@ -19,7 +20,27 @@ data class RefContractor(
     val id: Long = 0,
 
     @Column(unique = true, nullable = false)
-    val name: String // Подрядчик
+    val name: String
+) {
+    // связь один-ко-многим
+    @JsonIgnore
+    @OneToMany(mappedBy = "contractor", cascade = [CascadeType.ALL], orphanRemoval = true)
+    val geologists: MutableList<RefGeologist> = mutableListOf()
+}
+
+@Entity
+@Table(name = "ref_geologists")
+data class RefGeologist(
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    val id: Long = 0,
+
+    @Column(unique = true, nullable = false)
+    val name: String,
+
+    // Обратная связь (ManyToOne)
+    @ManyToOne
+    @JoinColumn(name = "contractor_id", nullable = false)
+    var contractor: RefContractor? = null
 )
 
 @Entity
@@ -30,16 +51,6 @@ data class RefDrillingRig(
 
     @Column(unique = true, nullable = false)
     val name: String  // Номер буровой
-)
-
-@Entity
-@Table(name = "ref_geologists")
-data class RefGeologist(
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    val id: Long = 0,
-
-    @Column(unique = true, nullable = false)
-    val name: String  // ФИО геолога
 )
 
 @Entity

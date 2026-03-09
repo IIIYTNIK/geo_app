@@ -21,11 +21,11 @@
             <Label text="Тип выработки:"/>
             <ComboBox fx:id="workTypeCombo" prefWidth="400"/>
 
-            <Label text="Геолог:"/>
-            <ComboBox fx:id="geologistCombo" prefWidth="400"/>
-
             <Label text="Подрядчик:"/>
             <ComboBox fx:id="contractorCombo" prefWidth="400"/>
+
+            <Label text="Геолог:"/>
+            <ComboBox fx:id="geologistCombo" prefWidth="400"/>            
 
             <Label text="Буровая:"/>
             <ComboBox fx:id="drillingRigCombo" prefWidth="400"/>

@@ -28,6 +28,9 @@ import org.example.geoapp.util.runOnFx
 class MainController {
 
     @FXML
+    private lateinit var adminMenuBar: MenuBar
+
+    @FXML
     private lateinit var workingsTable: TableView<Working>
 
     @FXML
@@ -108,13 +111,19 @@ class MainController {
     private lateinit var deleteButton: Button
 
     private lateinit var token: String
+    private lateinit var userRole: String
     private val api: GeoApi = MainApp.api
     private val workingsList: ObservableList<Working> = FXCollections.observableArrayList()
 
     private lateinit var tableFilter: TableFilter<Working>
 
-    fun setToken(token: String) {
+    fun initData(token: String, role: String) {
         this.token = token
+        this.userRole = role
+        
+        // Показываем меню только если роль "ROLE_ADMIN"
+        adminMenuBar.isVisible = (role == "ROLE_ADMIN")
+        
         loadWorkings()
     }
 
@@ -174,13 +183,15 @@ class MainController {
         deleteButton.disableProperty().bind(workingsTable.selectionModel.selectedItemProperty().isNull())
 
         // Горячие клавиши
+        // Двойной клик
+        workingsTable.setOnMouseClicked { event ->
+            if (event.clickCount == 2 && !workingsTable.selectionModel.selectedItems.isEmpty()) {
+                onEdit()
+            }
+        }
+        // Ctrl+E
         workingsTable.sceneProperty().addListener { _, _, newScene ->
             if (newScene != null) {
-                // F2
-                newScene.accelerators[KeyCodeCombination(KeyCode.F2)] = Runnable {
-                    if (!editButton.isDisable) onEdit()
-                }
-                // Ctrl+E
                 newScene.accelerators[KeyCodeCombination(KeyCode.E, KeyCombination.CONTROL_DOWN)] = Runnable {
                     if (!editButton.isDisable) onEdit()
                 }
@@ -267,5 +278,21 @@ class MainController {
             contentText = message
             showAndWait()
         }
+    }
+
+    @FXML
+    fun openAreasEditor() {
+        println("Открываем редактор участков...")
+        // Здесь мы будем вызывать новое окно
+    }
+
+    @FXML
+    fun openWorkTypesEditor() {
+        println("Открываем редактор типов...")
+    }
+
+    @FXML
+    fun openDrillingRigsEditor() {
+        println("Открываем редактор буровых...")
     }
 }

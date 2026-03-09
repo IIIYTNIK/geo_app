@@ -9,6 +9,14 @@
       fx:controller="org.example.geoapp.controller.MainController"
       prefWidth="1200" prefHeight="600">
 
+    <MenuBar fx:id="adminMenuBar" visible="false" managed="${adminMenuBar.visible}">    
+        <Menu text="Управление справочниками">
+            <MenuItem text="Участки" onAction="#openAreasEditor"/>
+            <MenuItem text="Типы выработок" onAction="#openWorkTypesEditor"/>
+            <MenuItem text="Буровые" onAction="#openDrillingRigsEditor"/>
+            </Menu>
+    </MenuBar>
+
     <TableView fx:id="workingsTable" VBox.vgrow="ALWAYS">
         <columns>
             <TableColumn fx:id="colRowNumber" text="№ п/п" prefWidth="50"/>

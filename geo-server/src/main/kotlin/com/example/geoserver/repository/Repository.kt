@@ -17,8 +17,9 @@ interface RefAreaRepository : JpaRepository<RefArea, Long>{
     fun findByName(name: String): RefArea?
 }
 
-interface RefGeologistRepository : JpaRepository<RefGeologist, Long>{
+interface RefGeologistRepository : JpaRepository<RefGeologist, Long> {
     fun findByName(name: String): RefGeologist?
+    fun findByContractorId(contractorId: Long): List<RefGeologist>
 }
 
 interface RefDrillingRigRepository : JpaRepository<RefDrillingRig, Long>{

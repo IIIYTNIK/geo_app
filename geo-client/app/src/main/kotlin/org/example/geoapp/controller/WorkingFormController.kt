@@ -8,8 +8,10 @@ import javafx.stage.Stage
 import org.example.geoapp.MainApp
 import org.example.geoapp.util.await
 import org.example.geoapp.util.runOnFx
+import org.example.geoapp.util.NumericFieldUtil
 import java.time.LocalDate
 import java.lang.reflect.Method
+import org.example.geoapp.util.NumberParsers.toDoubleSafe
 
 class WorkingFormController {
 
@@ -61,11 +63,34 @@ class WorkingFormController {
         this.token = token
         this.working = working
         this.onSaveCallback = onSave
+
+        setupNumericFields() // Загружаем справочники
+
         loadReferences()
         setupContractorAutoFill()
-        if (working != null) {
+
+        if (working != null) { // Если редактируем — устанавливаем значения
             fillFields()
+
+            contractorCombo.value = working.contractor
+            // После установки подрядчика — загрузим геологов
+            loadGeologistsForContractor(working.contractor?.id)
+            geologistCombo.value = working.geologist
+            
         }
+
+        // Слушатель изменения подрядчика → обновляем список геологов
+        contractorCombo.selectionModel.selectedItemProperty().addListener { _, _, newContractor ->
+            contractorExtraIndexField.text = when (newContractor?.name?.lowercase()) {
+                "вгсп" -> "01"
+                "зтп" -> "02"
+                "сп" -> "03"
+                else -> ""
+            }
+
+            loadGeologistsForContractor(newContractor?.id)
+        }
+
     }
 
     private fun loadReferences() {
@@ -73,7 +98,7 @@ class WorkingFormController {
             try {
                 val areas = api.getAreas().await()
                 val workTypes = api.getWorkTypes().await()
-                val geologists = api.getGeologists().await()
+                //val geologists = api.getGeologists().await()
                 val contractors = api.getContractors().await()
                 val drillingRigs = api.getDrillingRigs().await()
 
@@ -83,11 +108,11 @@ class WorkingFormController {
                 workTypeCombo.items = FXCollections.observableArrayList(workTypes)
                 workTypeCombo.setupNameConverter { it.name }
 
-                geologistCombo.items = FXCollections.observableArrayList(geologists)
-                geologistCombo.setupNameConverter { it.name }
-
                 contractorCombo.items = FXCollections.observableArrayList(contractors)
                 contractorCombo.setupNameConverter { it.name }
+
+                // geologistCombo.items = FXCollections.observableArrayList(geologists)
+                // geologistCombo.setupNameConverter { it.name }
 
                 drillingRigCombo.items = FXCollections.observableArrayList(drillingRigs)
                 drillingRigCombo.setupNameConverter { it.name }
@@ -99,7 +124,6 @@ class WorkingFormController {
     }
 
     private fun fillFields() {
-        // Устранение NPE при редактировании пустых полей через elvis operator ?: ""
         numberField.text = working?.number ?: ""
 
         plannedXField.text = working?.plannedX?.toString() ?: ""
@@ -138,10 +162,19 @@ class WorkingFormController {
         actNumberField.text = working?.actNumber ?: ""
         thermalTubeField.text = working?.thermalTube ?: ""
 
+        areaCombo.setupNameConverter { it.name }
         areaCombo.selectionModel.select(working?.area)
+
+        workTypeCombo.setupNameConverter { it.name }
         workTypeCombo.selectionModel.select(working?.workType)
+
+        contractorCombo.setupNameConverter { it.name }
         geologistCombo.selectionModel.select(working?.geologist)
+
+        drillingRigCombo.setupNameConverter { it.name }
         contractorCombo.selectionModel.select(working?.contractor)
+
+        geologistCombo.setupNameConverter { it.name }
         drillingRigCombo.selectionModel.select(working?.drillingRig)
     }
     
@@ -228,7 +261,7 @@ class WorkingFormController {
         fun validateNumber(field: TextField, fieldName: String): Double? {
             val txt = field.text?.trim().orEmpty()
             if (txt.isEmpty()) return null
-            val d = txt.toDoubleOrNull()
+            val d = txt.replace(",", ".").toDoubleOrNull()
             if (d == null) {
                 markFieldError(field, "$fieldName должно быть числом")
                 allValid = false
@@ -286,31 +319,31 @@ class WorkingFormController {
             area = areaCombo.selectionModel.selectedItem,
             workType = workTypeCombo.selectionModel.selectedItem,
             number = numberField.text.trim(),
-            plannedX = plannedXField.text.toDoubleOrNull(),
-            plannedY = plannedYField.text.toDoubleOrNull(),
-            plannedZ = plannedZField.text.toDoubleOrNull(),
-            actualX = actualXField.text.toDoubleOrNull(),
-            actualY = actualYField.text.toDoubleOrNull(),
-            actualZ = actualZField.text.toDoubleOrNull(),
-            depth = depthField.text.toDoubleOrNull(),
+            plannedX = plannedXField.toDoubleSafe(),
+            plannedY = plannedYField.toDoubleSafe(),
+            plannedZ = plannedZField.toDoubleSafe(),
+            actualX = actualXField.toDoubleSafe(),
+            actualY = actualYField.toDoubleSafe(),
+            actualZ = actualZField.toDoubleSafe(),
+            depth = depthField.toDoubleSafe(),
             startDate = startDatePicker.value?.toString(),
             endDate = endDatePicker.value?.toString(),
             geologist = geologistCombo.selectionModel.selectedItem,
             contractor = contractorCombo.selectionModel.selectedItem,
             drillingRig = drillingRigCombo.selectionModel.selectedItem,
             additionalInfo = additionalInfoArea.text.ifBlank { null },
-            coreRecovery = coreRecoveryField.text.toDoubleOrNull(),
+            coreRecovery = coreRecoveryField.toDoubleSafe(),
             casing = casingField.text.ifBlank { null },
             closureStage = null,
-            mmg1Top = mmg1TopField.text.toDoubleOrNull(),
-            mmg1Bottom = mmg1BottomField.text.toDoubleOrNull(),
-            mmg2Top = mmg2TopField.text.toDoubleOrNull(),
-            mmg2Bottom = mmg2BottomField.text.toDoubleOrNull(),
-            gwAppearLog = gwAppearLogField.text.toDoubleOrNull(),
-            gwStableLog = gwStableLogField.text.toDoubleOrNull(),
-            gwStableAbs = gwStableAbsField.text.toDoubleOrNull(),
-            gwStableRel = gwStableRelField.text.toDoubleOrNull(),
-            gwStableAbsFinal = gwStableAbsFinalField.text.toDoubleOrNull(),
+            mmg1Top = mmg1TopField.toDoubleSafe(),
+            mmg1Bottom = mmg1BottomField.toDoubleSafe(),
+            mmg2Top = mmg2TopField.toDoubleSafe(),
+            mmg2Bottom = mmg2BottomField.toDoubleSafe(),
+            gwAppearLog = gwAppearLogField.toDoubleSafe(),
+            gwStableLog = gwStableLogField.toDoubleSafe(),
+            gwStableAbs = gwStableAbsField.toDoubleSafe(),
+            gwStableRel = gwStableRelField.toDoubleSafe(),
+            gwStableAbsFinal = gwStableAbsFinalField.toDoubleSafe(),
             contractorExtraIndex = contractorExtraIndexField.text.ifBlank { null },
             act = actField.text.ifBlank { null },
             actNumber = actNumberField.text.ifBlank { null },
@@ -357,4 +390,58 @@ class WorkingFormController {
             }
         }
     }
+
+    private fun setupNumericFields() {
+
+        NumericFieldUtil.applyDecimalFilter(plannedXField)
+        NumericFieldUtil.applyDecimalFilter(plannedYField)
+        NumericFieldUtil.applyDecimalFilter(plannedZField)
+
+        NumericFieldUtil.applyDecimalFilter(actualXField)
+        NumericFieldUtil.applyDecimalFilter(actualYField)
+        NumericFieldUtil.applyDecimalFilter(actualZField)
+
+        NumericFieldUtil.applyDecimalFilter(depthField)
+        NumericFieldUtil.applyDecimalFilter(casingField)
+
+        NumericFieldUtil.applyDecimalFilter(mmg1TopField)
+        NumericFieldUtil.applyDecimalFilter(mmg1BottomField)
+        NumericFieldUtil.applyDecimalFilter(mmg2TopField)
+        NumericFieldUtil.applyDecimalFilter(mmg2BottomField)
+
+        NumericFieldUtil.applyDecimalFilter(gwAppearLogField)
+        NumericFieldUtil.applyDecimalFilter(gwStableLogField)
+        NumericFieldUtil.applyDecimalFilter(gwStableAbsField)
+        NumericFieldUtil.applyDecimalFilter(gwStableRelField)
+        NumericFieldUtil.applyDecimalFilter(gwStableAbsFinalField)
+
+        NumericFieldUtil.applyDecimalFilter(coreRecoveryField)
+    }
+
+    private fun loadGeologistsForContractor(contractorId: Long?) {
+        if (contractorId == null) {
+            geologistCombo.items.clear()
+            geologistCombo.value = null
+            return
+        }
+
+        runOnFx {
+            try {
+                val geologists = MainApp.api.getGeologistsByContractor("Bearer $token", contractorId).await()
+                geologistCombo.items.setAll(geologists)
+                geologistCombo.setupNameConverter { it.name }
+
+                if (working?.geologist != null && geologists.any { it.id == working!!.geologist!!.id }) {
+                    geologistCombo.value = working!!.geologist
+                } else {
+                    geologistCombo.value = null
+                }
+            } catch (e: Exception) {
+                errorLabel.text = "Ошибка загрузки геологов: ${e.message}"
+                geologistCombo.items.clear()
+            }
+        }
+    }
+
+
 }

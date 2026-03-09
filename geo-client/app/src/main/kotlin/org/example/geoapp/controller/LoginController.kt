@@ -58,7 +58,7 @@ class LoginController {
             try {
                 val response = api.login(LoginRequest(username, password)).await()
                 // Успешный вход
-                openMainWindow(response.token)
+                openMainWindow(response.token, response.role)
             } catch (e: Exception) {
                 errorLabel.text = when {
                     e.message?.contains("HTTP 401") == true -> "Неверный логин или пароль"
@@ -70,11 +70,12 @@ class LoginController {
         }
     }
 
-    private fun openMainWindow(token: String) {
+    private fun openMainWindow(token: String, role: String) {
         val loader = FXMLLoader(javaClass.getResource("/main.fxml"))
         val root = loader.load<javafx.scene.Parent>()
         val controller = loader.getController<MainController>()
-        controller.setToken(token)
+        // Вызываем новый метод инициализации
+        controller.initData(token, role)
 
         val stage = (this.root.scene.window as Stage)
         stage.scene = Scene(root)
