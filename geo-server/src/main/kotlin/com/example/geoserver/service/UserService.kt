@@ -20,7 +20,7 @@ class UserService(
             .orElseThrow { UsernameNotFoundException("User not found: $username") }
     }
 
-    // Метод для создания пользователя (можно вызвать один раз для теста)
+    // Метод для создания пользователя
     fun createUser(username: String, rawPassword: String, role: String): User {
         val encodedPassword = passwordEncoder.encode(rawPassword)
         val user = User(

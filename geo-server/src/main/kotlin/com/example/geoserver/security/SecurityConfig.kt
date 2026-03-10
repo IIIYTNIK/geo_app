@@ -42,6 +42,7 @@ class SecurityConfig(
             .csrf { it.disable() }
             .authorizeHttpRequests {
                 it.requestMatchers(HttpMethod.POST, "/api/auth/**").permitAll()
+                it.requestMatchers(HttpMethod.GET, "/hello").permitAll()
                 
                 it.requestMatchers(HttpMethod.GET, "/api/references/**").permitAll()
                 it.requestMatchers(HttpMethod.POST, "/api/references/**").hasAuthority("ROLE_ADMIN")

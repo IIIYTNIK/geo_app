@@ -14,7 +14,10 @@
             <MenuItem text="Участки" onAction="#openAreasEditor"/>
             <MenuItem text="Типы выработок" onAction="#openWorkTypesEditor"/>
             <MenuItem text="Буровые" onAction="#openDrillingRigsEditor"/>
-            </Menu>
+            <SeparatorMenuItem/>
+            <MenuItem text="Подрядчики" onAction="#openContractorsEditor"/>
+            <MenuItem text="Геологи" onAction="#openGeologistsEditor"/>
+        </Menu>
     </MenuBar>
 
     <TableView fx:id="workingsTable" VBox.vgrow="ALWAYS">

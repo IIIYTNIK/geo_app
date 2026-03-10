@@ -14,7 +14,7 @@ class MainApp : Application() {
     companion object {
         val api: GeoApi by lazy {
             Retrofit.Builder()
-                .baseUrl("http://localhost:8081/")
+                .baseUrl("http://192.168.0.10:8081/")
                 .addConverterFactory(GsonConverterFactory.create())
                 .build()
                 .create(GeoApi::class.java)

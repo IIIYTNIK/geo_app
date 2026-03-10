@@ -280,19 +280,26 @@ class MainController {
         }
     }
 
-    @FXML
-    fun openAreasEditor() {
-        println("Открываем редактор участков...")
-        // Здесь мы будем вызывать новое окно
-    }
+    @FXML fun openAreasEditor() = openRefEditor(RefType.AREA)
+    @FXML fun openWorkTypesEditor() = openRefEditor(RefType.WORK_TYPE)
+    @FXML fun openDrillingRigsEditor() = openRefEditor(RefType.DRILLING_RIG)
+    @FXML fun openContractorsEditor() = openRefEditor(RefType.CONTRACTOR)
+    @FXML fun openGeologistsEditor() = openRefEditor(RefType.GEOLOGIST)
 
-    @FXML
-    fun openWorkTypesEditor() {
-        println("Открываем редактор типов...")
-    }
+    private fun openRefEditor(type: RefType) {
+        val loader = FXMLLoader(javaClass.getResource("/referenceEditor.fxml"))
+        val root = loader.load<VBox>()
+        val controller = loader.getController<ReferenceEditorController>()
+        controller.initData(token, type)
 
-    @FXML
-    fun openDrillingRigsEditor() {
-        println("Открываем редактор буровых...")
+        val stage = Stage()
+        stage.initModality(Modality.WINDOW_MODAL)
+        stage.initOwner(workingsTable.scene.window)
+        stage.scene = Scene(root)
+        stage.title = "Справочник: ${type.title}"
+        stage.showAndWait()
+        
+        // После закрытия справочников перезагружаем главную таблицу (вдруг имена изменились)
+        loadWorkings() 
     }
 }
