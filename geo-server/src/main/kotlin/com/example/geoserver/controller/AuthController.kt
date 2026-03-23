@@ -20,7 +20,6 @@ class AuthController(
 ) {
 
     data class LoginRequest(val username: String, val password: String)
-    // ДОБАВИЛИ ROLE СЮДА
     data class LoginResponse(val token: String, val role: String)
 
     @PostMapping("/login")

@@ -13,11 +13,10 @@ import javafx.scene.input.KeyCode
 import javafx.scene.input.KeyCodeCombination
 import javafx.scene.input.KeyCombination
 import javafx.scene.layout.VBox
+import javafx.stage.FileChooser
 import javafx.stage.Modality
 import javafx.stage.Stage
 import org.controlsfx.control.table.TableFilter
-import org.controlsfx.control.table.ColumnFilter
-import org.controlsfx.control.table.FilterPanel
 import org.example.geoapp.MainApp
 import org.example.geoapp.util.FilterParser
 import org.example.geoapp.util.await
@@ -27,88 +26,47 @@ import org.example.geoapp.util.runOnFx
 
 class MainController {
 
-    @FXML
-    private lateinit var adminMenuBar: MenuBar
+    @FXML private lateinit var adminMenuBar: MenuBar
+    @FXML private lateinit var workingsTable: TableView<Working>
 
-    @FXML
-    private lateinit var workingsTable: TableView<Working>
+    @FXML private lateinit var colRowNumber: TableColumn<Working, Number>
+    @FXML private lateinit var colName: TableColumn<Working, String>
+    @FXML private lateinit var colArea: TableColumn<Working, String>
+    @FXML private lateinit var colWorkType: TableColumn<Working, String> 
+    @FXML private lateinit var colDepth: TableColumn<Working, Double?>
+    @FXML private lateinit var colGeologist: TableColumn<Working, String>
+    @FXML private lateinit var colContractor: TableColumn<Working, String>
+    @FXML private lateinit var colPlannedX: TableColumn<Working, Double?>
+    @FXML private lateinit var colPlannedY: TableColumn<Working, Double?>
+    @FXML private lateinit var colPlannedZ: TableColumn<Working, Double?>
+    @FXML private lateinit var colActualX: TableColumn<Working, Double?>
+    @FXML private lateinit var colActualY: TableColumn<Working, Double?>
+    @FXML private lateinit var colActualZ: TableColumn<Working, Double?>
+    @FXML private lateinit var colDeltaX: TableColumn<Working, Double?>
+    @FXML private lateinit var colDeltaY: TableColumn<Working, Double?>
+    @FXML private lateinit var colCoreRecovery: TableColumn<Working, Double?>
+    @FXML private lateinit var colCasing: TableColumn<Working, String?>
+    @FXML private lateinit var colClosureStage: TableColumn<Working, String?>
+    @FXML private lateinit var colStartDate: TableColumn<Working, String>
+    @FXML private lateinit var colEndDate: TableColumn<Working, String>
+    @FXML private lateinit var colAdditionalInfo: TableColumn<Working, String>
+    @FXML private lateinit var colMmg1Top: TableColumn<Working, Double?>
+    @FXML private lateinit var colMmg1Bottom: TableColumn<Working, Double?>
+    @FXML private lateinit var colMmg2Top: TableColumn<Working, Double?>
+    @FXML private lateinit var colMmg2Bottom: TableColumn<Working, Double?>
+    @FXML private lateinit var colGwAppearLog: TableColumn<Working, Double?>
+    @FXML private lateinit var colGwStableLog: TableColumn<Working, Double?>
+    @FXML private lateinit var colGwStableAbs: TableColumn<Working, Double?>
+    @FXML private lateinit var colGwStableRel: TableColumn<Working, Double?>
+    @FXML private lateinit var colGwStableAbsFinal: TableColumn<Working, Double?>
+    @FXML private lateinit var colContractorExtraIndex: TableColumn<Working, String?>
+    @FXML private lateinit var colAct: TableColumn<Working, String?>
+    @FXML private lateinit var colActNumber: TableColumn<Working, String?>
+    @FXML private lateinit var colThermalTube: TableColumn<Working, String?>
 
-    @FXML
-    private lateinit var colRowNumber: TableColumn<Working, Number>
-    @FXML
-    private lateinit var colName: TableColumn<Working, String>
-    @FXML
-    private lateinit var colArea: TableColumn<Working, String>
-    @FXML
-    private lateinit var colWorkType: TableColumn<Working, String>
-    @FXML
-    private lateinit var colDepth: TableColumn<Working, Double?>
-    @FXML
-    private lateinit var colGeologist: TableColumn<Working, String>
-    @FXML
-    private lateinit var colContractor: TableColumn<Working, String>
-    @FXML
-    private lateinit var colPlannedX: TableColumn<Working, Double?>
-    @FXML
-    private lateinit var colPlannedY: TableColumn<Working, Double?>
-    @FXML
-    private lateinit var colPlannedZ: TableColumn<Working, Double?>
-    @FXML
-    private lateinit var colActualX: TableColumn<Working, Double?>
-    @FXML
-    private lateinit var colActualY: TableColumn<Working, Double?>
-    @FXML
-    private lateinit var colActualZ: TableColumn<Working, Double?>
-    @FXML
-    private lateinit var colDeltaX: TableColumn<Working, Double?>
-    @FXML
-    private lateinit var colDeltaY: TableColumn<Working, Double?>
-    @FXML
-    private lateinit var colCoreRecovery: TableColumn<Working, Double?>
-    @FXML
-    private lateinit var colCasing: TableColumn<Working, String?>
-    @FXML
-    private lateinit var colClosureStage: TableColumn<Working, String?>
-    @FXML
-    private lateinit var colStartDate: TableColumn<Working, String>
-    @FXML
-    private lateinit var colEndDate: TableColumn<Working, String>
-    @FXML
-    private lateinit var colAdditionalInfo: TableColumn<Working, String>
-
-    @FXML
-    private lateinit var colMmg1Top: TableColumn<Working, Double?>
-    @FXML
-    private lateinit var colMmg1Bottom: TableColumn<Working, Double?>
-    @FXML
-    private lateinit var colMmg2Top: TableColumn<Working, Double?>
-    @FXML
-    private lateinit var colMmg2Bottom: TableColumn<Working, Double?>
-    @FXML
-    private lateinit var colGwAppearLog: TableColumn<Working, Double?>
-    @FXML
-    private lateinit var colGwStableLog: TableColumn<Working, Double?>
-    @FXML
-    private lateinit var colGwStableAbs: TableColumn<Working, Double?>
-    @FXML
-    private lateinit var colGwStableRel: TableColumn<Working, Double?>
-    @FXML
-    private lateinit var colGwStableAbsFinal: TableColumn<Working, Double?>
-    @FXML
-    private lateinit var colContractorExtraIndex: TableColumn<Working, String?>
-    @FXML
-    private lateinit var colAct: TableColumn<Working, String?>
-    @FXML
-    private lateinit var colActNumber: TableColumn<Working, String?>
-    @FXML
-    private lateinit var colThermalTube: TableColumn<Working, String?>
-
-    @FXML
-    private lateinit var addButton: Button
-    @FXML
-    private lateinit var editButton: Button
-    @FXML
-    private lateinit var deleteButton: Button
+    @FXML private lateinit var addButton: Button
+    @FXML private lateinit var editButton: Button
+    @FXML private lateinit var deleteButton: Button
 
     private lateinit var token: String
     private lateinit var userRole: String
@@ -123,12 +81,10 @@ class MainController {
         
         // Показываем меню только если роль "ROLE_ADMIN"
         adminMenuBar.isVisible = (role == "ROLE_ADMIN")
-        
         loadWorkings()
     }
 
-    @FXML
-    fun initialize() {
+    @FXML fun initialize() {
         // Существующие колонки
         colRowNumber.setCellValueFactory { cellData ->
             val index = workingsTable.items.indexOf(cellData.value) + 1
@@ -160,8 +116,6 @@ class MainController {
         colStartDate.setCellValueFactory { cellData -> javafx.beans.property.SimpleStringProperty(cellData.value.startDate ?: "") }
         colEndDate.setCellValueFactory { cellData -> javafx.beans.property.SimpleStringProperty(cellData.value.endDate ?: "") }
         colAdditionalInfo.setCellValueFactory { cellData -> javafx.beans.property.SimpleStringProperty(cellData.value.additionalInfo ?: "") }
-
-        // Новые колонки
         colMmg1Top.setCellValueFactory { cellData -> javafx.beans.property.SimpleObjectProperty(cellData.value.mmg1Top) }
         colMmg1Bottom.setCellValueFactory { cellData -> javafx.beans.property.SimpleObjectProperty(cellData.value.mmg1Bottom) }
         colMmg2Top.setCellValueFactory { cellData -> javafx.beans.property.SimpleObjectProperty(cellData.value.mmg2Top) }
@@ -222,21 +176,18 @@ class MainController {
         }
     }
 
-    @FXML
-    fun onAdd() {
+    @FXML fun onAdd() {
         showWorkingForm(null)
     }
 
-    @FXML
-    fun onEdit() {
+    @FXML fun onEdit() {
         val selected = workingsTable.selectionModel.selectedItem
         if (selected != null) {
             showWorkingForm(selected)
         }
     }
 
-    @FXML
-    fun onDelete() {
+    @FXML fun onDelete() {
         val selected = workingsTable.selectionModel.selectedItem
         if (selected != null) {
             val alert = Alert(Alert.AlertType.CONFIRMATION)
@@ -302,4 +253,33 @@ class MainController {
         // После закрытия справочников перезагружаем главную таблицу (вдруг имена изменились)
         loadWorkings() 
     }
+
+    @FXML
+    fun openExcelImport() {
+        val fileChooser = FileChooser()
+        fileChooser.title = "Выберите Excel файл для импорта"
+        fileChooser.extensionFilters.add(FileChooser.ExtensionFilter("Excel Files", "*.xls", "*.xlsx", "*.xlsm"))
+        
+        val file = fileChooser.showOpenDialog(workingsTable.scene.window)
+        
+        if (file != null) {
+            try {
+                val loader = FXMLLoader(javaClass.getResource("/excelImport.fxml"))
+                val root = loader.load<VBox>()
+                val controller = loader.getController<ExcelImportController>()
+                
+                controller.initData(token, file) { loadWorkings() }
+
+                val stage = Stage()
+                stage.initModality(Modality.WINDOW_MODAL)
+                stage.initOwner(workingsTable.scene.window)
+                stage.scene = Scene(root)
+                stage.title = "Мастер импорта выработок"
+                stage.showAndWait()
+            } catch (e: Exception) {
+                showAlert("Ошибка", "Не удалось открыть окно импорта: ${e.message}")
+            }
+        }
+    }
+    
 }

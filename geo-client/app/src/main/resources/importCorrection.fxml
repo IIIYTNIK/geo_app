@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<VBox spacing="10" style="-fx-padding: 20;" prefWidth="1200" prefHeight="600"
+      xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+      fx:controller="org.example.geoapp.controller.ImportCorrectionController">
+
+    <Label text="В следующих строках обнаружены ошибки формата данных. Исправьте значения двойным кликом по ячейке или пропустите их." wrapText="true" style="-fx-font-weight: bold; -fx-text-fill: #d32f2f;"/>
+
+    <TableView fx:id="correctionTable" VBox.vgrow="ALWAYS" editable="true" style="-fx-font-size: 13px;">
+    </TableView>
+
+    <Label fx:id="statusLabel" textFill="blue" wrapText="true"/>
+
+    <HBox spacing="10" alignment="CENTER_RIGHT">
+        <Button text="Пропустить все с ошибками (Отмена)" onAction="#onCancel"/>
+        <Button fx:id="retryButton" text="Повторить импорт исправленных" onAction="#onRetry" defaultButton="true" style="-fx-font-weight: bold; -fx-base: #ffb74d;"/>
+    </HBox>
+</VBox>

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<VBox spacing="10" style="-fx-padding: 20;" prefWidth="1200" prefHeight="750"
+      xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+      fx:controller="org.example.geoapp.controller.ExcelImportController">
+
+    <Label fx:id="fileInfoLabel" text="Файл: не выбран" style="-fx-font-weight: bold; -fx-font-size: 14px;"/>
+
+    <TitledPane text="Общие данные для импортируемых выработок" collapsible="false" style="-fx-font-weight: bold;">
+        <FlowPane hgap="20" vgap="10" style="-fx-padding: 10; -fx-font-weight: normal;">
+            <VBox spacing="5"><Label text="Участок:"/><ComboBox fx:id="areaCombo" prefWidth="180"/></VBox>
+            <VBox spacing="5"><Label text="Тип выработки:"/><ComboBox fx:id="workTypeCombo" prefWidth="180"/></VBox>
+            <VBox spacing="5"><Label text="Подрядчик:"/><ComboBox fx:id="contractorCombo" prefWidth="180"/></VBox>
+            <VBox spacing="5"><Label text="Геолог:"/><ComboBox fx:id="geologistCombo" prefWidth="180"/></VBox>
+            <VBox spacing="5"><Label text="Буровая:"/><ComboBox fx:id="drillingRigCombo" prefWidth="180"/></VBox>
+        </FlowPane>
+    </TitledPane>
+    
+    <HBox spacing="15" alignment="CENTER_LEFT" style="-fx-background-color: #f4f4f4; -fx-padding: 10; -fx-border-color: #ccc; -fx-border-radius: 5;">
+        <VBox spacing="5">
+            <Label text="Лист Excel:"/>
+            <ComboBox fx:id="sheetCombo" prefWidth="150"/>
+        </VBox>
+        <VBox spacing="5">
+            <Label text="Начиная со строки:"/>
+            <Spinner fx:id="startRowSpinner" prefWidth="100" editable="true"/> </VBox>
+        <VBox alignment="BOTTOM_CENTER">
+            <Button text="Авто-определение колонок" onAction="#onAutoMap" style="-fx-base: #b3e5fc; -fx-font-weight: bold;"/>
+        </VBox>
+        <Label text="(Выберите колонки. Каждое поле базы можно выбрать только один раз)" wrapText="true" HBox.hgrow="ALWAYS" style="-fx-text-fill: #666;"/>
+    </HBox>
+
+    <TableView fx:id="previewTable" VBox.vgrow="ALWAYS" style="-fx-font-size: 13px;">
+    </TableView>
+
+    <Label fx:id="statusLabel" textFill="red" wrapText="true"/>
+
+    <HBox spacing="10" alignment="CENTER_RIGHT">
+        <Button text="Отмена" onAction="#onCancel"/>
+        <Button fx:id="importButton" text="Начать импорт" onAction="#onImport" defaultButton="true" style="-fx-font-weight: bold; -fx-base: #81c784;" disable="true"/>
+    </HBox>
+</VBox>

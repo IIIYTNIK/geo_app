@@ -21,6 +21,9 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-javafx:1.8.1")
     implementation(kotlin("stdlib"))
     implementation(libs.guava)
+
+    implementation("org.apache.poi:poi:5.2.5")
+    implementation("org.apache.poi:poi-ooxml:5.2.5")
 }
 
 java {

@@ -17,6 +17,8 @@
             <SeparatorMenuItem/>
             <MenuItem text="Подрядчики" onAction="#openContractorsEditor"/>
             <MenuItem text="Геологи" onAction="#openGeologistsEditor"/>
+            <SeparatorMenuItem/>
+            <MenuItem text="Импорт из Excel..." onAction="#openExcelImport"/>
         </Menu>
     </MenuBar>
 

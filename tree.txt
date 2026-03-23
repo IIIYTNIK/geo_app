@@ -1,0 +1,157 @@
+C:.
+├───.idea
+├───.vs
+│   └───testproject — копия      
+│       ├───CopilotIndices       
+│       │   └───17.14.1231.31060 
+│       ├───FileContentIndex     
+│       └───v17
+├───.vscode
+├───geo-client
+│   ├───.gradle
+│   │   ├───9.3.1
+│   │   │   ├───checksums        
+│   │   │   ├───executionHistory
+│   │   │   ├───expanded
+│   │   │   ├───fileChanges
+│   │   │   ├───fileHashes
+│   │   │   └───vcsMetadata
+│   │   ├───buildOutputCleanup
+│   │   ├───configuration-cache
+│   │   │   ├───1ixkfuu2kxwqjbdp8me8qdxkh
+│   │   ├───kotlin
+│   │   │   └───errors
+│   │   └───vcs-1
+│   ├───.kotlin
+│   │   ├───errors
+│   │   └───sessions
+│   ├───.vscode
+│   ├───app
+│   │   ├───bin
+│   │   │   ├───main
+│   │   │   │   └───org
+│   │   │   │       └───example
+│   │   │   │           └───geoapp
+│   │   │   │               ├───api
+│   │   │   │               ├───controller
+│   │   │   │               └───util
+│   │   │   └───test
+│   │   │       └───org
+│   │   │           └───example
+│   │   ├───build
+│   │   │   ├───classes
+│   │   │   │   └───kotlin
+│   │   │   │       ├───main
+│   │   │   │       │   ├───com
+│   │   │   │       │   │   └───example
+│   │   │   │       │   │       └───geoapp
+│   │   │   │       │   │           └───api
+│   │   │   │       │   ├───META-INF
+│   │   │   │       │   └───org
+│   │   │   │       │       └───example
+│   │   │   │       │           └───geoapp
+│   │   │   │       │               ├───controller
+│   │   │   │       │               └───util
+│   │   │   │       └───test
+│   │   │   ├───kotlin
+│   │   │   │   ├───compileKotlin
+│   │   │   │   │   ├───cacheable
+│   │   │   │   │   │   └───caches-jvm
+│   │   │   │   │   │       ├───inputs
+│   │   │   │   │   │       ├───jvm
+│   │   │   │   │   │       │   └───kotlin
+│   │   │   │   │   │       └───lookups
+│   │   │   │   │   ├───classpath-snapshot
+│   │   │   │   │   └───local-state
+│   │   │   │   └───compileTestKotlin
+│   │   │   │       ├───cacheable
+│   │   │   │       │   └───caches-jvm
+│   │   │   │       │       ├───inputs
+│   │   │   │       │       ├───jvm
+│   │   │   │       │       └───lookups
+│   │   │   │       ├───classpath-snapshot
+│   │   │   │       └───local-state
+│   │   │   ├───libs
+│   │   │   ├───resources
+│   │   │   │   └───main
+│   │   │   └───tmp
+│   │   │       └───jar
+│   │   └───src
+│   │       ├───main
+│   │       │   ├───kotlin
+│   │       │   │   └───org
+│   │       │   │       └───example
+│   │       │   │           └───geoapp
+│   │       │   │               ├───api
+│   │       │   │               ├───controller
+│   │       │   │               └───util
+│   │       │   └───resources
+│   │       └───test
+│   │           ├───kotlin
+│   │           │   └───org
+│   │           │       └───example
+│   │           └───resources
+│   ├───build
+│   │   └───reports
+│   │       ├───configuration-cache
+│   │       │   ├───1ixkfuu2kxwqjbdp8me8qdxkh
+│   │       │   │   └───2ffr15j72yg9862jwm54vvnll
+│   │       └───problems
+│   └───gradle
+│       └───wrapper
+└───geo-server
+    ├───.gradle
+    │   ├───8.14.4
+    │   │   ├───checksums
+    │   │   ├───executionHistory
+    │   │   ├───expanded
+    │   │   ├───fileChanges
+    │   │   ├───fileHashes
+    │   │   └───vcsMetadata
+    │   ├───buildOutputCleanup
+    │   ├───kotlin
+    │   │   ├───errors
+    │   │   └───sessions
+    │   └───vcs-1
+    ├───.kotlin
+    │   └───sessions
+    ├───.vscode
+    ├───bin
+    │   ├───main
+    │   │   ├───com
+    │   │   │   └───example
+    │   │   │       └───geoserver
+    │   │   │           ├───config
+    │   │   │           ├───controller
+    │   │   │           ├───entity
+    │   │   │           ├───repository
+    │   │   │           ├───security
+    │   │   │           └───service
+    │   │   ├───migration
+    │   │   └───templates
+    │   └───test
+    │       └───com
+    │           └───example
+    │               └───geoserver
+    └───src
+        ├───main
+        │   ├───kotlin
+        │   │   └───com
+        │   │       └───example
+        │   │           └───geoserver
+        │   │               ├───config
+        │   │               ├───controller
+        │   │               ├───entity
+        │   │               ├───repository
+        │   │               ├───security
+        │   │               └───service
+        │   └───resources
+        │       ├───migration
+        │       ├───static
+        │       └───templates
+        └───test
+            ├───kotlin
+            │   └───com
+            │       └───example
+            │           └───geoserver
+            └───resources
