@@ -1,21 +1,30 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<?import javafx.geometry.Insets?>
 
 <VBox spacing="10" style="-fx-padding: 20;" prefWidth="1200" prefHeight="600"
       xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
       fx:controller="org.example.geoapp.controller.ImportCorrectionController">
 
-    <Label text="В следующих строках обнаружены ошибки формата данных. Исправьте значения двойным кликом по ячейке или пропустите их." wrapText="true" style="-fx-font-weight: bold; -fx-text-fill: #d32f2f;"/>
+    <HBox fx:id="adminPanel" spacing="10" alignment="CENTER_LEFT" managed="false" visible="false" style="-fx-background-color: #fff3e0; -fx-padding: 10; -fx-border-color: #ffcc80; -fx-border-radius: 5;">
+        <Label text="Новые справочники:" style="-fx-font-weight: bold;"/>
+        <Button text="Участки" onAction="#openAreas"/>
+        <Button text="Типы" onAction="#openWorkTypes"/>
+        <Button text="Подрядчики" onAction="#openContractors"/>
+        <Button text="Геологи" onAction="#openGeologists"/>
+        <Button text="Буровые" onAction="#openDrillingRigs"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button text="Обновить и перепроверить" onAction="#onRefreshAndRetry" style="-fx-base: #ffb74d; -fx-font-weight: bold;"/>
+    </HBox>
 
-    <TableView fx:id="correctionTable" VBox.vgrow="ALWAYS" editable="true" style="-fx-font-size: 13px;">
-    </TableView>
+    <Label text="В строках обнаружены ошибки (неизвестные справочники, конфликты или формат). Выберите правильное значение в таблице или пропустите строку." wrapText="true" style="-fx-font-weight: bold; -fx-text-fill: #d32f2f;"/>
+
+    <TableView fx:id="correctionTable" VBox.vgrow="ALWAYS" editable="true" style="-fx-font-size: 13px;"/>
 
     <Label fx:id="statusLabel" textFill="blue" wrapText="true"/>
 
     <HBox spacing="10" alignment="CENTER_RIGHT">
         <Button text="Пропустить все с ошибками (Отмена)" onAction="#onCancel"/>
-        <Button fx:id="retryButton" text="Повторить импорт исправленных" onAction="#onRetry" defaultButton="true" style="-fx-font-weight: bold; -fx-base: #ffb74d;"/>
+        <Button fx:id="retryButton" text="Повторить импорт исправленных" onAction="#onRetry" defaultButton="true" style="-fx-font-weight: bold; -fx-base: #81c784;"/>
     </HBox>
 </VBox>

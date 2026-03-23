@@ -26,7 +26,7 @@ import org.example.geoapp.util.runOnFx
 
 class MainController {
 
-    @FXML private lateinit var adminMenuBar: MenuBar
+    @FXML private lateinit var adminMenu: Menu
     @FXML private lateinit var workingsTable: TableView<Working>
 
     @FXML private lateinit var colRowNumber: TableColumn<Working, Number>
@@ -72,15 +72,13 @@ class MainController {
     private lateinit var userRole: String
     private val api: GeoApi = MainApp.api
     private val workingsList: ObservableList<Working> = FXCollections.observableArrayList()
-
     private lateinit var tableFilter: TableFilter<Working>
 
     fun initData(token: String, role: String) {
         this.token = token
         this.userRole = role
-        
-        // Показываем меню только если роль "ROLE_ADMIN"
-        adminMenuBar.isVisible = (role == "ROLE_ADMIN")
+        // Скрываем только меню "Справочники", меню "Инструменты" останется
+        adminMenu.isVisible = (role == "ROLE_ADMIN")
         loadWorkings()
     }
 
@@ -268,7 +266,7 @@ class MainController {
                 val root = loader.load<VBox>()
                 val controller = loader.getController<ExcelImportController>()
                 
-                controller.initData(token, file) { loadWorkings() }
+                controller.initData(token, userRole, file) { loadWorkings() }
 
                 val stage = Stage()
                 stage.initModality(Modality.WINDOW_MODAL)
@@ -281,5 +279,4 @@ class MainController {
             }
         }
     }
-    
 }

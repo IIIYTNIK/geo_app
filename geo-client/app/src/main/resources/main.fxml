@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
@@ -9,16 +8,17 @@
       fx:controller="org.example.geoapp.controller.MainController"
       prefWidth="1200" prefHeight="600">
 
-    <MenuBar fx:id="adminMenuBar" visible="false" managed="${adminMenuBar.visible}">    
-        <Menu text="Управление справочниками">
+    <MenuBar>
+        <Menu text="Инструменты">
+            <MenuItem text="Импорт из Excel..." onAction="#openExcelImport"/>
+        </Menu>
+        <Menu fx:id="adminMenu" text="Справочники" visible="false">
             <MenuItem text="Участки" onAction="#openAreasEditor"/>
             <MenuItem text="Типы выработок" onAction="#openWorkTypesEditor"/>
             <MenuItem text="Буровые" onAction="#openDrillingRigsEditor"/>
             <SeparatorMenuItem/>
             <MenuItem text="Подрядчики" onAction="#openContractorsEditor"/>
             <MenuItem text="Геологи" onAction="#openGeologistsEditor"/>
-            <SeparatorMenuItem/>
-            <MenuItem text="Импорт из Excel..." onAction="#openExcelImport"/>
         </Menu>
     </MenuBar>
 
@@ -53,7 +53,7 @@
             <TableColumn fx:id="colGwStableAbs" text="УГВ устан абс" prefWidth="80"/>
             <TableColumn fx:id="colGwStableRel" text="УГВ устан отн" prefWidth="80"/>
             <TableColumn fx:id="colGwStableAbsFinal" text="УГВ устан абс финал" prefWidth="100"/>
-            <TableColumn fx:id="colContractorExtraIndex" text="Допиндекс подрядчика" prefWidth="120"/>
+            <TableColumn fx:id="colContractorExtraIndex" text="Допиндекс" prefWidth="120"/>
             <TableColumn fx:id="colAct" text="Акт" prefWidth="60"/>
             <TableColumn fx:id="colActNumber" text="Номер акта" prefWidth="80"/>
             <TableColumn fx:id="colThermalTube" text="Термотрубка" prefWidth="80"/>

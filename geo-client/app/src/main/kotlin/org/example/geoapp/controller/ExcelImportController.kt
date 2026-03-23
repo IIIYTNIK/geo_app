@@ -15,7 +15,6 @@ import org.apache.poi.ss.util.CellReference
 import org.example.geoapp.MainApp
 import org.example.geoapp.util.DbField
 import org.example.geoapp.util.CorrectionRow
-import org.example.geoapp.util.WorkingParser
 import org.example.geoapp.util.await
 import org.example.geoapp.util.runOnFx
 import java.io.File
@@ -27,13 +26,6 @@ class DynamicRow(val rowData: List<String>, val originalRowIndex: Int)
 class ExcelImportController {
 
     @FXML private lateinit var fileInfoLabel: Label
-    
-    @FXML private lateinit var areaCombo: ComboBox<RefArea>
-    @FXML private lateinit var workTypeCombo: ComboBox<RefWorkType>
-    @FXML private lateinit var contractorCombo: ComboBox<RefContractor>
-    @FXML private lateinit var geologistCombo: ComboBox<RefGeologist>
-    @FXML private lateinit var drillingRigCombo: ComboBox<RefDrillingRig>
-
     @FXML private lateinit var sheetCombo: ComboBox<String>
     @FXML private lateinit var startRowSpinner: Spinner<Int>
     @FXML private lateinit var previewTable: TableView<DynamicRow>
@@ -41,72 +33,48 @@ class ExcelImportController {
     @FXML private lateinit var importButton: Button
 
     private lateinit var token: String
+    private lateinit var userRole: String
     private var workbook: Workbook? = null
     private var onCompleteCallback: () -> Unit = {}
     private val api = MainApp.api
 
-    private val columnMapping = mutableMapOf<Int, ComboBox<DbField>>()
+    // Делаем val, чтобы был доступ из ImportCorrectionController
+    val columnMapping = mutableMapOf<Int, ComboBox<DbField>>()
     private val excelData = mutableListOf<DynamicRow>()
+
+    // Кэш для проверки справочников (val, чтобы дочернее окно их видело)
+    var cacheAreas = listOf<RefArea>()
+    var cacheWorkTypes = listOf<RefWorkType>()
+    var cacheContractors = listOf<RefContractor>()
+    var cacheGeologists = listOf<RefGeologist>()
+    var cacheDrillingRigs = listOf<RefDrillingRig>()
 
     @FXML
     fun initialize() {
         startRowSpinner.valueFactory = SpinnerValueFactory.IntegerSpinnerValueFactory(1, 10000, 2)
-        startRowSpinner.isEditable = true // Можно вводить текст ручками
-
-        // Слушатель: при смене подрядчика загружаем геологов
-        contractorCombo.selectionModel.selectedItemProperty().addListener { _, _, newContractor ->
-            loadGeologistsForContractor(newContractor?.id)
-        }
+        startRowSpinner.isEditable = true
     }
 
-    fun initData(token: String, file: File, onComplete: () -> Unit) {
+    fun initData(token: String, role: String, file: File, onComplete: () -> Unit) {
         this.token = token
+        this.userRole = role
         this.onCompleteCallback = onComplete
         fileInfoLabel.text = "Файл: ${file.name}"
         
-        loadReferences()
-        openWorkbook(file)
+        loadReferences { openWorkbook(file) }
     }
 
-    private fun loadReferences() {
+    fun loadReferences(onLoaded: () -> Unit = {}) {
         runOnFx {
             try {
-                val areas = api.getAreas().await()
-                val workTypes = api.getWorkTypes().await()
-                val contractors = api.getContractors().await()
-                val drillingRigs = api.getDrillingRigs().await()
-
-                areaCombo.items = FXCollections.observableArrayList(areas)
-                areaCombo.setupNameConverter { it.name }
-
-                workTypeCombo.items = FXCollections.observableArrayList(workTypes)
-                workTypeCombo.setupNameConverter { it.name }
-
-                contractorCombo.items = FXCollections.observableArrayList(contractors)
-                contractorCombo.setupNameConverter { it.name }
-
-                drillingRigCombo.items = FXCollections.observableArrayList(drillingRigs)
-                drillingRigCombo.setupNameConverter { it.name }
-
+                cacheAreas = api.getAreas().await()
+                cacheWorkTypes = api.getWorkTypes().await()
+                cacheContractors = api.getContractors().await()
+                cacheGeologists = api.getGeologists().await()
+                cacheDrillingRigs = api.getDrillingRigs().await()
+                onLoaded()
             } catch (e: Exception) {
                 statusLabel.text = "Ошибка загрузки справочников: ${e.message}"
-            }
-        }
-    }
-
-    private fun loadGeologistsForContractor(contractorId: Long?) {
-        if (contractorId == null) {
-            geologistCombo.items.clear()
-            geologistCombo.value = null
-            return
-        }
-        runOnFx {
-            try {
-                val geologists = api.getGeologistsByContractor("Bearer $token", contractorId).await()
-                geologistCombo.items.setAll(geologists)
-                geologistCombo.setupNameConverter { it.name }
-            } catch (e: Exception) {
-                geologistCombo.items.clear()
             }
         }
     }
@@ -145,7 +113,12 @@ class ExcelImportController {
 
             val rowValues = (0 until lastCol).map { c ->
                 val cell = row.getCell(c, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL)
-                formatter.formatCellValue(cell, evaluator).trim() 
+                try {
+                    cell?.let { formatter.formatCellValue(it, evaluator) }?.trim() ?: ""
+                } catch (e: Exception) {
+                    // Fallback если формула битая
+                    cell?.let { formatter.formatCellValue(it) }?.trim() ?: ""
+                }
             }
             excelData.add(DynamicRow(rowValues, i + 1))
         }
@@ -159,7 +132,6 @@ class ExcelImportController {
         columnMapping.clear()
         val dbFields = FXCollections.observableArrayList(*DbField.values())
 
-        // 1. КОЛОНКА С НОМЕРОМ СТРОКИ
         val rowNumCol = TableColumn<DynamicRow, String>("№ стр.")
         rowNumCol.setCellValueFactory { SimpleStringProperty(it.value.originalRowIndex.toString()) }
         rowNumCol.prefWidth = 60.0
@@ -167,7 +139,6 @@ class ExcelImportController {
         rowNumCol.style = "-fx-alignment: CENTER; -fx-background-color: #f0f0f0; -fx-font-weight: bold;"
         previewTable.columns.add(rowNumCol)
 
-        // 2. ДИНАМИЧЕСКИЕ КОЛОНКИ EXCEL
         for (i in 0 until colCount) {
             val col = TableColumn<DynamicRow, String>()
             val headerLabel = Label("Столбец ${CellReference.convertNumToColString(i)}")
@@ -180,12 +151,12 @@ class ExcelImportController {
                 override fun fromString(string: String) = dbFields.find { it.title == string }
             }
             
-            // ЛОГИКА: ЗАЩИТА ОТ ДУБЛИРОВАНИЯ КОЛОНОК
+            // Защита от дублирования выбора колонок
             combo.valueProperty().addListener { _, _, newValue ->
                 if (newValue != null && newValue != DbField.IGNORE) {
                     for ((otherIdx, otherCombo) in columnMapping) {
                         if (otherIdx != i && otherCombo.value == newValue) {
-                            otherCombo.value = DbField.IGNORE // Сбрасываем дубликат
+                            otherCombo.value = DbField.IGNORE
                         }
                     }
                 }
@@ -214,51 +185,34 @@ class ExcelImportController {
     }
 
     @FXML fun onImport() {
-        // Обязательно "комитим" значение спиннера, если юзер ввел число ручками, но не нажал Enter
-        startRowSpinner.increment(0) 
-        
+        startRowSpinner.increment(0) // Заставляет Spinner зафиксировать введенное руками число
         val startRow = startRowSpinner.value
+        
         val validWorkings = mutableListOf<Working>()
         val invalidRows = mutableListOf<CorrectionRow>()
-
-        // Считываем выбранные справочники
-        val selectedArea = areaCombo.selectionModel.selectedItem
-        val selectedWorkType = workTypeCombo.selectionModel.selectedItem
-        val selectedContractor = contractorCombo.selectionModel.selectedItem
-        val selectedGeologist = geologistCombo.selectionModel.selectedItem
-        val selectedDrillingRig = drillingRigCombo.selectionModel.selectedItem
 
         for (row in excelData) {
             if (row.originalRowIndex < startRow) continue
 
-            val valuesMap = mutableMapOf<DbField, String>()
+            val rawValues = mutableMapOf<DbField, String>()
             for ((colIdx, combo) in columnMapping) {
-                val field = combo.value
-                if (field != DbField.IGNORE) {
-                    valuesMap[field] = row.rowData.getOrNull(colIdx) ?: ""
+                if (combo.value != DbField.IGNORE) {
+                    rawValues[combo.value] = row.rowData.getOrNull(colIdx) ?: ""
                 }
             }
 
-            if (valuesMap[DbField.NUMBER].isNullOrBlank()) continue
+            if (rawValues[DbField.NUMBER].isNullOrBlank()) continue
 
             try {
-                // Парсим сырые данные и прикрепляем глобальные справочники
-                val workingBase = WorkingParser.parse(valuesMap)
-                val working = workingBase.copy(
-                    area = selectedArea,
-                    workType = selectedWorkType,
-                    contractor = selectedContractor,
-                    geologist = selectedGeologist,
-                    drillingRig = selectedDrillingRig
-                )
+                val working = validateAndParse(rawValues)
                 validWorkings.add(working)
             } catch (e: Exception) {
-                invalidRows.add(CorrectionRow(row.originalRowIndex, e.message ?: "Ошибка формата", valuesMap))
+                invalidRows.add(CorrectionRow(row.originalRowIndex, e.message ?: "Ошибка", rawValues))
             }
         }
 
         importButton.isDisable = true
-        statusLabel.text = "Отправка на сервер..."
+        statusLabel.text = "Обработка данных..."
 
         runOnFx {
             try {
@@ -279,6 +233,76 @@ class ExcelImportController {
         }
     }
 
+    // Умная валидация строки с учетом справочников
+    fun validateAndParse(raw: Map<DbField, String>): Working {
+        fun getNum(field: DbField): Double? {
+            val str = raw[field]?.replace(",", ".")?.trim()
+            if (str.isNullOrEmpty()) return null
+            return str.toDoubleOrNull() ?: throw Exception("Ожидается число для '${field.title}'")
+        }
+        fun getStr(field: DbField): String? = raw[field]?.trim()?.ifEmpty { null }
+        
+        val number = getStr(DbField.NUMBER) ?: throw Exception("Номер скважины обязателен")
+        
+        // 1. Участок, Тип, Буровая
+        val areaName = getStr(DbField.AREA)
+        val area = if (areaName != null) {
+            cacheAreas.find { it.name.equals(areaName, true) } 
+                ?: throw Exception("Участок '$areaName' не найден")
+        } else null
+
+        val workTypeName = getStr(DbField.WORK_TYPE)
+        val workType = if (workTypeName != null) {
+            cacheWorkTypes.find { it.name.equals(workTypeName, true) } 
+                ?: throw Exception("Тип выработки '$workTypeName' не найден")
+        } else null
+
+        val rigName = getStr(DbField.DRILLING_RIG)
+        val rig = if (rigName != null) {
+            cacheDrillingRigs.find { it.name.equals(rigName, true) } 
+                ?: throw Exception("Буровая '$rigName' не найдена")
+        } else null
+
+        // 2. Строгая проверка: Подрядчик -> Геолог
+        val contractorName = getStr(DbField.CONTRACTOR)
+        val contractor = if (contractorName != null) {
+            cacheContractors.find { it.name.equals(contractorName, true) } 
+                ?: throw Exception("Подрядчик '$contractorName' не найден в базе")
+        } else null
+
+        val geologistName = getStr(DbField.GEOLOGIST)
+        val geologist = if (geologistName != null) {
+            val geo = cacheGeologists.find { it.name.equals(geologistName, true) }
+                ?: throw Exception("Геолог '$geologistName' не найден в базе")
+            
+            // Проверка принадлежности геолога к подрядчику
+            if (contractor != null && geo.contractor?.id != contractor.id) {
+                val realContractor = geo.contractor?.name ?: "Без подрядчика"
+                throw Exception("Геолог '${geo.name}' привязан к '${realContractor}', а не к '${contractor.name}'")
+            }
+            geo
+        } else null
+
+        val coreRec = getNum(DbField.CORE_RECOVERY)
+        if (coreRec != null && (coreRec < 0 || coreRec > 100)) throw Exception("Выход керна от 0 до 100")
+
+        return Working(
+            number = number, area = area, workType = workType, contractor = contractor, 
+            geologist = geologist, drillingRig = rig, plannedX = getNum(DbField.PLANNED_X),
+            plannedY = getNum(DbField.PLANNED_Y), plannedZ = getNum(DbField.PLANNED_Z),
+            actualX = getNum(DbField.ACTUAL_X), actualY = getNum(DbField.ACTUAL_Y), actualZ = getNum(DbField.ACTUAL_Z),
+            depth = getNum(DbField.DEPTH), coreRecovery = coreRec, casing = getStr(DbField.CASING),
+            startDate = getStr(DbField.START_DATE), endDate = getStr(DbField.END_DATE),
+            mmg1Top = getNum(DbField.MMG1_TOP), mmg1Bottom = getNum(DbField.MMG1_BOTTOM),
+            mmg2Top = getNum(DbField.MMG2_TOP), mmg2Bottom = getNum(DbField.MMG2_BOTTOM),
+            gwAppearLog = getNum(DbField.GW_APPEAR_LOG), gwStableLog = getNum(DbField.GW_STABLE_LOG),
+            gwStableAbs = getNum(DbField.GW_STABLE_ABS), gwStableRel = getNum(DbField.GW_STABLE_REL),
+            gwStableAbsFinal = getNum(DbField.GW_STABLE_ABS_FINAL), act = getStr(DbField.ACT),
+            actNumber = getStr(DbField.ACT_NUMBER), thermalTube = getStr(DbField.THERMAL_TUBE),
+            additionalInfo = getStr(DbField.ADDITIONAL_INFO)
+        )
+    }
+
     private fun showCorrectionWindow(invalidRows: List<CorrectionRow>) {
         val loader = FXMLLoader(javaClass.getResource("/importCorrection.fxml"))
         val root = loader.load<VBox>()
@@ -286,7 +310,7 @@ class ExcelImportController {
         
         val mappedFields = columnMapping.values.map { it.value }.filter { it != DbField.IGNORE }.distinct()
         
-        controller.initData(token, invalidRows, mappedFields) {
+        controller.initData(token, userRole, this, invalidRows, mappedFields) {
             onCompleteCallback()
             close()
         }
@@ -295,24 +319,10 @@ class ExcelImportController {
         stage.initModality(Modality.WINDOW_MODAL)
         stage.initOwner(previewTable.scene.window)
         stage.scene = Scene(root)
-        stage.title = "Исправление ошибок импорта"
+        stage.title = "Ошибки импорта"
         stage.showAndWait()
     }
 
-    @FXML fun onCancel() {
-        workbook?.close()
-        close()
-    }
-
+    @FXML fun onCancel() { workbook?.close(); close() }
     private fun close() { (previewTable.scene.window as Stage).close() }
-
-    // Вспомогательная функция для ComboBox
-    private fun <T> ComboBox<T>.setupNameConverter(extractor: (T) -> String) {
-        converter = object : javafx.util.StringConverter<T>() {
-            override fun toString(obj: T?): String = obj?.let(extractor) ?: ""
-            override fun fromString(string: String): T? {
-                return items.find { extractor(it) == string }
-            }
-        }
-    }
 }
