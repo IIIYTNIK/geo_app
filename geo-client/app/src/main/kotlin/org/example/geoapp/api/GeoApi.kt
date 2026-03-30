@@ -52,45 +52,63 @@ data class LoginRequest(val username: String, val password: String)
 data class LoginResponse(val token: String, val role: String)
 
 // Модели справочников
-data class RefArea(val id: Long = 0, val name: String)
-data class RefContractor(val id: Long = 0, val name: String)
-data class RefDrillingRig(val id: Long = 0, val name: String)
-data class RefWorkType(val id: Long = 0, val name: String)
-data class RefGeologist(val id: Long = 0, val name: String, var contractor: RefContractor? = null)
+data class RefArea(val id: Long = 0, val name: String, val comment: String? = null)
+data class RefContractor(val id: Long = 0, val name: String, val comment: String? = null)
+data class RefDrillingRig(val id: Long = 0, val name: String, val comment: String? = null)
+data class RefWorkType(val id: Long = 0, val name: String, val comment: String? = null)
+data class RefGeologist(val id: Long = 0, val name: String, var contractor: RefContractor? = null, val comment: String? = null)
 
 // Модель выработки (Working) - основная сущность, с которой будем работать в приложении
 data class Working(
-    val id: Long = 0, 
-    val area: RefArea? = null, 
-    val workType: RefWorkType? = null, 
-    val number: String = "",
-    val plannedX: Double? = null, 
-    val plannedY: Double? = null, 
-    val plannedZ: Double? = null,
-    val actualX: Double? = null, 
-    val actualY: Double? = null, 
+    val id: Long = 0,
+    val area: RefArea? = null,
+    var workType: RefWorkType? = null, 
+    var number: String,                
+    
+    val plannedX: Double? = null,
+    val plannedY: Double? = null,
+
+    val actualX: Double? = null,
+    val actualY: Double? = null,
     val actualZ: Double? = null,
-    val depth: Double? = null, 
-    val startDate: String? = null, 
+    
+    val deltaS: Double? = null,
+    val depth: Double? = null,
+    
+    val startDate: String? = null,
     val endDate: String? = null,
-    val geologist: RefGeologist? = null, 
-    val contractor: RefContractor? = null, 
+    
+    val geologist: RefGeologist? = null,
+    val contractor: RefContractor? = null,
     val drillingRig: RefDrillingRig? = null,
-    val additionalInfo: String? = null, 
-    val coreRecovery: Double? = null, 
-    val casing: String? = null,
-    val closureStage: String? = null, 
-    val mmg1Top: Double? = null, 
+    
+    val additionalInfo: String? = null,
+    
+    val coreRecovery: Double? = null,
+    val casing: Double? = null,
+    
+    val mmg1Top: Double? = null,
     val mmg1Bottom: Double? = null,
     val mmg2Top: Double? = null,
-    val mmg2Bottom: Double? = null, 
+    val mmg2Bottom: Double? = null,
+    
     val gwAppearLog: Double? = null,
-    val gwStableLog: Double? = null, 
-    val gwStableAbs: Double? = null, 
-    val gwStableRel: Double? = null,
-    val gwStableAbsFinal: Double? = null, 
-    val contractorExtraIndex: String? = null,
-    val act: String? = null, 
-    val actNumber: String? = null, 
-    val thermalTube: String? = null
+    val gwStableLog: Double? = null,
+    val gwStableAbs: Double? = null,
+
+    // Чекбоксы (Boolean)
+    var act: Boolean = false,
+    val actNumber: String? = null,
+    var thermalTube: Boolean = false,
+    var hasVideo: Boolean = false,
+    var hasDrilling: Boolean = false,
+    var hasJournal: Boolean = false,
+    var hasCore: Boolean = false,
+    var hasRod: Boolean = false,
+
+    val samplesThawed: Int? = null,
+    val samplesFrozen: Int? = null,
+    val samplesRocky: Int? = null,
+
+    val isProject: Boolean = false
 )

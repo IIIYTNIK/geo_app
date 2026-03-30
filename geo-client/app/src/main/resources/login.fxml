@@ -25,7 +25,7 @@
     </GridPane>
 
     <HBox alignment="CENTER" spacing="10">
-        <Button fx:id="loginButton" text="Войти" onAction="#onLogin" prefWidth="100"/>
+        <Button fx:id="loginButton" text="Войти" onAction="#onLogin" prefWidth="100" defaultButton="true"/>
         <ProgressIndicator fx:id="progressIndicator" prefWidth="25" prefHeight="25"/>
     </HBox>
 

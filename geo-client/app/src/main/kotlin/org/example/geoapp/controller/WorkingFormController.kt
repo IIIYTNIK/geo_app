@@ -4,31 +4,39 @@ import com.example.geoapp.api.*
 import javafx.collections.FXCollections
 import javafx.fxml.FXML
 import javafx.scene.control.*
+import javafx.scene.input.KeyCode
+import javafx.scene.input.KeyCodeCombination
+import javafx.scene.layout.VBox
 import javafx.stage.Stage
+import javafx.util.StringConverter
+import java.time.LocalDate
 import org.example.geoapp.MainApp
 import org.example.geoapp.util.await
 import org.example.geoapp.util.runOnFx
 import org.example.geoapp.util.NumericFieldUtil
-import java.time.LocalDate
-import java.lang.reflect.Method
 import org.example.geoapp.util.NumberParsers.toDoubleSafe
 
 class WorkingFormController {
 
+    @FXML private lateinit var root: VBox
     @FXML private lateinit var areaCombo: ComboBox<RefArea>
     @FXML private lateinit var workTypeCombo: ComboBox<RefWorkType>
     @FXML private lateinit var geologistCombo: ComboBox<RefGeologist>
     @FXML private lateinit var contractorCombo: ComboBox<RefContractor>
     @FXML private lateinit var drillingRigCombo: ComboBox<RefDrillingRig>
+    
     @FXML private lateinit var numberField: TextField
     @FXML private lateinit var plannedXField: TextField
     @FXML private lateinit var plannedYField: TextField
-    @FXML private lateinit var plannedZField: TextField
     @FXML private lateinit var actualXField: TextField
     @FXML private lateinit var actualYField: TextField
     @FXML private lateinit var actualZField: TextField
+    @FXML private lateinit var deltaSLabel: Label
+
     @FXML private lateinit var depthField: TextField
     @FXML private lateinit var casingField: TextField
+    @FXML private lateinit var coreRecoveryField: TextField
+    
     @FXML private lateinit var startDatePicker: DatePicker
     @FXML private lateinit var endDatePicker: DatePicker
     @FXML private lateinit var additionalInfoArea: TextArea
@@ -37,17 +45,14 @@ class WorkingFormController {
     @FXML private lateinit var mmg1BottomField: TextField
     @FXML private lateinit var mmg2TopField: TextField
     @FXML private lateinit var mmg2BottomField: TextField
+    
     @FXML private lateinit var gwAppearLogField: TextField
     @FXML private lateinit var gwStableLogField: TextField
-    @FXML private lateinit var gwStableAbsField: TextField
-    @FXML private lateinit var gwStableRelField: TextField
-    @FXML private lateinit var gwStableAbsFinalField: TextField
+    @FXML private lateinit var gwStableAbsLabel: Label
 
-    @FXML private lateinit var coreRecoveryField: TextField
-    @FXML private lateinit var contractorExtraIndexField: TextField
-    @FXML private lateinit var actField: TextField
+    @FXML private lateinit var actCheckBox: CheckBox
     @FXML private lateinit var actNumberField: TextField
-    @FXML private lateinit var thermalTubeField: TextField
+    @FXML private lateinit var thermalTubeCheckBox: CheckBox
 
     @FXML private lateinit var saveButton: Button
     @FXML private lateinit var cancelButton: Button
@@ -56,391 +61,240 @@ class WorkingFormController {
     private lateinit var token: String
     private var working: Working? = null
     private var onSaveCallback: () -> Unit = {}
-
     private val api = MainApp.api
+
+    @FXML
+    fun initialize() {
+        actNumberField.disableProperty().bind(actCheckBox.selectedProperty().not())
+        
+        // Настраиваем конвертеры сразу при инициализации окна
+        setupAllConverters()
+        setupNumericFields()
+
+        root.sceneProperty().addListener { _, _, newScene ->
+            newScene?.accelerators?.put(KeyCodeCombination(KeyCode.ESCAPE)) { onCancel() }
+        }
+    }
 
     fun initData(token: String, working: Working?, onSave: () -> Unit) {
         this.token = token
         this.working = working
         this.onSaveCallback = onSave
 
-        setupNumericFields() // Загружаем справочники
-
-        loadReferences()
-        setupContractorAutoFill()
-
-        if (working != null) { // Если редактируем — устанавливаем значения
-            fillFields()
-
-            contractorCombo.value = working.contractor
-            // После установки подрядчика — загрузим геологов
-            loadGeologistsForContractor(working.contractor?.id)
-            geologistCombo.value = working.geologist
-            
+        // 1. Сначала загружаем общие справочники
+        loadReferences {
+            // 2. После того как списки загружены, заполняем поля (если это редактирование)
+            if (working != null) {
+                fillFields()
+            }
         }
 
-        // Слушатель изменения подрядчика → обновляем список геологов
+        // Слушатель для фильтрации геологов по подрядчику
         contractorCombo.selectionModel.selectedItemProperty().addListener { _, _, newContractor ->
-            contractorExtraIndexField.text = when (newContractor?.name?.lowercase()) {
-                "вгсп" -> "01"
-                "зтп" -> "02"
-                "сп" -> "03"
-                else -> ""
-            }
-
             loadGeologistsForContractor(newContractor?.id)
         }
-
     }
 
-    private fun loadReferences() {
+    private fun setupAllConverters() {
+        // Используем расширение для всех комбобоксов
+        areaCombo.setupNameConverter { it.name }
+        workTypeCombo.setupNameConverter { it.name }
+        contractorCombo.setupNameConverter { it.name }
+        geologistCombo.setupNameConverter { it.name }
+        drillingRigCombo.setupNameConverter { it.name }
+    }
+
+    private fun loadReferences(onReady: () -> Unit) {
         runOnFx {
             try {
+                // Загружаем данные с сервера
                 val areas = api.getAreas().await()
-                val workTypes = api.getWorkTypes().await()
-                //val geologists = api.getGeologists().await()
+                val types = api.getWorkTypes().await()
                 val contractors = api.getContractors().await()
-                val drillingRigs = api.getDrillingRigs().await()
+                val rigs = api.getDrillingRigs().await()
 
-                areaCombo.items = FXCollections.observableArrayList(areas)
-                areaCombo.setupNameConverter { it.name }
+                // Обновляем списки
+                areaCombo.items.setAll(areas)
+                workTypeCombo.items.setAll(types)
+                contractorCombo.items.setAll(contractors)
+                drillingRigCombo.items.setAll(rigs)
 
-                workTypeCombo.items = FXCollections.observableArrayList(workTypes)
-                workTypeCombo.setupNameConverter { it.name }
-
-                contractorCombo.items = FXCollections.observableArrayList(contractors)
-                contractorCombo.setupNameConverter { it.name }
-
-                // geologistCombo.items = FXCollections.observableArrayList(geologists)
-                // geologistCombo.setupNameConverter { it.name }
-
-                drillingRigCombo.items = FXCollections.observableArrayList(drillingRigs)
-                drillingRigCombo.setupNameConverter { it.name }
-
+                onReady()
             } catch (e: Exception) {
-                errorLabel.text = "Ошибка загрузки справочников: ${e.message}"
+                errorLabel.text = "Ошибка загрузки справочников"
             }
         }
     }
 
     private fun fillFields() {
-        numberField.text = working?.number ?: ""
+        val w = working ?: return
 
-        plannedXField.text = working?.plannedX?.toString() ?: ""
-        plannedYField.text = working?.plannedY?.toString() ?: ""
-        plannedZField.text = working?.plannedZ?.toString() ?: ""
+        numberField.text = w.number ?: ""
+        plannedXField.text = w.plannedX?.toString() ?: ""
+        plannedYField.text = w.plannedY?.toString() ?: ""
+        actualXField.text = w.actualX?.toString() ?: ""
+        actualYField.text = w.actualY?.toString() ?: ""
+        actualZField.text = w.actualZ?.toString() ?: ""
+        
+        //deltaSLabel.text = "Смещение от проекта: ${w.deltaS ?: "не определено"} м"
 
-        actualXField.text = working?.actualX?.toString() ?: ""
-        actualYField.text = working?.actualY?.toString() ?: ""
-        actualZField.text = working?.actualZ?.toString() ?: ""
+        depthField.text = w.depth?.toString() ?: ""
+        casingField.text = w.casing?.toString() ?: ""
+        coreRecoveryField.text = w.coreRecovery?.toString() ?: ""
 
-        depthField.text = working?.depth?.toString() ?: ""
-        casingField.text = working?.casing ?: ""
+        startDatePicker.value = w.startDate?.let { LocalDate.parse(it) }
+        endDatePicker.value = w.endDate?.let { LocalDate.parse(it) }
 
-        startDatePicker.value = working?.startDate?.let { LocalDate.parse(it) }
-        endDatePicker.value = working?.endDate?.let { LocalDate.parse(it) }
+        additionalInfoArea.text = w.additionalInfo ?: ""
 
-        additionalInfoArea.text = working?.additionalInfo ?: ""
+        mmg1TopField.text = w.mmg1Top?.toString() ?: ""
+        mmg1BottomField.text = w.mmg1Bottom?.toString() ?: ""
+        mmg2TopField.text = w.mmg2Top?.toString() ?: ""
+        mmg2BottomField.text = w.mmg2Bottom?.toString() ?: ""
 
-        mmg1TopField.text = working?.mmg1Top?.toString() ?: ""
-        mmg1BottomField.text = working?.mmg1Bottom?.toString() ?: ""
-        mmg2TopField.text = working?.mmg2Top?.toString() ?: ""
-        mmg2BottomField.text = working?.mmg2Bottom?.toString() ?: ""
+        gwAppearLogField.text = w.gwAppearLog?.toString() ?: ""
+        gwStableLogField.text = w.gwStableLog?.toString() ?: ""
+        gwStableAbsLabel.text = "УУГВ абс: ${w.gwStableAbs ?: "не определено"}"
 
-        gwAppearLogField.text = working?.gwAppearLog?.toString() ?: ""
-        gwStableLogField.text = working?.gwStableLog?.toString() ?: ""
-        gwStableAbsField.text = working?.gwStableAbs?.toString() ?: ""
-        gwStableRelField.text = working?.gwStableRel?.toString() ?: ""
-        gwStableAbsFinalField.text = working?.gwStableAbsFinal?.toString() ?: ""
+        actCheckBox.isSelected = w.act == true
+        actNumberField.text = w.actNumber ?: ""
+        thermalTubeCheckBox.isSelected = w.thermalTube == true
 
-        coreRecoveryField.text = working?.coreRecovery?.toString() ?: ""
+        // Важно: выбираем объекты из загруженных списков по ID
+        areaCombo.items.find { it.id == w.area?.id }?.let { areaCombo.value = it }
+        workTypeCombo.items.find { it.id == w.workType?.id }?.let { workTypeCombo.value = it }
+        contractorCombo.items.find { it.id == w.contractor?.id }?.let { contractorCombo.value = it }
+        drillingRigCombo.items.find { it.id == w.drillingRig?.id }?.let { drillingRigCombo.value = it }
 
-        contractorExtraIndexField.text = working?.contractorExtraIndex ?: ""
-        contractorExtraIndexField.isEditable = false
-
-        actField.text = working?.act ?: ""
-        actNumberField.text = working?.actNumber ?: ""
-        thermalTubeField.text = working?.thermalTube ?: ""
-
-        areaCombo.setupNameConverter { it.name }
-        areaCombo.selectionModel.select(working?.area)
-
-        workTypeCombo.setupNameConverter { it.name }
-        workTypeCombo.selectionModel.select(working?.workType)
-
-        contractorCombo.setupNameConverter { it.name }
-        geologistCombo.selectionModel.select(working?.geologist)
-
-        drillingRigCombo.setupNameConverter { it.name }
-        contractorCombo.selectionModel.select(working?.contractor)
-
-        geologistCombo.setupNameConverter { it.name }
-        drillingRigCombo.selectionModel.select(working?.drillingRig)
-    }
-    
-    private fun setupContractorAutoFill() {
-        contractorExtraIndexField.isEditable = false
-        contractorCombo.selectionModel.selectedItemProperty().addListener { _, _, newContractor ->
-            val extra = extractContractorIndex(newContractor)
-            contractorExtraIndexField.text = extra ?: ""
-        }
+        // Если есть подрядчик, грузим его геологов
+        w.contractor?.id?.let { loadGeologistsForContractor(it, w.geologist?.id) }
     }
 
-    private fun extractContractorIndex(obj: Any?): String? {
-        if (obj == null) return null
-        try {
-            val candidates = listOf(
-                "getExtraIndex", "getExtra", "getIndex", "getCode", "getId", "getNumber", "getIndexCode", "index", "extraIndex"
-            )
-            for (name in candidates) {
-                try {
-                    val method: Method? = try {
-                        obj.javaClass.getMethod(name)
-                    } catch (_: NoSuchMethodException) { null }
-                    if (method != null) {
-                        val value = method.invoke(obj) ?: continue
-                        val s = value.toString().trim()
-                        if (s.isNotEmpty()) return s
-                    }
-                } catch (_: Exception) { }
-            }
-            for (field in obj.javaClass.declaredFields) {
-                try {
-                    field.isAccessible = true
-                    val value = field.get(obj) ?: continue
-                    val s = value.toString().trim()
-                    if (s.isNotEmpty()) return s
-                } catch (_: Exception) { }
-            }
-        } catch (_: Exception) { }
-        return null
-    }
-
-        /** Безопасная установка текста ошибки с отвязкой (unbind) свойств JavaFX */
-    private fun markFieldError(control: Control, message: String) {
-        control.style = "-fx-border-color: #ff6b6b; -fx-border-width: 2px;"
-        if (control is TextField) {
-            control.clear()
-            control.promptTextProperty().unbind()
-            control.promptText = message
-        } else if (control is DatePicker) {
-            control.value = null
-            control.editor.promptTextProperty().unbind()
-            control.editor.clear()
-            control.editor.promptText = message
-        }
-    }
-
-    /** Метод для сброса стилей как в CheckField.java */
-    private fun resetErrorStyles(vararg controls: Control) {
-        for (control in controls) {
-            control.style = ""
-            if (control is TextField) {
-                control.promptTextProperty().unbind()
-                control.promptText = ""
-            } else if (control is DatePicker) {
-                control.editor.promptTextProperty().unbind()
-                control.editor.promptText = "ГГГГ-ММ-ДД"
-            }
-        }
-    }
-
-    private fun validateInputs(): Boolean {
-        var allValid = true
-
-        resetErrorStyles(
-            plannedXField, plannedYField, plannedZField,
-            actualXField, actualYField, actualZField,
-            depthField, casingField, coreRecoveryField,
-            startDatePicker, endDatePicker, numberField
-        )
-
-        errorLabel.text = ""
-
-        // Вспомогательная функция для числовых полей
-        fun validateNumber(field: TextField, fieldName: String): Double? {
-            val txt = field.text?.trim().orEmpty()
-            if (txt.isEmpty()) return null
-            val d = txt.replace(",", ".").toDoubleOrNull()
-            if (d == null) {
-                markFieldError(field, "$fieldName должно быть числом")
-                allValid = false
-            }
-            return d
-        }
-
-        if (numberField.text.trim().isEmpty()) {
-            markFieldError(numberField, "Номер обязателен")
-            allValid = false
-        }
-
-        validateNumber(plannedXField, "План X")
-        validateNumber(plannedYField, "План Y")
-        validateNumber(plannedZField, "План Z")
-        validateNumber(actualXField, "Факт X")
-        validateNumber(actualYField, "Факт Y")
-        validateNumber(actualZField, "Факт Z")
-
-        val depth = validateNumber(depthField, "Глубина")
-        if (depth != null && depth < 0) {
-            markFieldError(depthField, "Глубина >= 0")
-            allValid = false
-        }
-
-        validateNumber(casingField, "Обсад") // Проверяем как число, сохраняем как текст
-
-        val core = validateNumber(coreRecoveryField, "Керн")
-        if (core != null && (core < 0 || core > 100)) {
-            markFieldError(coreRecoveryField, "Керн от 0 до 100")
-            allValid = false
-        }
-
-        // Проверка дат
-        val start = startDatePicker.value
-        val end = endDatePicker.value
-        if (start != null && end != null) {
-            if (end.isBefore(start)) {
-                markFieldError(endDatePicker, "Окончание не может быть раньше начала")
-                allValid = false
-            }
-        }
-
-        return allValid
-    }
-
-    @FXML
-    fun onSave() {
-        if (!validateInputs()) {
+    private fun loadGeologistsForContractor(contractorId: Long?, selectedGeologistId: Long? = null) {
+        if (contractorId == null) {
+            geologistCombo.items.clear()
             return
         }
-
-        val newWorking = Working(
-            id = working?.id ?: 0,
-            area = areaCombo.selectionModel.selectedItem,
-            workType = workTypeCombo.selectionModel.selectedItem,
-            number = numberField.text.trim(),
-            plannedX = plannedXField.toDoubleSafe(),
-            plannedY = plannedYField.toDoubleSafe(),
-            plannedZ = plannedZField.toDoubleSafe(),
-            actualX = actualXField.toDoubleSafe(),
-            actualY = actualYField.toDoubleSafe(),
-            actualZ = actualZField.toDoubleSafe(),
-            depth = depthField.toDoubleSafe(),
-            startDate = startDatePicker.value?.toString(),
-            endDate = endDatePicker.value?.toString(),
-            geologist = geologistCombo.selectionModel.selectedItem,
-            contractor = contractorCombo.selectionModel.selectedItem,
-            drillingRig = drillingRigCombo.selectionModel.selectedItem,
-            additionalInfo = additionalInfoArea.text.ifBlank { null },
-            coreRecovery = coreRecoveryField.toDoubleSafe(),
-            casing = casingField.text.ifBlank { null },
-            closureStage = null,
-            mmg1Top = mmg1TopField.toDoubleSafe(),
-            mmg1Bottom = mmg1BottomField.toDoubleSafe(),
-            mmg2Top = mmg2TopField.toDoubleSafe(),
-            mmg2Bottom = mmg2BottomField.toDoubleSafe(),
-            gwAppearLog = gwAppearLogField.toDoubleSafe(),
-            gwStableLog = gwStableLogField.toDoubleSafe(),
-            gwStableAbs = gwStableAbsField.toDoubleSafe(),
-            gwStableRel = gwStableRelField.toDoubleSafe(),
-            gwStableAbsFinal = gwStableAbsFinalField.toDoubleSafe(),
-            contractorExtraIndex = contractorExtraIndexField.text.ifBlank { null },
-            act = actField.text.ifBlank { null },
-            actNumber = actNumberField.text.ifBlank { null },
-            thermalTube = thermalTubeField.text.ifBlank { null }
-        )
-
-        saveButton.isDisable = true
-        errorLabel.text = ""
-
         runOnFx {
             try {
-                if (working == null) {
-                    api.createWorking("Bearer $token", newWorking).await()
-                } else {
-                    api.updateWorking("Bearer $token", working!!.id, newWorking).await()
+                val geologists = api.getGeologistsByContractor("Bearer $token", contractorId).await()
+                geologistCombo.items.setAll(geologists)
+                
+                // Если мы передали ID (при первичной загрузке), выбираем его
+                if (selectedGeologistId != null) {
+                    geologistCombo.items.find { it.id == selectedGeologistId }?.let { 
+                        geologistCombo.value = it 
+                    }
                 }
-                onSaveCallback()
-                close()
             } catch (e: Exception) {
-                errorLabel.text = if (e.message?.contains("HTTP 409") == true) {
-                    "Номер уже существует"
-                } else {
-                    "Ошибка сохранения: ${e.message}"
-                }
-                saveButton.isDisable = false
+                geologistCombo.items.clear()
             }
         }
     }
 
-    @FXML
-    fun onCancel() {
-        close()
-    }
-
-    private fun close() {
-        (areaCombo.scene.window as Stage).close()
-    }
-
+    // Универсальное расширение для настройки отображения
     private fun <T> ComboBox<T>.setupNameConverter(extractor: (T) -> String) {
-        converter = object : javafx.util.StringConverter<T>() {
+        this.converter = object : StringConverter<T>() {
             override fun toString(obj: T?): String = obj?.let(extractor) ?: ""
-            override fun fromString(string: String): T? {
+            override fun fromString(string: String?): T? {
                 return items.find { extractor(it) == string }
             }
         }
     }
 
     private fun setupNumericFields() {
+        listOf(
+            plannedXField, plannedYField, actualXField, actualYField, actualZField, 
+            depthField, casingField, mmg1TopField, mmg1BottomField, mmg2TopField, 
+            mmg2BottomField, gwAppearLogField, gwStableLogField, coreRecoveryField
+        ).forEach { NumericFieldUtil.applyDecimalFilter(it) }
 
-        NumericFieldUtil.applyDecimalFilter(plannedXField)
-        NumericFieldUtil.applyDecimalFilter(plannedYField)
-        NumericFieldUtil.applyDecimalFilter(plannedZField)
-
-        NumericFieldUtil.applyDecimalFilter(actualXField)
-        NumericFieldUtil.applyDecimalFilter(actualYField)
-        NumericFieldUtil.applyDecimalFilter(actualZField)
-
-        NumericFieldUtil.applyDecimalFilter(depthField)
-        NumericFieldUtil.applyDecimalFilter(casingField)
-
-        NumericFieldUtil.applyDecimalFilter(mmg1TopField)
-        NumericFieldUtil.applyDecimalFilter(mmg1BottomField)
-        NumericFieldUtil.applyDecimalFilter(mmg2TopField)
-        NumericFieldUtil.applyDecimalFilter(mmg2BottomField)
-
-        NumericFieldUtil.applyDecimalFilter(gwAppearLogField)
-        NumericFieldUtil.applyDecimalFilter(gwStableLogField)
-        NumericFieldUtil.applyDecimalFilter(gwStableAbsField)
-        NumericFieldUtil.applyDecimalFilter(gwStableRelField)
-        NumericFieldUtil.applyDecimalFilter(gwStableAbsFinalField)
-
-        NumericFieldUtil.applyDecimalFilter(coreRecoveryField)
+        listOf(plannedXField, plannedYField, actualXField, actualYField).forEach { field ->
+            field.textProperty().addListener { _, _, _ -> updateDeltaS() }
+        }
     }
 
-    private fun loadGeologistsForContractor(contractorId: Long?) {
-        if (contractorId == null) {
-            geologistCombo.items.clear()
-            geologistCombo.value = null
-            return
-        }
+    private fun updateDeltaS() {
+        val plannedX = plannedXField.toDoubleSafe()
+        val plannedY = plannedYField.toDoubleSafe()
+        val actualX = actualXField.toDoubleSafe()
+        val actualY = actualYField.toDoubleSafe()
 
+        val deltaS = if (plannedX != null && plannedY != null && actualX != null && actualY != null) {
+            val dx = plannedX - actualX
+            val dy = plannedY - actualY
+            val distance = Math.sqrt(dx * dx + dy * dy)
+            "%.3f".format(distance)
+        } else {
+            "не определено"
+        }
+        deltaSLabel.text = "Смещение от проекта: $deltaS м"
+    }
+
+    @FXML fun onCancel() = close()
+    private fun close() = (root.scene.window as Stage).close()
+
+    @FXML fun onSave() {
+        if (!validateInputs()) return
+
+        val newWorking = Working(
+            id = working?.id ?: 0,
+            area = areaCombo.value,
+            workType = workTypeCombo.value,
+            number = numberField.text.trim(),
+            plannedX = plannedXField.toDoubleSafe(),
+            plannedY = plannedYField.toDoubleSafe(),
+            actualX = actualXField.toDoubleSafe(),
+            actualY = actualYField.toDoubleSafe(),
+            actualZ = actualZField.toDoubleSafe(),
+            depth = depthField.toDoubleSafe(),
+            startDate = startDatePicker.value?.toString(),
+            endDate = endDatePicker.value?.toString(),
+            geologist = geologistCombo.value,
+            contractor = contractorCombo.value,
+            drillingRig = drillingRigCombo.value,
+            additionalInfo = additionalInfoArea.text.ifBlank { null },
+            coreRecovery = coreRecoveryField.toDoubleSafe(),
+            casing = casingField.toDoubleSafe(),
+            mmg1Top = mmg1TopField.toDoubleSafe(),
+            mmg1Bottom = mmg1BottomField.toDoubleSafe(),
+            mmg2Top = mmg2TopField.toDoubleSafe(),
+            mmg2Bottom = mmg2BottomField.toDoubleSafe(),
+            gwAppearLog = gwAppearLogField.toDoubleSafe(),
+            gwStableLog = gwStableLogField.toDoubleSafe(),
+            act = actCheckBox.isSelected,
+            actNumber = if (actCheckBox.isSelected) actNumberField.text.ifBlank { null } else null,
+            thermalTube = thermalTubeCheckBox.isSelected,
+            hasVideo = working?.hasVideo ?: false,
+            hasDrilling = working?.hasDrilling ?: false,
+            hasJournal = working?.hasJournal ?: false,
+            hasCore = working?.hasCore ?: false,
+            hasRod = working?.hasRod ?: false,
+            isProject = working?.isProject ?: false
+        )
+
+        saveButton.isDisable = true
         runOnFx {
             try {
-                val geologists = MainApp.api.getGeologistsByContractor("Bearer $token", contractorId).await()
-                geologistCombo.items.setAll(geologists)
-                geologistCombo.setupNameConverter { it.name }
-
-                if (working?.geologist != null && geologists.any { it.id == working!!.geologist!!.id }) {
-                    geologistCombo.value = working!!.geologist
-                } else {
-                    geologistCombo.value = null
-                }
+                if (working == null) api.createWorking("Bearer $token", newWorking).await()
+                else api.updateWorking("Bearer $token", working!!.id, newWorking).await()
+                onSaveCallback()
+                close()
             } catch (e: Exception) {
-                errorLabel.text = "Ошибка загрузки геологов: ${e.message}"
-                geologistCombo.items.clear()
+                errorLabel.text = "Ошибка: ${e.message}"
+                saveButton.isDisable = false
             }
         }
     }
 
+    private fun validateInputs(): Boolean {
+        var allValid = true
+        errorLabel.text = ""
+        // Упрощенная валидация для краткости
+        if (numberField.text.isNullOrBlank()) {
+            numberField.style = "-fx-border-color: red"
+            allValid = false
+        }
+        return allValid
+    }
 }

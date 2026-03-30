@@ -30,7 +30,7 @@ class DataInitializer(
                 role = "ROLE_ADMIN"
             )
             userRepository.save(admin)
-            //println("Создан тестовый пользователь: admin / secret123")
+            // println("Создан тестовый пользователь: admin / secret123")
         }
         if (userRepository.findByUsername("user").isEmpty) {
             val user = User(

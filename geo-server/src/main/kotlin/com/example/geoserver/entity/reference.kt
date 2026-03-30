@@ -10,7 +10,10 @@ data class RefArea(
     val id: Long = 0,
 
     @Column(unique = true, nullable = false)
-    val name: String // Название участка
+    val name: String, // Название участка
+
+    @Column(columnDefinition = "TEXT") 
+    var comment: String? = null
 )
 
 @Entity
@@ -20,7 +23,10 @@ data class RefContractor(
     val id: Long = 0,
 
     @Column(unique = true, nullable = false)
-    val name: String
+    val name: String,
+
+    @Column(columnDefinition = "TEXT")
+    var comment: String? = null
 ) {
     // связь один-ко-многим
     @JsonIgnore
@@ -40,7 +46,10 @@ data class RefGeologist(
     // Обратная связь (ManyToOne)
     @ManyToOne
     @JoinColumn(name = "contractor_id", nullable = false)
-    var contractor: RefContractor? = null
+    var contractor: RefContractor? = null,
+
+    @Column(columnDefinition = "TEXT")
+    var comment: String? = null
 )
 
 @Entity
@@ -50,7 +59,10 @@ data class RefDrillingRig(
     val id: Long = 0,
 
     @Column(unique = true, nullable = false)
-    val name: String  // Номер буровой
+    val name: String,  // Номер буровой
+
+    @Column(columnDefinition = "TEXT")
+    var comment: String? = null
 )
 
 @Entity
@@ -60,5 +72,8 @@ data class RefWorkType(
     val id: Long = 0,
 
     @Column(unique = true, nullable = false)
-    val name: String  // "Скважина", "Шурф", "Расчистка"
+    val name: String,  // "Скважина", "Шурф", "Расчистка"
+
+    @Column(columnDefinition = "TEXT")
+    var comment: String? = null
 )

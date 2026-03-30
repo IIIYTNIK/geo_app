@@ -5,6 +5,7 @@ import javafx.beans.property.SimpleStringProperty
 import javafx.collections.FXCollections
 import javafx.fxml.FXML
 import javafx.scene.control.*
+import javafx.scene.control.cell.TextFieldTableCell
 import org.example.geoapp.MainApp
 import org.example.geoapp.util.await
 import org.example.geoapp.util.awaitUnit
@@ -15,7 +16,7 @@ enum class RefType(val title: String) {
     CONTRACTOR("Подрядчики"), GEOLOGIST("Геологи")
 }
 
-data class RefUiModel(val id: Long, val name: String, val parent: RefContractor?, val originalObj: Any)
+data class RefUiModel(val id: Long, val name: String, val parent: RefContractor?, var comment: String?, val originalObj: Any)
 
 class ReferenceEditorController {
 
@@ -23,6 +24,7 @@ class ReferenceEditorController {
     @FXML private lateinit var colId: TableColumn<RefUiModel, String>
     @FXML private lateinit var colName: TableColumn<RefUiModel, String>
     @FXML private lateinit var colParent: TableColumn<RefUiModel, String>
+    @FXML private lateinit var colComment: TableColumn<RefUiModel, String>
 
     @FXML private lateinit var nameField: TextField
     @FXML private lateinit var contractorLabel: Label
@@ -35,12 +37,47 @@ class ReferenceEditorController {
     private lateinit var currentType: RefType
     private val api = MainApp.api
 
+    @FXML
+fun initialize() {
+    // Разрешаем редактирование в самой таблице
+    referenceTable.isEditable = true
+
+    // Настраиваем колонку комментария, чтобы она была текстовым полем
+    colComment.cellFactory = TextFieldTableCell.forTableColumn()
+
+    // Обрабатываем сохранение при правке комментария прямо в таблице
+    colComment.setOnEditCommit { event ->
+        val uiModel = event.rowValue
+        val newComment = event.newValue
+        
+        uiModel.comment = newComment // Обновляем в локальной модели
+        
+        // Отправляем на сервер (асинхронно)
+        runOnFx {
+            try {
+                val tokenStr = "Bearer $token"
+                // Обновляем объект, подставляя новый комментарий
+                when (currentType) {
+                    RefType.AREA -> api.updateArea(tokenStr, uiModel.id, (uiModel.originalObj as RefArea).copy(comment = newComment)).await()
+                    RefType.WORK_TYPE -> api.updateWorkType(tokenStr, uiModel.id, (uiModel.originalObj as RefWorkType).copy(comment = newComment)).await()
+                    RefType.DRILLING_RIG -> api.updateDrillingRig(tokenStr, uiModel.id, (uiModel.originalObj as RefDrillingRig).copy(comment = newComment)).await()
+                    RefType.CONTRACTOR -> api.updateContractor(tokenStr, uiModel.id, (uiModel.originalObj as RefContractor).copy(comment = newComment)).await()
+                    RefType.GEOLOGIST -> api.updateGeologist(tokenStr, uiModel.id, (uiModel.originalObj as RefGeologist).copy(comment = newComment)).await()
+                }
+            } catch (e: Exception) {
+                errorLabel.text = "Ошибка при сохранении комментария: ${e.message}"
+            }
+        }
+    }
+}
+
     fun initData(token: String, type: RefType) {
         this.token = token
         this.currentType = type
 
         colId.setCellValueFactory { SimpleStringProperty(it.value.id.toString()) }
         colName.setCellValueFactory { SimpleStringProperty(it.value.name) }
+        colComment.setCellValueFactory { SimpleStringProperty(it.value.comment ?: "") }
         
         if (type == RefType.GEOLOGIST) {
             colParent.isVisible = true
@@ -74,12 +111,12 @@ class ReferenceEditorController {
         runOnFx {
             try {
                 val items = mutableListOf<RefUiModel>()
-                when (currentType) {
-                    RefType.AREA -> api.getAreas().await().forEach { items.add(RefUiModel(it.id, it.name, null, it)) }
-                    RefType.WORK_TYPE -> api.getWorkTypes().await().forEach { items.add(RefUiModel(it.id, it.name, null, it)) }
-                    RefType.DRILLING_RIG -> api.getDrillingRigs().await().forEach { items.add(RefUiModel(it.id, it.name, null, it)) }
-                    RefType.CONTRACTOR -> api.getContractors().await().forEach { items.add(RefUiModel(it.id, it.name, null, it)) }
-                    RefType.GEOLOGIST -> api.getGeologists().await().forEach { items.add(RefUiModel(it.id, it.name, it.contractor, it)) }
+               when (currentType) {
+                    RefType.AREA -> api.getAreas().await().forEach { items.add(RefUiModel(it.id, it.name, null, it.comment, it)) }
+                    RefType.WORK_TYPE -> api.getWorkTypes().await().forEach { items.add(RefUiModel(it.id, it.name, null, it.comment, it)) }
+                    RefType.DRILLING_RIG -> api.getDrillingRigs().await().forEach { items.add(RefUiModel(it.id, it.name, null, it.comment, it)) }
+                    RefType.CONTRACTOR -> api.getContractors().await().forEach { items.add(RefUiModel(it.id, it.name, null, it.comment, it)) }
+                    RefType.GEOLOGIST -> api.getGeologists().await().forEach { items.add(RefUiModel(it.id, it.name, it.contractor, it.comment, it)) }
                 }
                 referenceTable.items = FXCollections.observableArrayList(items)
             } catch (e: Exception) {

@@ -11,6 +11,10 @@
     
     <HBox spacing="15" alignment="CENTER_LEFT" style="-fx-background-color: #f4f4f4; -fx-padding: 10; -fx-border-color: #ccc; -fx-border-radius: 5;">
         <VBox spacing="5">
+            <Label text="Участок (для всего файла):" style="-fx-font-weight: bold; -fx-text-fill: #1976d2;"/>
+            <ComboBox fx:id="importAreaCombo" prefWidth="200" promptText="Выберите участок..."/>
+        </VBox>
+        <VBox spacing="5">
             <Label text="Лист Excel:"/>
             <ComboBox fx:id="sheetCombo" prefWidth="150"/>
         </VBox>

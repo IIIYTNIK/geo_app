@@ -1,137 +1,71 @@
 <?xml version="1.0" encoding="UTF-8"?>
-
-<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<VBox xmlns="http://javafx.com/javafx"
-      xmlns:fx="http://javafx.com/fxml"
-      fx:controller="org.example.geoapp.controller.WorkingFormController"
-      prefWidth="500" prefHeight="700"
-      spacing="0">
-
-    <ScrollPane fx:id="scrollPane"
-                VBox.vgrow="ALWAYS"
-                fitToWidth="true"
-                style="-fx-background-color: transparent;">
+<VBox fx:id="root" xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml" fx:controller="org.example.geoapp.controller.WorkingFormController" prefWidth="550" prefHeight="750" spacing="0">
+    <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS" style="-fx-background-color: transparent;">
         <VBox spacing="10" style="-fx-padding: 20;">
-            <Label text="Участок:"/>
-            <ComboBox fx:id="areaCombo" prefWidth="400"/>
+            <Label text="* — обязательное поле, его нужно заполнить обязательно" style="-fx-text-fill: red; -fx-font-size: 12px;"/>
 
-            <Label text="Тип выработки:"/>
-            <ComboBox fx:id="workTypeCombo" prefWidth="400"/>
-
-            <Label text="Подрядчик:"/>
-            <ComboBox fx:id="contractorCombo" prefWidth="400"/>
-
-            <Label text="Геолог:"/>
-            <ComboBox fx:id="geologistCombo" prefWidth="400"/>            
-
-            <Label text="Буровая:"/>
-            <ComboBox fx:id="drillingRigCombo" prefWidth="400"/>
-
-            <Label text="Номер*:"/>
-            <TextField fx:id="numberField"/>
+            <Label text="Участок:"/> <ComboBox fx:id="areaCombo" prefWidth="400"/>
+            <Label text="Тип выработки:"/> <ComboBox fx:id="workTypeCombo" prefWidth="400"/>
+            <Label text="Подрядчик:"/> <ComboBox fx:id="contractorCombo" prefWidth="400"/>
+            <Label text="Геолог:"/> <ComboBox fx:id="geologistCombo" prefWidth="400"/>
+            <Label text="Буровая:"/> <ComboBox fx:id="drillingRigCombo" prefWidth="400"/>
+            
+            <Label text="Номер*:"/> <TextField fx:id="numberField"/>
+            
+            <HBox spacing="10">
+                <VBox HBox.hgrow="ALWAYS"><Label text="План X:"/><TextField fx:id="plannedXField"/></VBox>
+                <VBox HBox.hgrow="ALWAYS"><Label text="План Y:"/><TextField fx:id="plannedYField"/></VBox>
+            </HBox>
+            
+            <HBox spacing="10">
+                <VBox HBox.hgrow="ALWAYS"><Label text="Факт X:"/><TextField fx:id="actualXField"/></VBox>
+                <VBox HBox.hgrow="ALWAYS"><Label text="Факт Y:"/><TextField fx:id="actualYField"/></VBox>
+                <VBox HBox.hgrow="ALWAYS"><Label text="Факт Z:"/><TextField fx:id="actualZField"/></VBox>
+            </HBox>
+            <Label fx:id="deltaSLabel" text="Смещение от проекта: не определено" style="-fx-text-fill: #555; -fx-font-style: italic;"/>
 
             <HBox spacing="10">
-                <VBox HBox.hgrow="ALWAYS">
-                    <Label text="План X:"/>
-                    <TextField fx:id="plannedXField"/>
-                </VBox>
-                <VBox HBox.hgrow="ALWAYS">
-                    <Label text="План Y:"/>
-                    <TextField fx:id="plannedYField"/>
-                </VBox>
-                <VBox HBox.hgrow="ALWAYS">
-                    <Label text="План Z:"/>
-                    <TextField fx:id="plannedZField"/>
-                </VBox>
+                <VBox HBox.hgrow="ALWAYS"><Label text="Глубина:"/><TextField fx:id="depthField"/></VBox>
+                <VBox HBox.hgrow="ALWAYS"><Label text="Выход керна, %:"/><TextField fx:id="coreRecoveryField"/></VBox>
+                <VBox HBox.hgrow="ALWAYS"><Label text="Обсад:"/><TextField fx:id="casingField"/></VBox>
             </HBox>
 
             <HBox spacing="10">
-                <VBox HBox.hgrow="ALWAYS">
-                    <Label text="Факт X:"/>
-                    <TextField fx:id="actualXField"/>
-                </VBox>
-                <VBox HBox.hgrow="ALWAYS">
-                    <Label text="Факт Y:"/>
-                    <TextField fx:id="actualYField"/>
-                </VBox>
-                <VBox HBox.hgrow="ALWAYS">
-                    <Label text="Факт Z:"/>
-                    <TextField fx:id="actualZField"/>
-                </VBox>
+                <VBox HBox.hgrow="ALWAYS"><Label text="Дата начала:"/><DatePicker fx:id="startDatePicker" HBox.hgrow="ALWAYS"/></VBox>
+                <VBox HBox.hgrow="ALWAYS"><Label text="Дата окончания:"/><DatePicker fx:id="endDatePicker" HBox.hgrow="ALWAYS"/></VBox>
             </HBox>
-
-            <Label text="Глубина:"/>
-            <TextField fx:id="depthField"/>
-
-            <Label text="Керн, %:"/>
-            <TextField fx:id="coreRecoveryField"/>
-
-            <Label text="Обсад:"/>
-            <TextField fx:id="casingField"/>
 
             <HBox spacing="10">
-                <VBox HBox.hgrow="ALWAYS">
-                    <Label text="Дата начала:"/>
-                    <DatePicker fx:id="startDatePicker" promptText="ГГГГ-ММ-ДД" HBox.hgrow="ALWAYS"/>
-                </VBox>
-                <VBox HBox.hgrow="ALWAYS">
-                    <Label text="Дата окончания:"/>
-                    <DatePicker fx:id="endDatePicker" promptText="ГГГГ-ММ-ДД" HBox.hgrow="ALWAYS"/>
-                </VBox>
+                <VBox HBox.hgrow="ALWAYS"><Label text="ММГ1 кровля:"/><TextField fx:id="mmg1TopField"/></VBox>
+                <VBox HBox.hgrow="ALWAYS"><Label text="ММГ1 подошва:"/><TextField fx:id="mmg1BottomField"/></VBox>
             </HBox>
 
-            <Label text="ММГ1 кровля:"/>
-            <TextField fx:id="mmg1TopField"/>
+            <HBox spacing="10">
+                <VBox HBox.hgrow="ALWAYS"><Label text="ММГ2 кровля:"/><TextField fx:id="mmg2TopField"/></VBox>
+                <VBox HBox.hgrow="ALWAYS"><Label text="ММГ2 подошва:"/><TextField fx:id="mmg2BottomField"/></VBox>
+            </HBox>
 
-            <Label text="ММГ1 подошва:"/>
-            <TextField fx:id="mmg1BottomField"/>
+            <Label text="ПУГВ (УГВ появ):"/> <TextField fx:id="gwAppearLogField"/>
+            <Label text="УУГВ (УГВ устан):"/> <TextField fx:id="gwStableLogField"/>
+            <Label fx:id="gwStableAbsLabel" text="УУГВ абс: не определено" style="-fx-text-fill: #555;"/>
 
-            <Label text="ММГ2 кровля:"/>
-            <TextField fx:id="mmg2TopField"/>
+            <HBox spacing="20" alignment="CENTER_LEFT" style="-fx-padding: 10 0 0 0;">
+                <CheckBox fx:id="actCheckBox" text="Акт"/>
+                <VBox><Label text="Номер акта:"/><TextField fx:id="actNumberField" prefWidth="150"/></VBox>
+            </HBox>
 
-            <Label text="ММГ2 подошва:"/>
-            <TextField fx:id="mmg2BottomField"/>
+            <CheckBox fx:id="thermalTubeCheckBox" text="Термотрубка" style="-fx-padding: 5 0 10 0;"/>
 
-            <Label text="УГВ появ по журналу:"/>
-            <TextField fx:id="gwAppearLogField"/>
-
-            <Label text="УГВ устан по журналу:"/>
-            <TextField fx:id="gwStableLogField"/>
-
-            <Label text="УГВ устан по журналу, абс:"/>
-            <TextField fx:id="gwStableAbsField"/>
-
-            <Label text="УГВ устан, отн:"/>
-            <TextField fx:id="gwStableRelField"/>
-
-            <Label text="УГВ устан, абс:"/>
-            <TextField fx:id="gwStableAbsFinalField"/>
-
-            <Label text="Допиндекс подрядчика:"/>
-            <TextField fx:id="contractorExtraIndexField"/>
-
-            <Label text="Акт:"/>
-            <TextField fx:id="actField"/>
-
-            <Label text="Номер акта:"/>
-            <TextField fx:id="actNumberField"/>
-
-            <Label text="Термотрубка:"/>
-            <TextField fx:id="thermalTubeField"/>
-
-            <Label text="Доп. информация:"/>
-            <TextArea fx:id="additionalInfoArea" prefRowCount="3"/>
-
+            <Label text="Комментарий:"/><TextArea fx:id="additionalInfoArea" prefRowCount="3"/>
+            
             <Label fx:id="errorLabel" textFill="red"/>
         </VBox>
     </ScrollPane>
-
-    <!-- Нижняя панель с кнопками (всегда видна) -->
-    <HBox spacing="10" alignment="CENTER_RIGHT" style="-fx-padding: 10;">
-        <Button fx:id="saveButton" text="Сохранить" onAction="#onSave" prefWidth="100"/>
+    <HBox spacing="10" alignment="CENTER_RIGHT" style="-fx-padding: 10; -fx-background-color: #f4f4f4;">
+        <Button fx:id="saveButton" text="Сохранить" onAction="#onSave" prefWidth="100" style="-fx-font-weight: bold;" defaultButton="true"/>
         <Button fx:id="cancelButton" text="Отмена" onAction="#onCancel" prefWidth="100"/>
     </HBox>
 </VBox>

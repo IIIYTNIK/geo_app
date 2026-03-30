@@ -9,6 +9,7 @@ package com.example.geoserver.entity
 
 import jakarta.persistence.*
 import java.time.LocalDate
+import java.time.Instant
 
 @Entity
 @Table(name = "workings")
@@ -16,99 +17,70 @@ data class Working(
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     val id: Long = 0,
 
-    @ManyToOne
-    @JoinColumn(name = "area_id", nullable = true)
+    @ManyToOne @JoinColumn(name = "area_id")
     val area: RefArea? = null,
 
-    @ManyToOne
-    @JoinColumn(name = "work_type_id", nullable = true)
+    @ManyToOne @JoinColumn(name = "work_type_id")
     val workType: RefWorkType? = null,
 
     @Column(nullable = true, unique = true)
-    val number: String,  // номер скважины/шурфа/расчистки
+    val number: String,
 
-    // Планировочные координаты
+    // Координаты
     val plannedX: Double? = null,
     val plannedY: Double? = null,
-    val plannedZ: Double? = null,
+    // План Z удален
 
-    // Фактические координаты
     val actualX: Double? = null,
     val actualY: Double? = null,
     val actualZ: Double? = null,
 
-    val depth: Double? = null,  // глубина
+    val deltaS: Double? = null, // Смещение от проекта
 
-    @Column(name = "start_date")
-    val startDate: LocalDate? = null,
+    val depth: Double? = null,
 
-    @Column(name = "end_date")
-    val endDate: LocalDate? = null,
+    @Column(name = "start_date") val startDate: LocalDate? = null,
+    @Column(name = "end_date") val endDate: LocalDate? = null,
 
-    @ManyToOne
-    @JoinColumn(name = "geologist_id")
-    val geologist: RefGeologist? = null,
-
-    @ManyToOne
-    @JoinColumn(name = "contractor_id")
-    val contractor: RefContractor? = null,
-
-    @ManyToOne
-    @JoinColumn(name = "drilling_rig_id")
-    val drillingRig: RefDrillingRig? = null,
+    @ManyToOne @JoinColumn(name = "geologist_id") val geologist: RefGeologist? = null,
+    @ManyToOne @JoinColumn(name = "contractor_id") val contractor: RefContractor? = null,
+    @ManyToOne @JoinColumn(name = "drilling_rig_id") val drillingRig: RefDrillingRig? = null,
 
     @Column(name = "additional_info", columnDefinition = "TEXT")
-    val additionalInfo: String? = null,
+    val additionalInfo: String? = null, // Комментарий
 
-    // Аудит
-    @Column(name = "created_at")
-    val createdAt: java.time.Instant = java.time.Instant.now(),
+    @Column(name = "created_at") val createdAt: Instant = Instant.now(),
+    @Column(name = "updated_at") val updatedAt: Instant? = null,
 
-    @Column(name = "updated_at")
-    val updatedAt: java.time.Instant? = null,
-
-    @Column(name = "coreRecovery")
-    val coreRecovery: Double? = null,
-
-    @Column(name = "casing")
+    @Column(name = "core_recovery") val coreRecovery: Double? = null,
     val casing: Double? = null,
 
-    @Column(name = "mmg1_top")
-    val mmg1Top: Double? = null,
-    
-    @Column(name = "mmg1_bottom")
-    val mmg1Bottom: Double? = null,
-    
-    @Column(name = "mmg2_top")
-    val mmg2Top: Double? = null,
-    
-    @Column(name = "mmg2_bottom")
-    val mmg2Bottom: Double? = null,
-    
-    @Column(name = "gw_appear_log")
-    val gwAppearLog: Double? = null,
-    
-    @Column(name = "gw_stable_log")
-    val gwStableLog: Double? = null,
-    
-    @Column(name = "gw_stable_abs")
-    val gwStableAbs: Double? = null,
-    
-    @Column(name = "gw_stable_rel")
-    val gwStableRel: Double? = null,
-    
-    @Column(name = "gw_stable_abs_final")
-    val gwStableAbsFinal: Double? = null,
-    
-    @Column(name = "contractor_extra_index")
-    val contractorExtraIndex: String? = null,
-    
-    @Column(name = "act")
-    val act: String? = null,
-    
-    @Column(name = "act_number")
-    val actNumber: String? = null,
-    
-    @Column(name = "thermal_tube")
-    val thermalTube: String? = null
+    @Column(name = "mmg1_top") val mmg1Top: Double? = null,
+    @Column(name = "mmg1_bottom") val mmg1Bottom: Double? = null,
+    @Column(name = "mmg2_top") val mmg2Top: Double? = null,
+    @Column(name = "mmg2_bottom") val mmg2Bottom: Double? = null,
+
+    @Column(name = "gw_appear_log") val gwAppearLog: Double? = null, // ПУГВ
+    @Column(name = "gw_stable_log") val gwStableLog: Double? = null, // УУГВ
+    @Column(name = "gw_stable_abs") val gwStableAbs: Double? = null, // УУГВ абс (расчетное)
+
+    // Чекбоксы (Акт и Термотрубка)
+    val act: Boolean = false,
+    @Column(name = "act_number") val actNumber: String? = null,
+    @Column(name = "thermal_tube") val thermalTube: Boolean = false,
+
+    // Новые поля: чекбоксы наличия материалов/журналов
+    val hasVideo: Boolean = false,
+    val hasDrilling: Boolean = false,
+    val hasJournal: Boolean = false,
+    val hasCore: Boolean = false,
+    val hasRod: Boolean = false,
+
+    // Новые поля: образцы
+    val samplesThawed: Int? = null,
+    val samplesFrozen: Int? = null,
+    val samplesRocky: Int? = null,
+
+    // Флаг для определения проектной скважины
+    val isProject: Boolean = false
 )

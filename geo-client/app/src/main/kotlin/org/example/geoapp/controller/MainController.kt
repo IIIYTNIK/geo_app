@@ -2,13 +2,15 @@ package org.example.geoapp.controller
 
 import com.example.geoapp.api.GeoApi
 import com.example.geoapp.api.Working
+import javafx.beans.property.SimpleBooleanProperty
+import javafx.beans.property.SimpleStringProperty
+import javafx.beans.property.SimpleObjectProperty
 import javafx.collections.FXCollections
 import javafx.collections.ObservableList
 import javafx.fxml.FXML
 import javafx.fxml.FXMLLoader
 import javafx.scene.Scene
 import javafx.scene.control.*
-import javafx.scene.control.cell.PropertyValueFactory
 import javafx.scene.input.KeyCode
 import javafx.scene.input.KeyCodeCombination
 import javafx.scene.input.KeyCombination
@@ -20,36 +22,44 @@ import org.controlsfx.control.table.TableFilter
 import org.example.geoapp.MainApp
 import org.example.geoapp.util.FilterParser
 import org.example.geoapp.util.await
-import org.example.geoapp.util.awaitVoid
 import org.example.geoapp.util.awaitUnit
 import org.example.geoapp.util.runOnFx
 
 class MainController {
 
     @FXML private lateinit var adminMenu: Menu
+    @FXML private lateinit var filterAreaCombo: ComboBox<String>
     @FXML private lateinit var workingsTable: TableView<Working>
 
     @FXML private lateinit var colRowNumber: TableColumn<Working, Number>
     @FXML private lateinit var colName: TableColumn<Working, String>
     @FXML private lateinit var colArea: TableColumn<Working, String>
-    @FXML private lateinit var colWorkType: TableColumn<Working, String> 
-    @FXML private lateinit var colDepth: TableColumn<Working, Double?>
     @FXML private lateinit var colGeologist: TableColumn<Working, String>
     @FXML private lateinit var colContractor: TableColumn<Working, String>
     @FXML private lateinit var colPlannedX: TableColumn<Working, Double?>
     @FXML private lateinit var colPlannedY: TableColumn<Working, Double?>
-    @FXML private lateinit var colPlannedZ: TableColumn<Working, Double?>
     @FXML private lateinit var colActualX: TableColumn<Working, Double?>
     @FXML private lateinit var colActualY: TableColumn<Working, Double?>
     @FXML private lateinit var colActualZ: TableColumn<Working, Double?>
-    @FXML private lateinit var colDeltaX: TableColumn<Working, Double?>
-    @FXML private lateinit var colDeltaY: TableColumn<Working, Double?>
+    @FXML private lateinit var colDeltaS: TableColumn<Working, Double?>
+    @FXML private lateinit var colDepth: TableColumn<Working, Double?>
     @FXML private lateinit var colCoreRecovery: TableColumn<Working, Double?>
-    @FXML private lateinit var colCasing: TableColumn<Working, String?>
-    @FXML private lateinit var colClosureStage: TableColumn<Working, String?>
+    @FXML private lateinit var colCasing: TableColumn<Working, Double?>
+    
+    // Чекбоксы
+    @FXML private lateinit var colHasVideo: TableColumn<Working, Boolean>
+    @FXML private lateinit var colHasDrilling: TableColumn<Working, Boolean>
+    @FXML private lateinit var colHasJournal: TableColumn<Working, Boolean>
+    @FXML private lateinit var colHasCore: TableColumn<Working, Boolean>
+    @FXML private lateinit var colHasRod: TableColumn<Working, Boolean>
+
+    // Образцы
+    @FXML private lateinit var colSamplesThawed: TableColumn<Working, Int?>
+    @FXML private lateinit var colSamplesFrozen: TableColumn<Working, Int?>
+    @FXML private lateinit var colSamplesRocky: TableColumn<Working, Int?>
+
     @FXML private lateinit var colStartDate: TableColumn<Working, String>
     @FXML private lateinit var colEndDate: TableColumn<Working, String>
-    @FXML private lateinit var colAdditionalInfo: TableColumn<Working, String>
     @FXML private lateinit var colMmg1Top: TableColumn<Working, Double?>
     @FXML private lateinit var colMmg1Bottom: TableColumn<Working, Double?>
     @FXML private lateinit var colMmg2Top: TableColumn<Working, Double?>
@@ -57,12 +67,10 @@ class MainController {
     @FXML private lateinit var colGwAppearLog: TableColumn<Working, Double?>
     @FXML private lateinit var colGwStableLog: TableColumn<Working, Double?>
     @FXML private lateinit var colGwStableAbs: TableColumn<Working, Double?>
-    @FXML private lateinit var colGwStableRel: TableColumn<Working, Double?>
-    @FXML private lateinit var colGwStableAbsFinal: TableColumn<Working, Double?>
-    @FXML private lateinit var colContractorExtraIndex: TableColumn<Working, String?>
-    @FXML private lateinit var colAct: TableColumn<Working, String?>
+    @FXML private lateinit var colAct: TableColumn<Working, String>
     @FXML private lateinit var colActNumber: TableColumn<Working, String?>
-    @FXML private lateinit var colThermalTube: TableColumn<Working, String?>
+    @FXML private lateinit var colThermalTube: TableColumn<Working, String>
+    @FXML private lateinit var colAdditionalInfo: TableColumn<Working, String>
 
     @FXML private lateinit var addButton: Button
     @FXML private lateinit var editButton: Button
@@ -71,135 +79,221 @@ class MainController {
     private lateinit var token: String
     private lateinit var userRole: String
     private val api: GeoApi = MainApp.api
+    private val allWorkings: MutableList<Working> = mutableListOf()
     private val workingsList: ObservableList<Working> = FXCollections.observableArrayList()
+
     private lateinit var tableFilter: TableFilter<Working>
 
     fun initData(token: String, role: String) {
         this.token = token
         this.userRole = role
-        // Скрываем только меню "Справочники", меню "Инструменты" останется
         adminMenu.isVisible = (role == "ROLE_ADMIN")
         loadWorkings()
     }
 
     @FXML fun initialize() {
-        // Существующие колонки
-        colRowNumber.setCellValueFactory { cellData ->
-            val index = workingsTable.items.indexOf(cellData.value) + 1
-            javafx.beans.property.SimpleIntegerProperty(index)
+        workingsTable.selectionModel.selectionMode = SelectionMode.MULTIPLE
+
+        // Сборка Наименования (Тип + Номер)
+        colName.setCellValueFactory { cellData -> 
+            val w = cellData.value
+            val prefix = when(w.workType?.name?.lowercase()) {
+                "скважина" -> "С-"
+                "шурф" -> "Ш-"
+                "расчистка" -> "Р-"
+                else -> ""
+            }
+            SimpleStringProperty("$prefix${w.number}")
         }
-        colName.setCellValueFactory { cellData -> javafx.beans.property.SimpleStringProperty(cellData.value.number) }
-        colArea.setCellValueFactory { cellData -> javafx.beans.property.SimpleStringProperty(cellData.value.area?.name ?: "") }
-        colWorkType.setCellValueFactory { cellData -> javafx.beans.property.SimpleStringProperty(cellData.value.workType?.name ?: "") }
-        colDepth.setCellValueFactory { cellData -> javafx.beans.property.SimpleObjectProperty(cellData.value.depth) }
-        colGeologist.setCellValueFactory { cellData -> javafx.beans.property.SimpleStringProperty(cellData.value.geologist?.name ?: "") }
-        colContractor.setCellValueFactory { cellData -> javafx.beans.property.SimpleStringProperty(cellData.value.contractor?.name ?: "") }
-        colPlannedX.setCellValueFactory { cellData -> javafx.beans.property.SimpleObjectProperty(cellData.value.plannedX) }
-        colPlannedY.setCellValueFactory { cellData -> javafx.beans.property.SimpleObjectProperty(cellData.value.plannedY) }
-        colPlannedZ.setCellValueFactory { cellData -> javafx.beans.property.SimpleObjectProperty(cellData.value.plannedZ) }
-        colActualX.setCellValueFactory { cellData -> javafx.beans.property.SimpleObjectProperty(cellData.value.actualX) }
-        colActualY.setCellValueFactory { cellData -> javafx.beans.property.SimpleObjectProperty(cellData.value.actualY) }
-        colActualZ.setCellValueFactory { cellData -> javafx.beans.property.SimpleObjectProperty(cellData.value.actualZ) }
-        colDeltaX.setCellValueFactory { cellData ->
-            val dx = cellData.value.actualX?.minus(cellData.value.plannedX ?: 0.0)
-            javafx.beans.property.SimpleObjectProperty(dx)
-        }
-        colDeltaY.setCellValueFactory { cellData ->
-            val dy = cellData.value.actualY?.minus(cellData.value.plannedY ?: 0.0)
-            javafx.beans.property.SimpleObjectProperty(dy)
-        }
-        colCoreRecovery.setCellValueFactory { cellData -> javafx.beans.property.SimpleObjectProperty(cellData.value.coreRecovery) }
-        colCasing.setCellValueFactory { cellData -> javafx.beans.property.SimpleStringProperty(cellData.value.casing ?: "") }
-        colClosureStage.setCellValueFactory { cellData -> javafx.beans.property.SimpleStringProperty(cellData.value.closureStage ?: "") }
-        colStartDate.setCellValueFactory { cellData -> javafx.beans.property.SimpleStringProperty(cellData.value.startDate ?: "") }
-        colEndDate.setCellValueFactory { cellData -> javafx.beans.property.SimpleStringProperty(cellData.value.endDate ?: "") }
-        colAdditionalInfo.setCellValueFactory { cellData -> javafx.beans.property.SimpleStringProperty(cellData.value.additionalInfo ?: "") }
-        colMmg1Top.setCellValueFactory { cellData -> javafx.beans.property.SimpleObjectProperty(cellData.value.mmg1Top) }
-        colMmg1Bottom.setCellValueFactory { cellData -> javafx.beans.property.SimpleObjectProperty(cellData.value.mmg1Bottom) }
-        colMmg2Top.setCellValueFactory { cellData -> javafx.beans.property.SimpleObjectProperty(cellData.value.mmg2Top) }
-        colMmg2Bottom.setCellValueFactory { cellData -> javafx.beans.property.SimpleObjectProperty(cellData.value.mmg2Bottom) }
-        colGwAppearLog.setCellValueFactory { cellData -> javafx.beans.property.SimpleObjectProperty(cellData.value.gwAppearLog) }
-        colGwStableLog.setCellValueFactory { cellData -> javafx.beans.property.SimpleObjectProperty(cellData.value.gwStableLog) }
-        colGwStableAbs.setCellValueFactory { cellData -> javafx.beans.property.SimpleObjectProperty(cellData.value.gwStableAbs) }
-        colGwStableRel.setCellValueFactory { cellData -> javafx.beans.property.SimpleObjectProperty(cellData.value.gwStableRel) }
-        colGwStableAbsFinal.setCellValueFactory { cellData -> javafx.beans.property.SimpleObjectProperty(cellData.value.gwStableAbsFinal) }
-        colContractorExtraIndex.setCellValueFactory { cellData -> javafx.beans.property.SimpleStringProperty(cellData.value.contractorExtraIndex) }
-        colAct.setCellValueFactory { cellData -> javafx.beans.property.SimpleStringProperty(cellData.value.act) }
-        colActNumber.setCellValueFactory { cellData -> javafx.beans.property.SimpleStringProperty(cellData.value.actNumber) }
-        colThermalTube.setCellValueFactory { cellData -> javafx.beans.property.SimpleStringProperty(cellData.value.thermalTube) }
+
+        colRowNumber.setCellValueFactory { SimpleObjectProperty(workingsTable.items.indexOf(it.value) + 1) }
+        colArea.setCellValueFactory { SimpleStringProperty(it.value.area?.name ?: "") }
+        colGeologist.setCellValueFactory { SimpleStringProperty(it.value.geologist?.name ?: "") }
+        colContractor.setCellValueFactory { SimpleStringProperty(it.value.contractor?.name ?: "") }
+        
+        colPlannedX.setCellValueFactory { SimpleObjectProperty(it.value.plannedX) }
+        colPlannedY.setCellValueFactory { SimpleObjectProperty(it.value.plannedY) }
+        colActualX.setCellValueFactory { SimpleObjectProperty(it.value.actualX) }
+        colActualY.setCellValueFactory { SimpleObjectProperty(it.value.actualY) }
+        colActualZ.setCellValueFactory { SimpleObjectProperty(it.value.actualZ) }
+        colDeltaS.setCellValueFactory { SimpleObjectProperty(it.value.deltaS) }
+        colDepth.setCellValueFactory { SimpleObjectProperty(it.value.depth) }
+        colCoreRecovery.setCellValueFactory { SimpleObjectProperty(it.value.coreRecovery) }
+        colCasing.setCellValueFactory { SimpleObjectProperty(it.value.casing) }
+
+        // Интерактивные чекбоксы в таблице
+        createInteractiveCheckbox(colHasVideo, { it.hasVideo }, { w, v -> w.hasVideo = v })
+        createInteractiveCheckbox(colHasDrilling, { it.hasDrilling }, { w, v -> w.hasDrilling = v })
+        createInteractiveCheckbox(colHasJournal, { it.hasJournal }, { w, v -> w.hasJournal = v })
+        createInteractiveCheckbox(colHasCore, { it.hasCore }, { w, v -> w.hasCore = v })
+        createInteractiveCheckbox(colHasRod, { it.hasRod }, { w, v -> w.hasRod = v })
+
+        colSamplesThawed.setCellValueFactory { SimpleObjectProperty(it.value.samplesThawed) }
+        colSamplesFrozen.setCellValueFactory { SimpleObjectProperty(it.value.samplesFrozen) }
+        colSamplesRocky.setCellValueFactory { SimpleObjectProperty(it.value.samplesRocky) }
+
+        colStartDate.setCellValueFactory { SimpleStringProperty(it.value.startDate ?: "") }
+        colEndDate.setCellValueFactory { SimpleStringProperty(it.value.endDate ?: "") }
+        colMmg1Top.setCellValueFactory { SimpleObjectProperty(it.value.mmg1Top) }
+        colMmg1Bottom.setCellValueFactory { SimpleObjectProperty(it.value.mmg1Bottom) }
+        colMmg2Top.setCellValueFactory { SimpleObjectProperty(it.value.mmg2Top) }
+        colMmg2Bottom.setCellValueFactory { SimpleObjectProperty(it.value.mmg2Bottom) }
+        colGwAppearLog.setCellValueFactory { SimpleObjectProperty(it.value.gwAppearLog) }
+        colGwStableLog.setCellValueFactory { SimpleObjectProperty(it.value.gwStableLog) }
+        colGwStableAbs.setCellValueFactory { SimpleObjectProperty(it.value.gwStableAbs) }
+        
+        colAct.setCellValueFactory { SimpleStringProperty(if (it.value.act) "Да" else "Нет") }
+        colActNumber.setCellValueFactory { SimpleStringProperty(it.value.actNumber ?: "") }
+        colThermalTube.setCellValueFactory { SimpleStringProperty(if (it.value.thermalTube) "Да" else "Нет") }
+        colAdditionalInfo.setCellValueFactory { SimpleStringProperty(it.value.additionalInfo ?: "") }
 
         workingsTable.items = workingsList
 
-        // Кнопки
-        editButton.disableProperty().bind(workingsTable.selectionModel.selectedItemProperty().isNull())
-        deleteButton.disableProperty().bind(workingsTable.selectionModel.selectedItemProperty().isNull())
+        // Контекстное меню
+        val contextMenu = ContextMenu()
+        val editItem = MenuItem("Редактировать").apply { setOnAction { onEdit() } }
+        val deleteItem = MenuItem("Удалить").apply { setOnAction { onDelete() } }
+        contextMenu.items.addAll(editItem, deleteItem)
+        workingsTable.contextMenu = contextMenu
 
-        // Горячие клавиши
-        // Двойной клик
+        editButton.disableProperty().bind(workingsTable.selectionModel.selectedItemProperty().isNull)
+        deleteButton.disableProperty().bind(workingsTable.selectionModel.selectedItemProperty().isNull)
+
+        workingsTable.setOnKeyPressed { event ->
+            if (event.code == javafx.scene.input.KeyCode.DELETE) {
+                onDelete()
+            }
+        }
+
         workingsTable.setOnMouseClicked { event ->
-            if (event.clickCount == 2 && !workingsTable.selectionModel.selectedItems.isEmpty()) {
-                onEdit()
-            }
+            if (event.clickCount == 2 && !workingsTable.selectionModel.isEmpty) onEdit()
         }
-        // Ctrl+E
+
         workingsTable.sceneProperty().addListener { _, _, newScene ->
-            if (newScene != null) {
-                newScene.accelerators[KeyCodeCombination(KeyCode.E, KeyCombination.CONTROL_DOWN)] = Runnable {
-                    if (!editButton.isDisable) onEdit()
-                }
-            }
+            newScene?.accelerators?.put(KeyCodeCombination(KeyCode.E, KeyCombination.CONTROL_DOWN), Runnable { if (!editButton.isDisable) onEdit() })
         }
-    }
 
-    fun loadWorkings() {
-        runOnFx {
-            try {
-                val workings = api.getWorkings("Bearer $token").await()
-                    .sortedBy { it.id }
-                workingsList.setAll(workings)
-
-                if (!::tableFilter.isInitialized) {
-                    tableFilter = TableFilter
-                        .forTableView(workingsTable)
-                        .lazy(false)
-                        .apply()
-
-                    tableFilter.setSearchStrategy { input: String, target: String ->
-                        FilterParser.parse(input, target)
+        // Цветовая раскраска строк (Оранжевый / Зеленый)
+        workingsTable.setRowFactory {
+            object : TableRow<Working>() {
+                override fun updateItem(item: Working?, empty: Boolean) {
+                    super.updateItem(item, empty)
+                    if (item == null || empty) {
+                        style = ""
+                    } else {
+                        if (item.isProject) {
+                            if (item.contractor != null && item.geologist != null && item.drillingRig != null) {
+                                style = "-fx-background-color: #c8e6c9;" // Зеленый (заполненная проектная)
+                            } else {
+                                style = "-fx-background-color: #ffe0b2;" // Оранжевый (пустая проектная)
+                            }
+                        } else {
+                            style = "-fx-background-color: #c8e6c9;" // Зеленый (фактическая)
+                        }
                     }
                 }
-            } catch (e: Exception) {
-                showAlert("Ошибка загрузки", "Не удалось загрузить список выработок: ${e.message}")
             }
         }
     }
 
-    @FXML fun onAdd() {
-        showWorkingForm(null)
+    private fun createInteractiveCheckbox(col: TableColumn<Working, Boolean>, getter: (Working) -> Boolean, setter: (Working, Boolean) -> Unit) {
+        col.setCellValueFactory { SimpleBooleanProperty(getter(it.value)) }
+        col.setCellFactory {
+            object : TableCell<Working, Boolean>() {
+                val checkBox = CheckBox()
+                init {
+                    checkBox.setOnAction {
+                        val working = tableView.items[index]
+                        setter(working, checkBox.isSelected)
+                        runOnFx {
+                            try {
+                                api.updateWorking("Bearer $token", working.id, working).await()
+                                updateStyle(checkBox.isSelected)
+                            } catch(e: Exception) {
+                                checkBox.isSelected = !checkBox.isSelected // Откат при ошибке
+                            }
+                        }
+                    }
+                    alignment = javafx.geometry.Pos.CENTER
+                }
+                override fun updateItem(item: Boolean?, empty: Boolean) {
+                    super.updateItem(item, empty)
+                    if (empty || item == null) {
+                        graphic = null
+                        style = ""
+                    } else {
+                        checkBox.isSelected = item
+                        graphic = checkBox
+                        updateStyle(item)
+                    }
+                }
+                private fun updateStyle(isChecked: Boolean) {
+                    style = if (isChecked) "-fx-background-color: #a5d6a7;" else "-fx-background-color: #ef9a9a;"
+                }
+            }
+        }
     }
+
+    fun loadWorkings(onComplete: (() -> Unit)? = null) {
+        runOnFx {
+            try {
+                val fetched = api.getWorkings("Bearer $token").await().sortedBy { it.id }
+                allWorkings.clear()
+                allWorkings.addAll(fetched)
+                
+                applyFilter()
+
+                val selectedArea = filterAreaCombo.value
+                val areas = listOf("ВСЕ") + fetched.mapNotNull { it.area?.name }.distinct()
+                filterAreaCombo.items = FXCollections.observableArrayList(areas)
+                filterAreaCombo.value = selectedArea ?: "ВСЕ"
+                filterAreaCombo.setOnAction { applyFilter() }
+
+                if (!::tableFilter.isInitialized) {
+                    tableFilter = TableFilter.forTableView(workingsTable).lazy(false).apply()
+                    tableFilter.setSearchStrategy { input: String, target: String -> FilterParser.parse(input, target) }
+                }
+                
+                // Вызываем колбэк после завершения всех обновлений
+                onComplete?.invoke()
+            } catch (e: Exception) {
+                showAlert("Ошибка", "Не удалось загрузить: ${e.message}")
+            }
+        }
+    }
+
+    private fun applyFilter() {
+        val selected = filterAreaCombo.value
+        val filtered = if (selected == null || selected == "ВСЕ") allWorkings else allWorkings.filter { it.area?.name == selected }
+        workingsList.setAll(filtered)
+    }
+
+    @FXML fun onAdd() = showWorkingForm(null)
 
     @FXML fun onEdit() {
         val selected = workingsTable.selectionModel.selectedItem
-        if (selected != null) {
-            showWorkingForm(selected)
-        }
+        if (selected != null) showWorkingForm(selected)
     }
 
     @FXML fun onDelete() {
-        val selected = workingsTable.selectionModel.selectedItem
-        if (selected != null) {
-            val alert = Alert(Alert.AlertType.CONFIRMATION)
-            alert.title = "Подтверждение"
-            alert.headerText = "Удалить выработку ${selected.number}?"
-            alert.contentText = "Это действие нельзя отменить."
-            val result = alert.showAndWait()
-            if (result.isPresent && result.get() == ButtonType.OK) {
+        val selectedItems = workingsTable.selectionModel.selectedItems.toList()
+        if (selectedItems.isNotEmpty()) {
+            val alert = Alert(Alert.AlertType.CONFIRMATION, "Удалить ${selectedItems.size} записей?", ButtonType.YES, ButtonType.NO)
+            if (alert.showAndWait().get() == ButtonType.YES) {
+                val lastSelectedIndex = workingsTable.selectionModel.selectedIndex
                 runOnFx {
                     try {
-                        api.deleteWorking("Bearer $token", selected.id).awaitUnit()
-                        loadWorkings()
+                        selectedItems.forEach { api.deleteWorking("Bearer $token", it.id).awaitUnit() }
+                        // Передаём колбэк для выделения строки после обновления таблицы
+                        loadWorkings {
+                            if (workingsList.isNotEmpty()) {
+                                val newIdx = if (lastSelectedIndex >= workingsList.size) workingsList.size - 1 else lastSelectedIndex
+                                workingsTable.selectionModel.select(newIdx)
+                                workingsTable.requestFocus()
+                            }
+                        }
                     } catch (e: Exception) {
-                        showAlert("Ошибка удаления", e.message ?: "Неизвестная ошибка")
+                        showAlert("Ошибка", e.message ?: "Ошибка удаления")
                     }
                 }
             }
@@ -221,12 +315,7 @@ class MainController {
     }
 
     private fun showAlert(title: String, message: String) {
-        Alert(Alert.AlertType.ERROR).apply {
-            this.title = title
-            headerText = null
-            contentText = message
-            showAndWait()
-        }
+        Alert(Alert.AlertType.ERROR).apply { this.title = title; headerText = null; contentText = message; showAndWait() }
     }
 
     @FXML fun openAreasEditor() = openRefEditor(RefType.AREA)
@@ -240,42 +329,35 @@ class MainController {
         val root = loader.load<VBox>()
         val controller = loader.getController<ReferenceEditorController>()
         controller.initData(token, type)
-
         val stage = Stage()
         stage.initModality(Modality.WINDOW_MODAL)
         stage.initOwner(workingsTable.scene.window)
         stage.scene = Scene(root)
         stage.title = "Справочник: ${type.title}"
         stage.showAndWait()
-        
-        // После закрытия справочников перезагружаем главную таблицу (вдруг имена изменились)
         loadWorkings() 
     }
 
-    @FXML
-    fun openExcelImport() {
-        val fileChooser = FileChooser()
-        fileChooser.title = "Выберите Excel файл для импорта"
-        fileChooser.extensionFilters.add(FileChooser.ExtensionFilter("Excel Files", "*.xls", "*.xlsx", "*.xlsm"))
-        
-        val file = fileChooser.showOpenDialog(workingsTable.scene.window)
-        
-        if (file != null) {
-            try {
-                val loader = FXMLLoader(javaClass.getResource("/excelImport.fxml"))
-                val root = loader.load<VBox>()
-                val controller = loader.getController<ExcelImportController>()
-                
-                controller.initData(token, userRole, file) { loadWorkings() }
+    @FXML fun openProjectExcelImport() = openExcelImport(true)
+    @FXML fun openActualExcelImport() = openExcelImport(false)
 
-                val stage = Stage()
-                stage.initModality(Modality.WINDOW_MODAL)
-                stage.initOwner(workingsTable.scene.window)
-                stage.scene = Scene(root)
-                stage.title = "Мастер импорта выработок"
-                stage.showAndWait()
-            } catch (e: Exception) {
-                showAlert("Ошибка", "Не удалось открыть окно импорта: ${e.message}")
+    private fun openExcelImport(isProject: Boolean) {
+        val fileChooser = FileChooser().apply {
+            title = "Выберите Excel файл"
+            extensionFilters.add(FileChooser.ExtensionFilter("Excel", "*.xls", "*.xlsx", "*.xlsm"))
+        }
+        val file = fileChooser.showOpenDialog(workingsTable.scene.window)
+        if (file != null) {
+            val loader = FXMLLoader(javaClass.getResource("/excelImport.fxml"))
+            val root = loader.load<VBox>()
+            // Передаем флаг isProject в контроллер импорта
+            loader.getController<ExcelImportController>().initData(token, userRole, file, isProject) { loadWorkings() }
+            Stage().apply {
+                initModality(Modality.WINDOW_MODAL)
+                initOwner(workingsTable.scene.window)
+                scene = Scene(root)
+                title = if (isProject) "Импорт ПРОЕКТНЫХ скважин" else "Импорт ФАКТИЧЕСКИХ скважин"
+                showAndWait()
             }
         }
     }

@@ -164,6 +164,8 @@ class ImportCorrectionController {
         stage.showAndWait()
     }
 
-    @FXML fun onCancel() { onAllCompletedCallback(); close() }
+    @FXML fun onCancel() { 
+        close() 
+    }
     private fun close() { (correctionTable.scene.window as Stage).close() }
 }

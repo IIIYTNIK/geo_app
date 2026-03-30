@@ -1,16 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<VBox xmlns="http://javafx.com/javafx"
-      xmlns:fx="http://javafx.com/fxml"
-      fx:controller="org.example.geoapp.controller.MainController"
-      prefWidth="1200" prefHeight="600">
-
+<VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml" fx:controller="org.example.geoapp.controller.MainController" prefWidth="1400" prefHeight="700">
     <MenuBar>
         <Menu text="Инструменты">
-            <MenuItem text="Импорт из Excel..." onAction="#openExcelImport"/>
+            <MenuItem text="Импорт проектных скважин" onAction="#openProjectExcelImport"/>
+            <MenuItem text="Импорт фактических скважин" onAction="#openActualExcelImport"/>
         </Menu>
         <Menu fx:id="adminMenu" text="Справочники" visible="false">
             <MenuItem text="Участки" onAction="#openAreasEditor"/>
@@ -22,48 +18,63 @@
         </Menu>
     </MenuBar>
 
-    <TableView fx:id="workingsTable" VBox.vgrow="ALWAYS">
-        <columns>
-            <TableColumn fx:id="colRowNumber" text="№ п/п" prefWidth="50"/>
-            <TableColumn fx:id="colName" text="Наименование" prefWidth="120"/>
-            <TableColumn fx:id="colArea" text="Участок" prefWidth="120"/>
-            <TableColumn fx:id="colWorkType" text="Тип" prefWidth="100"/>
-            <TableColumn fx:id="colGeologist" text="Геолог" prefWidth="120"/>
-            <TableColumn fx:id="colContractor" text="Подрядчик" prefWidth="120"/>
-            <TableColumn fx:id="colPlannedX" text="X план" prefWidth="70"/>
-            <TableColumn fx:id="colPlannedY" text="Y план" prefWidth="70"/>
-            <TableColumn fx:id="colPlannedZ" text="Z план" prefWidth="70"/>
-            <TableColumn fx:id="colActualX" text="X факт" prefWidth="70"/>
-            <TableColumn fx:id="colActualY" text="Y факт" prefWidth="70"/>
-            <TableColumn fx:id="colActualZ" text="Z факт" prefWidth="70"/>
-            <TableColumn fx:id="colDeltaX" text="ΔX" prefWidth="70"/>
-            <TableColumn fx:id="colDeltaY" text="ΔY" prefWidth="70"/>
-            <TableColumn fx:id="colDepth" text="Глубина" prefWidth="80"/>
-            <TableColumn fx:id="colCoreRecovery" text="Керн,%" prefWidth="70"/>
-            <TableColumn fx:id="colCasing" text="Обсад" prefWidth="80"/>
-            <TableColumn fx:id="colClosureStage" text="Этап закрытия" prefWidth="100"/>
-            <TableColumn fx:id="colStartDate" text="Дата нач" prefWidth="90"/>
-            <TableColumn fx:id="colEndDate" text="Дата оконч" prefWidth="90"/>
-            <TableColumn fx:id="colMmg1Top" text="ММГ1 кровля" prefWidth="80"/>
-            <TableColumn fx:id="colMmg1Bottom" text="ММГ1 подошва" prefWidth="80"/>
-            <TableColumn fx:id="colMmg2Top" text="ММГ2 кровля" prefWidth="80"/>
-            <TableColumn fx:id="colMmg2Bottom" text="ММГ2 подошва" prefWidth="80"/>
-            <TableColumn fx:id="colGwAppearLog" text="УГВ появ журнал" prefWidth="90"/>
-            <TableColumn fx:id="colGwStableLog" text="УГВ устан журнал" prefWidth="90"/>
-            <TableColumn fx:id="colGwStableAbs" text="УГВ устан абс" prefWidth="80"/>
-            <TableColumn fx:id="colGwStableRel" text="УГВ устан отн" prefWidth="80"/>
-            <TableColumn fx:id="colGwStableAbsFinal" text="УГВ устан абс финал" prefWidth="100"/>
-            <TableColumn fx:id="colContractorExtraIndex" text="Допиндекс" prefWidth="120"/>
-            <TableColumn fx:id="colAct" text="Акт" prefWidth="60"/>
-            <TableColumn fx:id="colActNumber" text="Номер акта" prefWidth="80"/>
-            <TableColumn fx:id="colThermalTube" text="Термотрубка" prefWidth="80"/>
-            <TableColumn fx:id="colAdditionalInfo" text="Примечание" prefWidth="150"/>
-        </columns>
-    </TableView>
-
-    <HBox spacing="10" alignment="CENTER_RIGHT" style="-fx-padding: 10;">
+    <HBox spacing="10" alignment="CENTER_LEFT" style="-fx-padding: 10;">
+        <Label text="Фильтр по участку:" style="-fx-font-weight: bold;"/>
+        <ComboBox fx:id="filterAreaCombo" prefWidth="200"/>
+        <Region HBox.hgrow="ALWAYS"/>
         <Button fx:id="addButton" text="Добавить" onAction="#onAdd"/>
         <Button fx:id="editButton" text="Редактировать" onAction="#onEdit"/>
         <Button fx:id="deleteButton" text="Удалить" onAction="#onDelete"/>
     </HBox>
+
+    <TableView fx:id="workingsTable" VBox.vgrow="ALWAYS">
+        <columns>
+            <TableColumn fx:id="colRowNumber" text="№" prefWidth="40"/>
+            <TableColumn fx:id="colName" text="Наименование" prefWidth="120"/>
+            <TableColumn fx:id="colArea" text="Участок" prefWidth="100"/>
+            <TableColumn fx:id="colGeologist" text="Геолог" prefWidth="100"/>
+            <TableColumn fx:id="colContractor" text="Подрядчик" prefWidth="100"/>
+            <TableColumn fx:id="colPlannedX" text="X план" prefWidth="70"/>
+            <TableColumn fx:id="colPlannedY" text="Y план" prefWidth="70"/>
+            <TableColumn fx:id="colActualX" text="X факт" prefWidth="70"/>
+            <TableColumn fx:id="colActualY" text="Y факт" prefWidth="70"/>
+            <TableColumn fx:id="colActualZ" text="Z факт" prefWidth="70"/>
+            <TableColumn fx:id="colDeltaS" text="ΔS" prefWidth="60"/>
+            <TableColumn fx:id="colDepth" text="Глубина" prefWidth="60"/>
+            <TableColumn fx:id="colCoreRecovery" text="Керн,%" prefWidth="60"/>
+            <TableColumn fx:id="colCasing" text="Обсад" prefWidth="60"/>
+            
+            <TableColumn text="Материалы">
+                <columns>
+                    <TableColumn fx:id="colHasVideo" text="Видео" prefWidth="60"/>
+                    <TableColumn fx:id="colHasDrilling" text="Буровая" prefWidth="60"/>
+                    <TableColumn fx:id="colHasJournal" text="Журнал" prefWidth="60"/>
+                    <TableColumn fx:id="colHasCore" text="Керн" prefWidth="60"/>
+                    <TableColumn fx:id="colHasRod" text="Штанга" prefWidth="60"/>
+                </columns>
+            </TableColumn>
+
+            <TableColumn text="Образцы (шт)">
+                <columns>
+                    <TableColumn fx:id="colSamplesThawed" text="Талые" prefWidth="50"/>
+                    <TableColumn fx:id="colSamplesFrozen" text="Мерзл" prefWidth="50"/>
+                    <TableColumn fx:id="colSamplesRocky" text="Скал" prefWidth="50"/>
+                </columns>
+            </TableColumn>
+
+            <TableColumn fx:id="colStartDate" text="Дата нач" prefWidth="80"/>
+            <TableColumn fx:id="colEndDate" text="Дата оконч" prefWidth="80"/>
+            <TableColumn fx:id="colMmg1Top" text="ММГ1 кр." prefWidth="60"/>
+            <TableColumn fx:id="colMmg1Bottom" text="ММГ1 под." prefWidth="60"/>
+            <TableColumn fx:id="colMmg2Top" text="ММГ2 кр." prefWidth="60"/>
+            <TableColumn fx:id="colMmg2Bottom" text="ММГ2 под." prefWidth="60"/>
+            <TableColumn fx:id="colGwAppearLog" text="ПУГВ" prefWidth="60"/>
+            <TableColumn fx:id="colGwStableLog" text="УУГВ" prefWidth="60"/>
+            <TableColumn fx:id="colGwStableAbs" text="УУГВ абс" prefWidth="70"/>
+            <TableColumn fx:id="colAct" text="Акт" prefWidth="50"/>
+            <TableColumn fx:id="colActNumber" text="№ акта" prefWidth="60"/>
+            <TableColumn fx:id="colThermalTube" text="Т-трубка" prefWidth="70"/>
+            <TableColumn fx:id="colAdditionalInfo" text="Комментарий" prefWidth="150"/>
+        </columns>
+    </TableView>
 </VBox>

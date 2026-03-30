@@ -11,6 +11,7 @@
             <TableColumn fx:id="colId" text="ID" prefWidth="50"/>
             <TableColumn fx:id="colName" text="Наименование" prefWidth="250"/>
             <TableColumn fx:id="colParent" text="Подрядчик" prefWidth="150" visible="false"/>
+            <TableColumn fx:id="colComment" text="Комментарий" prefWidth="200"/>
         </columns>
     </TableView>
 

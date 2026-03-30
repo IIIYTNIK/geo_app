@@ -32,17 +32,18 @@ class ExcelImportController {
     @FXML private lateinit var statusLabel: Label
     @FXML private lateinit var importButton: Button
 
+    @FXML private lateinit var importAreaCombo: ComboBox<RefArea>
+    private var isProjectImport: Boolean = false
+
     private lateinit var token: String
     private lateinit var userRole: String
     private var workbook: Workbook? = null
     private var onCompleteCallback: () -> Unit = {}
     private val api = MainApp.api
 
-    // Делаем val, чтобы был доступ из ImportCorrectionController
     val columnMapping = mutableMapOf<Int, ComboBox<DbField>>()
     private val excelData = mutableListOf<DynamicRow>()
 
-    // Кэш для проверки справочников (val, чтобы дочернее окно их видело)
     var cacheAreas = listOf<RefArea>()
     var cacheWorkTypes = listOf<RefWorkType>()
     var cacheContractors = listOf<RefContractor>()
@@ -55,9 +56,10 @@ class ExcelImportController {
         startRowSpinner.isEditable = true
     }
 
-    fun initData(token: String, role: String, file: File, onComplete: () -> Unit) {
+    fun initData(token: String, role: String, file: File, isProject: Boolean, onComplete: () -> Unit) {
         this.token = token
         this.userRole = role
+        this.isProjectImport = isProject
         this.onCompleteCallback = onComplete
         fileInfoLabel.text = "Файл: ${file.name}"
         
@@ -72,6 +74,14 @@ class ExcelImportController {
                 cacheContractors = api.getContractors().await()
                 cacheGeologists = api.getGeologists().await()
                 cacheDrillingRigs = api.getDrillingRigs().await()
+                
+                // Настраиваем комбобокс участков
+                importAreaCombo.items = FXCollections.observableArrayList(cacheAreas)
+                importAreaCombo.converter = object : javafx.util.StringConverter<RefArea>() {
+                    override fun toString(obj: RefArea?) = obj?.name ?: ""
+                    override fun fromString(string: String) = cacheAreas.find { it.name == string }
+                }
+
                 onLoaded()
             } catch (e: Exception) {
                 statusLabel.text = "Ошибка загрузки справочников: ${e.message}"
@@ -116,7 +126,6 @@ class ExcelImportController {
                 try {
                     cell?.let { formatter.formatCellValue(it, evaluator) }?.trim() ?: ""
                 } catch (e: Exception) {
-                    // Fallback если формула битая
                     cell?.let { formatter.formatCellValue(it) }?.trim() ?: ""
                 }
             }
@@ -130,8 +139,10 @@ class ExcelImportController {
     private fun buildDynamicTable(colCount: Int) {
         previewTable.columns.clear()
         columnMapping.clear()
-        val dbFields = FXCollections.observableArrayList(*DbField.values())
 
+        val availableFields = DbField.values().filter { it != DbField.AREA }.toTypedArray()
+        val dbFields = FXCollections.observableArrayList(*availableFields)
+        
         val rowNumCol = TableColumn<DynamicRow, String>("№ стр.")
         rowNumCol.setCellValueFactory { SimpleStringProperty(it.value.originalRowIndex.toString()) }
         rowNumCol.prefWidth = 60.0
@@ -151,7 +162,6 @@ class ExcelImportController {
                 override fun fromString(string: String) = dbFields.find { it.title == string }
             }
             
-            // Защита от дублирования выбора колонок
             combo.valueProperty().addListener { _, _, newValue ->
                 if (newValue != null && newValue != DbField.IGNORE) {
                     for ((otherIdx, otherCombo) in columnMapping) {
@@ -185,7 +195,12 @@ class ExcelImportController {
     }
 
     @FXML fun onImport() {
-        startRowSpinner.increment(0) // Заставляет Spinner зафиксировать введенное руками число
+        if (importAreaCombo.value == null) {
+            statusLabel.text = "ОШИБКА: Сначала выберите Участок в верхней панели!"
+            return
+        }
+        
+        startRowSpinner.increment(0)
         val startRow = startRowSpinner.value
         
         val validWorkings = mutableListOf<Working>()
@@ -195,13 +210,18 @@ class ExcelImportController {
             if (row.originalRowIndex < startRow) continue
 
             val rawValues = mutableMapOf<DbField, String>()
+            var hasAnyData = false // Флаг для отслеживания полностью пустых строк
+
             for ((colIdx, combo) in columnMapping) {
                 if (combo.value != DbField.IGNORE) {
-                    rawValues[combo.value] = row.rowData.getOrNull(colIdx) ?: ""
+                    val cellValue = row.rowData.getOrNull(colIdx) ?: ""
+                    rawValues[combo.value] = cellValue
+                    if (cellValue.isNotBlank()) hasAnyData = true
                 }
             }
 
-            if (rawValues[DbField.NUMBER].isNullOrBlank()) continue
+            // Игнорируем строку, если все выбранные ячейки пустые (лечит "лишние 4 строки")
+            if (!hasAnyData) continue
 
             try {
                 val working = validateAndParse(rawValues)
@@ -222,6 +242,9 @@ class ExcelImportController {
 
                 if (invalidRows.isNotEmpty()) {
                     showCorrectionWindow(invalidRows)
+                    // Восстанавливаем интерфейс после закрытия окна исправлений
+                    importButton.isDisable = false
+                    statusLabel.text = "Готово. Обработайте ошибки."
                 } else {
                     onCompleteCallback()
                     close()
@@ -233,73 +256,122 @@ class ExcelImportController {
         }
     }
 
-    // Умная валидация строки с учетом справочников
     fun validateAndParse(raw: Map<DbField, String>): Working {
         fun getNum(field: DbField): Double? {
             val str = raw[field]?.replace(",", ".")?.trim()
             if (str.isNullOrEmpty()) return null
             return str.toDoubleOrNull() ?: throw Exception("Ожидается число для '${field.title}'")
         }
+        
         fun getStr(field: DbField): String? = raw[field]?.trim()?.ifEmpty { null }
-        
-        val number = getStr(DbField.NUMBER) ?: throw Exception("Номер скважины обязателен")
-        
-        // 1. Участок, Тип, Буровая
-        val areaName = getStr(DbField.AREA)
-        val area = if (areaName != null) {
-            cacheAreas.find { it.name.equals(areaName, true) } 
-                ?: throw Exception("Участок '$areaName' не найден")
-        } else null
+
+        fun getSafeStr(name: String): String? {
+            val key = raw.keys.find { it.name == name } ?: return null
+            return raw[key]?.trim()?.ifEmpty { null }
+        }
+
+        fun getSafeBool(name: String): Boolean {
+            val str = getSafeStr(name)?.lowercase()
+            return str == "да" || str == "true" || str == "1" || str == "+" || str == "yes"
+        }
+
+        // УМНЫЙ ПАРСЕР ДАТ
+        fun getDateStr(field: DbField): String? {
+            val str = getStr(field) ?: return null
+            // Список возможных форматов из Excel
+            val formats = listOf(
+                "yyyy-MM-dd", "dd.MM.yyyy", "dd.MM.yy", 
+                "MM/dd/yy", "dd/MM/yy", "MM/dd/yyyy", "dd/MM/yyyy", "yyyy.MM.dd"
+            )
+            for (pattern in formats) {
+                try {
+                    val formatter = java.time.format.DateTimeFormatter.ofPattern(pattern)
+                    val date = java.time.LocalDate.parse(str, formatter)
+                    // Возвращаем в стандарте ISO (yyyy-MM-dd), который ждет сервер
+                    return date.format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE)
+                } catch (e: Exception) { /* Пробуем следующий формат */ }
+            }
+            throw Exception("Неверный формат даты: '$str'. Ожидается ДД.ММ.ГГГГ")
+        }
+
+        val number = getStr(DbField.NUMBER) ?: ""
+        var parsedNumber = number
+        var parsedWorkType: RefWorkType? = null
+
+        val combinedName = getSafeStr("NAME_COMBINED")
+        if (combinedName != null) {
+            val matchResult = Regex("^([^\\d]*)([\\d]+.*)$").find(combinedName)
+            if (matchResult != null) {
+                val typePrefix = matchResult.groupValues[1].replace("-", "").trim()
+                parsedNumber = matchResult.groupValues[2].trim()
+                if (typePrefix.isNotEmpty()) {
+                    parsedWorkType = cacheWorkTypes.find { 
+                        it.name.contains(typePrefix, ignoreCase = true) || typePrefix.contains(it.name, ignoreCase = true)
+                    }
+                }
+            } else {
+                parsedNumber = combinedName
+            }
+        }
+
+        if (parsedNumber.isEmpty()) throw Exception("Обязательное поле Номер выработки пустое")
+
+        val area = importAreaCombo.value ?: throw Exception("Не выбран участок")
 
         val workTypeName = getStr(DbField.WORK_TYPE)
-        val workType = if (workTypeName != null) {
-            cacheWorkTypes.find { it.name.equals(workTypeName, true) } 
-                ?: throw Exception("Тип выработки '$workTypeName' не найден")
-        } else null
+        val workType = parsedWorkType ?: if (workTypeName != null) cacheWorkTypes.find { it.name.equals(workTypeName, true) } ?: throw Exception("Тип выработки '$workTypeName' не найден") else null
 
         val rigName = getStr(DbField.DRILLING_RIG)
-        val rig = if (rigName != null) {
-            cacheDrillingRigs.find { it.name.equals(rigName, true) } 
-                ?: throw Exception("Буровая '$rigName' не найдена")
-        } else null
+        val rig = if (rigName != null) cacheDrillingRigs.find { it.name.equals(rigName, true) } ?: throw Exception("Буровая '$rigName' не найдена") else null
 
-        // 2. Строгая проверка: Подрядчик -> Геолог
         val contractorName = getStr(DbField.CONTRACTOR)
-        val contractor = if (contractorName != null) {
-            cacheContractors.find { it.name.equals(contractorName, true) } 
-                ?: throw Exception("Подрядчик '$contractorName' не найден в базе")
-        } else null
+        val contractor = if (contractorName != null) cacheContractors.find { it.name.equals(contractorName, true) } ?: throw Exception("Подрядчик '$contractorName' не найден") else null
 
         val geologistName = getStr(DbField.GEOLOGIST)
         val geologist = if (geologistName != null) {
-            val geo = cacheGeologists.find { it.name.equals(geologistName, true) }
-                ?: throw Exception("Геолог '$geologistName' не найден в базе")
-            
-            // Проверка принадлежности геолога к подрядчику
-            if (contractor != null && geo.contractor?.id != contractor.id) {
-                val realContractor = geo.contractor?.name ?: "Без подрядчика"
-                throw Exception("Геолог '${geo.name}' привязан к '${realContractor}', а не к '${contractor.name}'")
-            }
+            val geo = cacheGeologists.find { it.name.equals(geologistName, true) } ?: throw Exception("Геолог '$geologistName' не найден в базе")
+            if (contractor != null && geo.contractor?.id != contractor.id) throw Exception("Геолог относится к другому подрядчику")
             geo
         } else null
 
         val coreRec = getNum(DbField.CORE_RECOVERY)
-        if (coreRec != null && (coreRec < 0 || coreRec > 100)) throw Exception("Выход керна от 0 до 100")
+        if (coreRec != null && (coreRec < 0 || coreRec > 100)) throw Exception("Выход керна должен быть от 0 до 100%")
+
+        if (!isProjectImport) {
+            if (contractor == null) throw Exception("Для фактической скважины обязателен 'Подрядчик'")
+            if (geologist == null) throw Exception("Для фактической скважины обязателен 'Геолог'")
+            if (rig == null) throw Exception("Для фактической скважины обязательна 'Буровая'")
+        }
 
         return Working(
-            number = number, area = area, workType = workType, contractor = contractor, 
-            geologist = geologist, drillingRig = rig, plannedX = getNum(DbField.PLANNED_X),
-            plannedY = getNum(DbField.PLANNED_Y), plannedZ = getNum(DbField.PLANNED_Z),
-            actualX = getNum(DbField.ACTUAL_X), actualY = getNum(DbField.ACTUAL_Y), actualZ = getNum(DbField.ACTUAL_Z),
-            depth = getNum(DbField.DEPTH), coreRecovery = coreRec, casing = getStr(DbField.CASING),
-            startDate = getStr(DbField.START_DATE), endDate = getStr(DbField.END_DATE),
-            mmg1Top = getNum(DbField.MMG1_TOP), mmg1Bottom = getNum(DbField.MMG1_BOTTOM),
-            mmg2Top = getNum(DbField.MMG2_TOP), mmg2Bottom = getNum(DbField.MMG2_BOTTOM),
-            gwAppearLog = getNum(DbField.GW_APPEAR_LOG), gwStableLog = getNum(DbField.GW_STABLE_LOG),
-            gwStableAbs = getNum(DbField.GW_STABLE_ABS), gwStableRel = getNum(DbField.GW_STABLE_REL),
-            gwStableAbsFinal = getNum(DbField.GW_STABLE_ABS_FINAL), act = getStr(DbField.ACT),
-            actNumber = getStr(DbField.ACT_NUMBER), thermalTube = getStr(DbField.THERMAL_TUBE),
-            additionalInfo = getStr(DbField.ADDITIONAL_INFO)
+            number = parsedNumber, 
+            area = area, 
+            isProject = isProjectImport,
+            workType = workType, 
+            contractor = contractor, 
+            geologist = geologist, 
+            drillingRig = rig, 
+            plannedX = getNum(DbField.PLANNED_X), 
+            plannedY = getNum(DbField.PLANNED_Y), 
+            actualX = getNum(DbField.ACTUAL_X), 
+            actualY = getNum(DbField.ACTUAL_Y), 
+            actualZ = getNum(DbField.ACTUAL_Z),
+            depth = getNum(DbField.DEPTH), 
+            coreRecovery = coreRec, 
+            casing = getNum(DbField.CASING), 
+            // Используем новый парсер дат!
+            startDate = getDateStr(DbField.START_DATE), 
+            endDate = getDateStr(DbField.END_DATE),
+            mmg1Top = getNum(DbField.MMG1_TOP), 
+            mmg1Bottom = getNum(DbField.MMG1_BOTTOM),
+            mmg2Top = getNum(DbField.MMG2_TOP), 
+            mmg2Bottom = getNum(DbField.MMG2_BOTTOM),
+            gwAppearLog = getNum(DbField.GW_APPEAR_LOG), 
+            gwStableLog = getNum(DbField.GW_STABLE_LOG),
+            act = getSafeBool("ACT"),
+            actNumber = getSafeStr("ACT_NUMBER"), 
+            thermalTube = getSafeBool("THERMAL_TUBE"),
+            additionalInfo = getSafeStr("ADDITIONAL_INFO") ?: getSafeStr("COMMENT")
         )
     }
 

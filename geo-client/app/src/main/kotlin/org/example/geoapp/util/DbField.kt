@@ -1,10 +1,11 @@
 package org.example.geoapp.util
 
-import com.example.geoapp.api.*
-
 enum class DbField(val propKey: String, val title: String, val isReference: Boolean = false) {
     IGNORE("ignore", "--- Пропустить ---"),
-    NUMBER("number", "Номер скважины*"),
+    
+    // Виртуальное поле для склейки
+    NAME_COMBINED("nameCombined", "Наименование (Тип + Номер)"), 
+    NUMBER("number", "Номер выработки (только номер)"),
     
     // Справочники
     AREA("area", "Участок", true),
@@ -16,7 +17,6 @@ enum class DbField(val propKey: String, val title: String, val isReference: Bool
     // Числа и текст
     PLANNED_X("plannedX", "План X"),
     PLANNED_Y("plannedY", "План Y"),
-    PLANNED_Z("plannedZ", "План Z"),
     ACTUAL_X("actualX", "Факт X"),
     ACTUAL_Y("actualY", "Факт Y"),
     ACTUAL_Z("actualZ", "Факт Z"),
@@ -30,15 +30,16 @@ enum class DbField(val propKey: String, val title: String, val isReference: Bool
     MMG2_TOP("mmg2Top", "ММГ2 кровля"),
     MMG2_BOTTOM("mmg2Bottom", "ММГ2 подошва"),
     GW_APPEAR_LOG("gwAppearLog", "УГВ появ (журнал)"),
-    GW_STABLE_LOG("gwStableLog", "УГВ устан (журнал)"),
-    GW_STABLE_ABS("gwStableAbs", "УГВ устан (абс)"),
-    GW_STABLE_REL("gwStableRel", "УГВ устан (отн)"),
-    GW_STABLE_ABS_FINAL("gwStableAbsFinal", "УГВ устан (абс финал)"),
-    ACT("act", "Акт"),
+    GW_STABLE_LOG("gwStableLog", "УУГВ устан (журнал)"),
     ACT_NUMBER("actNumber", "Номер акта"),
-    THERMAL_TUBE("thermalTube", "Термотрубка"),
-    ADDITIONAL_INFO("additionalInfo", "Примечание")
+    ADDITIONAL_INFO("additionalInfo", "Примечание"),
+
+    // Образцы
+    SAMPLES_THAWED("samplesThawed", "Образцы талые (шт)"),
+    SAMPLES_FROZEN("samplesFrozen", "Образцы мерзлые (шт)"),
+    SAMPLES_ROCKY("samplesRocky", "Образцы скальные (шт)")
 }
 
+// ВОТ ЭТОТ КЛАСС БЫЛ ПОТЕРЯН:
 // Контейнер для строки, требующей исправления
 class CorrectionRow(val originalRowIndex: Int, var errorMsg: String, val rawValues: MutableMap<DbField, String>)
