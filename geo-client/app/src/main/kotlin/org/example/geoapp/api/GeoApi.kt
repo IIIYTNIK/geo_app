@@ -63,18 +63,21 @@ data class Working(
     val id: Long = 0,
     val area: RefArea? = null,
     var workType: RefWorkType? = null, 
-    var number: String,                
+    var number: String,             
+    
+    var orderNum: Int? = null, // Для отображения порядкового номера в таблице (не сохраняется на сервере)
     
     val plannedX: Double? = null,
     val plannedY: Double? = null,
+    val plannedDepth: Double? = null,
 
     val actualX: Double? = null,
     val actualY: Double? = null,
     val actualZ: Double? = null,
-    
+    val actualDepth: Double? = null,
+
     val deltaS: Double? = null,
-    val depth: Double? = null,
-    
+
     val startDate: String? = null,
     val endDate: String? = null,
     
@@ -104,7 +107,7 @@ data class Working(
     var hasDrilling: Boolean = false,
     var hasJournal: Boolean = false,
     var hasCore: Boolean = false,
-    var hasRod: Boolean = false,
+    var hasStake: Boolean = false,
 
     val samplesThawed: Int? = null,
     val samplesFrozen: Int? = null,

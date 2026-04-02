@@ -26,18 +26,19 @@ data class Working(
     @Column(nullable = true, unique = true)
     val number: String,
 
+    @Column(name = "order_num") val orderNum: Int? = null,
+    
     // Координаты
     val plannedX: Double? = null,
     val plannedY: Double? = null,
-    // План Z удален
+    val plannedDepth: Double? = null,
 
     val actualX: Double? = null,
     val actualY: Double? = null,
     val actualZ: Double? = null,
+    val actualDepth: Double? = null,
 
     val deltaS: Double? = null, // Смещение от проекта
-
-    val depth: Double? = null,
 
     @Column(name = "start_date") val startDate: LocalDate? = null,
     @Column(name = "end_date") val endDate: LocalDate? = null,
@@ -70,11 +71,11 @@ data class Working(
     @Column(name = "thermal_tube") val thermalTube: Boolean = false,
 
     // Новые поля: чекбоксы наличия материалов/журналов
-    val hasVideo: Boolean = false,
-    val hasDrilling: Boolean = false,
-    val hasJournal: Boolean = false,
-    val hasCore: Boolean = false,
-    val hasRod: Boolean = false,
+    @Column (name = "has_video") val hasVideo: Boolean = false,
+    @Column (name = "has_drilling") val hasDrilling: Boolean = false,
+    @Column (name = "has_journal") val hasJournal: Boolean = false,
+    @Column (name = "has_core") val hasCore: Boolean = false,
+    @Column (name = "has_stake") val hasStake: Boolean = false,
 
     // Новые поля: образцы
     val samplesThawed: Int? = null,

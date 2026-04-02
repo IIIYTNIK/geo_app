@@ -5,12 +5,16 @@ import org.springframework.web.server.ResponseStatusException
 import org.springframework.http.HttpStatus
 import com.example.geoserver.entity.*
 import com.example.geoserver.repository.*
+import com.example.geoserver.service.WorkingService
 import kotlin.math.sqrt
 import kotlin.math.round
 
+
 @RestController
 @RequestMapping("/api/workings")
-class WorkingController(private val repo: WorkingRepository) {
+class WorkingController(private val repo: WorkingRepository,
+                        private val workingService: WorkingService
+) {
 
     @GetMapping
     fun getAll(): List<Working> = repo.findAll()
@@ -19,9 +23,7 @@ class WorkingController(private val repo: WorkingRepository) {
     fun getById(@PathVariable id: Long): Working? = repo.findById(id).orElse(null)
 
     @PostMapping
-    fun create(@RequestBody working: Working): Working {
-        return repo.save(calculateComputedFields(working))
-    }
+    fun create(@RequestBody working: Working) = workingService.saveWorking(working)
 
     @PostMapping("/batch")
     fun createBatch(@RequestBody workings: List<Working>): List<Working> {

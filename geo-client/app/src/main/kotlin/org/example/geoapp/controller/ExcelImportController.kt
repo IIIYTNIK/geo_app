@@ -123,10 +123,17 @@ class ExcelImportController {
 
             val rowValues = (0 until lastCol).map { c ->
                 val cell = row.getCell(c, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL)
-                try {
-                    cell?.let { formatter.formatCellValue(it, evaluator) }?.trim() ?: ""
-                } catch (e: Exception) {
-                    cell?.let { formatter.formatCellValue(it) }?.trim() ?: ""
+                if (cell == null) {
+                    ""
+                } else if (cell.cellType == CellType.NUMERIC) {
+                    // Читаем точное число и конвертируем в обычную строку без "E"
+                    java.math.BigDecimal(cell.numericCellValue).stripTrailingZeros().toPlainString()
+                } else {
+                    try {
+                        formatter.formatCellValue(cell, evaluator).trim()
+                    } catch (e: Exception) {
+                        formatter.formatCellValue(cell).trim()
+                    }
                 }
             }
             excelData.add(DynamicRow(rowValues, i + 1))
@@ -353,10 +360,11 @@ class ExcelImportController {
             drillingRig = rig, 
             plannedX = getNum(DbField.PLANNED_X), 
             plannedY = getNum(DbField.PLANNED_Y), 
+            plannedDepth = getNum(DbField.PLANNED_DEPTH), 
             actualX = getNum(DbField.ACTUAL_X), 
             actualY = getNum(DbField.ACTUAL_Y), 
             actualZ = getNum(DbField.ACTUAL_Z),
-            depth = getNum(DbField.DEPTH), 
+            actualDepth = getNum(DbField.ACTUAL_DEPTH), 
             coreRecovery = coreRec, 
             casing = getNum(DbField.CASING), 
             // Используем новый парсер дат!

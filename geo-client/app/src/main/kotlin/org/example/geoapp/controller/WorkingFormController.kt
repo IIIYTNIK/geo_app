@@ -28,12 +28,13 @@ class WorkingFormController {
     @FXML private lateinit var numberField: TextField
     @FXML private lateinit var plannedXField: TextField
     @FXML private lateinit var plannedYField: TextField
+    @FXML private lateinit var plannedDepthField: TextField
     @FXML private lateinit var actualXField: TextField
     @FXML private lateinit var actualYField: TextField
     @FXML private lateinit var actualZField: TextField
+    @FXML private lateinit var actualDepthField: TextField
     @FXML private lateinit var deltaSLabel: Label
-
-    @FXML private lateinit var depthField: TextField
+    
     @FXML private lateinit var casingField: TextField
     @FXML private lateinit var coreRecoveryField: TextField
     
@@ -138,7 +139,8 @@ class WorkingFormController {
         
         //deltaSLabel.text = "Смещение от проекта: ${w.deltaS ?: "не определено"} м"
 
-        depthField.text = w.depth?.toString() ?: ""
+        plannedDepthField.text = w.plannedDepth?.toString() ?: ""
+        actualDepthField.text = w.actualDepth?.toString() ?: ""
         casingField.text = w.casing?.toString() ?: ""
         coreRecoveryField.text = w.coreRecovery?.toString() ?: ""
 
@@ -205,7 +207,7 @@ class WorkingFormController {
     private fun setupNumericFields() {
         listOf(
             plannedXField, plannedYField, actualXField, actualYField, actualZField, 
-            depthField, casingField, mmg1TopField, mmg1BottomField, mmg2TopField, 
+            plannedDepthField, actualDepthField, casingField, mmg1TopField, mmg1BottomField, mmg2TopField, 
             mmg2BottomField, gwAppearLogField, gwStableLogField, coreRecoveryField
         ).forEach { NumericFieldUtil.applyDecimalFilter(it) }
 
@@ -239,6 +241,7 @@ class WorkingFormController {
 
         val newWorking = Working(
             id = working?.id ?: 0,
+            orderNum = working?.orderNum,
             area = areaCombo.value,
             workType = workTypeCombo.value,
             number = numberField.text.trim(),
@@ -247,7 +250,8 @@ class WorkingFormController {
             actualX = actualXField.toDoubleSafe(),
             actualY = actualYField.toDoubleSafe(),
             actualZ = actualZField.toDoubleSafe(),
-            depth = depthField.toDoubleSafe(),
+            actualDepth = actualDepthField.toDoubleSafe(),
+            plannedDepth = plannedDepthField.toDoubleSafe(),
             startDate = startDatePicker.value?.toString(),
             endDate = endDatePicker.value?.toString(),
             geologist = geologistCombo.value,
@@ -269,7 +273,7 @@ class WorkingFormController {
             hasDrilling = working?.hasDrilling ?: false,
             hasJournal = working?.hasJournal ?: false,
             hasCore = working?.hasCore ?: false,
-            hasRod = working?.hasRod ?: false,
+            hasStake = working?.hasStake ?: false,
             isProject = working?.isProject ?: false
         )
 
@@ -297,4 +301,7 @@ class WorkingFormController {
         }
         return allValid
     }
+
+    private fun Double?.toPlain(): String = this?.let { java.math.BigDecimal(it).stripTrailingZeros().toPlainString() } ?: ""
+
 }

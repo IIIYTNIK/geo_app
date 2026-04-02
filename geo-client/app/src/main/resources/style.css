@@ -1,0 +1,12 @@
+/* Убираем синее выделение и делаем его серым */
+.table-view:focused .table-row-cell:selected, 
+.table-view .table-row-cell:selected {
+    -fx-background-color: #e0e0e0;
+    -fx-background-insets: 0;
+}
+
+/* Делаем текст всегда черным, даже при выделении */
+.table-view:focused .table-row-cell:selected .text, 
+.table-view .table-row-cell:selected .text {
+    -fx-fill: black;
+}

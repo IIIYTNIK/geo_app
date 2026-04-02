@@ -17,10 +17,11 @@ enum class DbField(val propKey: String, val title: String, val isReference: Bool
     // Числа и текст
     PLANNED_X("plannedX", "План X"),
     PLANNED_Y("plannedY", "План Y"),
+    PLANNED_DEPTH("plannedDepth", "План глубина"),
     ACTUAL_X("actualX", "Факт X"),
     ACTUAL_Y("actualY", "Факт Y"),
     ACTUAL_Z("actualZ", "Факт Z"),
-    DEPTH("depth", "Глубина"),
+    ACTUAL_DEPTH("actualDepth", "Факт глубина"),
     CORE_RECOVERY("coreRecovery", "Керн, %"),
     CASING("casing", "Обсад"),
     START_DATE("startDate", "Дата начала"),

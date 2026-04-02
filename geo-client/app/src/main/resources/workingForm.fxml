@@ -18,17 +18,19 @@
             <HBox spacing="10">
                 <VBox HBox.hgrow="ALWAYS"><Label text="План X:"/><TextField fx:id="plannedXField"/></VBox>
                 <VBox HBox.hgrow="ALWAYS"><Label text="План Y:"/><TextField fx:id="plannedYField"/></VBox>
+                <VBox HBox.hgrow="ALWAYS"><Label text="План H:"/><TextField fx:id="plannedDepthField"/></VBox>
             </HBox>
             
             <HBox spacing="10">
                 <VBox HBox.hgrow="ALWAYS"><Label text="Факт X:"/><TextField fx:id="actualXField"/></VBox>
                 <VBox HBox.hgrow="ALWAYS"><Label text="Факт Y:"/><TextField fx:id="actualYField"/></VBox>
                 <VBox HBox.hgrow="ALWAYS"><Label text="Факт Z:"/><TextField fx:id="actualZField"/></VBox>
+                <VBox HBox.hgrow="ALWAYS"><Label text="Факт H:"/><TextField fx:id="actualDepthField"/></VBox>
             </HBox>
+            
             <Label fx:id="deltaSLabel" text="Смещение от проекта: не определено" style="-fx-text-fill: #555; -fx-font-style: italic;"/>
 
             <HBox spacing="10">
-                <VBox HBox.hgrow="ALWAYS"><Label text="Глубина:"/><TextField fx:id="depthField"/></VBox>
                 <VBox HBox.hgrow="ALWAYS"><Label text="Выход керна, %:"/><TextField fx:id="coreRecoveryField"/></VBox>
                 <VBox HBox.hgrow="ALWAYS"><Label text="Обсад:"/><TextField fx:id="casingField"/></VBox>
             </HBox>
@@ -48,8 +50,10 @@
                 <VBox HBox.hgrow="ALWAYS"><Label text="ММГ2 подошва:"/><TextField fx:id="mmg2BottomField"/></VBox>
             </HBox>
 
-            <Label text="ПУГВ (УГВ появ):"/> <TextField fx:id="gwAppearLogField"/>
-            <Label text="УУГВ (УГВ устан):"/> <TextField fx:id="gwStableLogField"/>
+            <HBox spacing="10">
+                <VBox HBox.hgrow="ALWAYS"><Label text="ПУГВ (УГВ появ):"/><TextField fx:id="gwAppearLogField"/></VBox>
+                <VBox HBox.hgrow="ALWAYS"><Label text="УУГВ (УГВ устан):"/><TextField fx:id="gwStableLogField"/></VBox>
+            </HBox>
             <Label fx:id="gwStableAbsLabel" text="УУГВ абс: не определено" style="-fx-text-fill: #555;"/>
 
             <HBox spacing="20" alignment="CENTER_LEFT" style="-fx-padding: 10 0 0 0;">

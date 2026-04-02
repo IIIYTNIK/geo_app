@@ -62,10 +62,11 @@ object WorkingParser {
             workType = parsedWorkType, // Это поле потом дополнится в ExcelImportController, если тут null
             plannedX = getNum(DbField.PLANNED_X),
             plannedY = getNum(DbField.PLANNED_Y),
+            plannedDepth = getNum(DbField.PLANNED_DEPTH),
             actualX = getNum(DbField.ACTUAL_X),
             actualY = getNum(DbField.ACTUAL_Y),
             actualZ = getNum(DbField.ACTUAL_Z),
-            depth = getNum(DbField.DEPTH),
+            actualDepth = getNum(DbField.ACTUAL_DEPTH),
             coreRecovery = coreRec,
             casing = getNum(DbField.CASING),
             startDate = getStr(DbField.START_DATE),

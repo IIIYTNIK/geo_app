@@ -38,9 +38,11 @@ class MainController {
     @FXML private lateinit var colContractor: TableColumn<Working, String>
     @FXML private lateinit var colPlannedX: TableColumn<Working, Double?>
     @FXML private lateinit var colPlannedY: TableColumn<Working, Double?>
+    @FXML private lateinit var colPlannedDepth: TableColumn<Working, Double?>
     @FXML private lateinit var colActualX: TableColumn<Working, Double?>
     @FXML private lateinit var colActualY: TableColumn<Working, Double?>
     @FXML private lateinit var colActualZ: TableColumn<Working, Double?>
+    @FXML private lateinit var colActualDepth: TableColumn<Working, Double?>
     @FXML private lateinit var colDeltaS: TableColumn<Working, Double?>
     @FXML private lateinit var colDepth: TableColumn<Working, Double?>
     @FXML private lateinit var colCoreRecovery: TableColumn<Working, Double?>
@@ -51,7 +53,7 @@ class MainController {
     @FXML private lateinit var colHasDrilling: TableColumn<Working, Boolean>
     @FXML private lateinit var colHasJournal: TableColumn<Working, Boolean>
     @FXML private lateinit var colHasCore: TableColumn<Working, Boolean>
-    @FXML private lateinit var colHasRod: TableColumn<Working, Boolean>
+    @FXML private lateinit var colHasStake: TableColumn<Working, Boolean>
 
     // Образцы
     @FXML private lateinit var colSamplesThawed: TableColumn<Working, Int?>
@@ -106,18 +108,19 @@ class MainController {
             SimpleStringProperty("$prefix${w.number}")
         }
 
-        colRowNumber.setCellValueFactory { SimpleObjectProperty(workingsTable.items.indexOf(it.value) + 1) }
+        colRowNumber.setCellValueFactory { SimpleObjectProperty(it.value.orderNum) }
         colArea.setCellValueFactory { SimpleStringProperty(it.value.area?.name ?: "") }
         colGeologist.setCellValueFactory { SimpleStringProperty(it.value.geologist?.name ?: "") }
         colContractor.setCellValueFactory { SimpleStringProperty(it.value.contractor?.name ?: "") }
         
         colPlannedX.setCellValueFactory { SimpleObjectProperty(it.value.plannedX) }
         colPlannedY.setCellValueFactory { SimpleObjectProperty(it.value.plannedY) }
+        colPlannedDepth.setCellValueFactory { SimpleObjectProperty(it.value.plannedDepth) }
         colActualX.setCellValueFactory { SimpleObjectProperty(it.value.actualX) }
         colActualY.setCellValueFactory { SimpleObjectProperty(it.value.actualY) }
         colActualZ.setCellValueFactory { SimpleObjectProperty(it.value.actualZ) }
+        colActualDepth.setCellValueFactory { SimpleObjectProperty(it.value.actualDepth) }
         colDeltaS.setCellValueFactory { SimpleObjectProperty(it.value.deltaS) }
-        colDepth.setCellValueFactory { SimpleObjectProperty(it.value.depth) }
         colCoreRecovery.setCellValueFactory { SimpleObjectProperty(it.value.coreRecovery) }
         colCasing.setCellValueFactory { SimpleObjectProperty(it.value.casing) }
 
@@ -126,7 +129,7 @@ class MainController {
         createInteractiveCheckbox(colHasDrilling, { it.hasDrilling }, { w, v -> w.hasDrilling = v })
         createInteractiveCheckbox(colHasJournal, { it.hasJournal }, { w, v -> w.hasJournal = v })
         createInteractiveCheckbox(colHasCore, { it.hasCore }, { w, v -> w.hasCore = v })
-        createInteractiveCheckbox(colHasRod, { it.hasRod }, { w, v -> w.hasRod = v })
+        createInteractiveCheckbox(colHasStake, { it.hasStake }, { w, v -> w.hasStake = v })
 
         colSamplesThawed.setCellValueFactory { SimpleObjectProperty(it.value.samplesThawed) }
         colSamplesFrozen.setCellValueFactory { SimpleObjectProperty(it.value.samplesFrozen) }
@@ -254,6 +257,8 @@ class MainController {
                     tableFilter.setSearchStrategy { input: String, target: String -> FilterParser.parse(input, target) }
                 }
                 
+                autoResizeColumns()
+                
                 // Вызываем колбэк после завершения всех обновлений
                 onComplete?.invoke()
             } catch (e: Exception) {
@@ -359,6 +364,20 @@ class MainController {
                 title = if (isProject) "Импорт ПРОЕКТНЫХ скважин" else "Импорт ФАКТИЧЕСКИХ скважин"
                 showAndWait()
             }
+        }
+    }
+
+    private fun autoResizeColumns() {
+        workingsTable.columns.forEach { col ->
+            var maxWidth = javafx.scene.text.Text(col.text).layoutBounds.width + 25.0 // Ширина заголовка + отступ
+            for (i in 0 until minOf(workingsTable.items.size, 50)) {
+                val cellData = col.getCellData(i)?.toString() ?: ""
+                val width = javafx.scene.text.Text(cellData).layoutBounds.width + 15.0
+                if (width > maxWidth) {
+                    maxWidth = width
+                }
+            }
+            col.prefWidth = maxWidth
         }
     }
 }
