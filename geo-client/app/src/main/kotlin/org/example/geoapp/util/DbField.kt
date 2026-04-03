@@ -17,30 +17,38 @@ enum class DbField(val propKey: String, val title: String, val isReference: Bool
     // Числа и текст
     PLANNED_X("plannedX", "План X"),
     PLANNED_Y("plannedY", "План Y"),
-    PLANNED_DEPTH("plannedDepth", "План глубина"),
+    PLANNED_DEPTH("plannedDepth", "План H"),
     ACTUAL_X("actualX", "Факт X"),
     ACTUAL_Y("actualY", "Факт Y"),
     ACTUAL_Z("actualZ", "Факт Z"),
-    ACTUAL_DEPTH("actualDepth", "Факт глубина"),
-    CORE_RECOVERY("coreRecovery", "Керн, %"),
+    ACTUAL_DEPTH("actualDepth", "Факт H"),
+    CORE_RECOVERY("coreRecovery", "Выход керна, %"),
     CASING("casing", "Обсад"),
     START_DATE("startDate", "Дата начала"),
     END_DATE("endDate", "Дата окончания"),
-    MMG1_TOP("mmg1Top", "ММГ1 кровля"),
-    MMG1_BOTTOM("mmg1Bottom", "ММГ1 подошва"),
-    MMG2_TOP("mmg2Top", "ММГ2 кровля"),
-    MMG2_BOTTOM("mmg2Bottom", "ММГ2 подошва"),
-    GW_APPEAR_LOG("gwAppearLog", "УГВ появ (журнал)"),
-    GW_STABLE_LOG("gwStableLog", "УУГВ устан (журнал)"),
-    ACT_NUMBER("actNumber", "Номер акта"),
-    ADDITIONAL_INFO("additionalInfo", "Примечание"),
+    MMG1_TOP("mmg1Top", "ММГ1 кр."),
+    MMG1_BOTTOM("mmg1Bottom", "ММГ1 под."),
+    MMG2_TOP("mmg2Top", "ММГ2 кр."),
+    MMG2_BOTTOM("mmg2Bottom", "ММГ2 под."),
+    GW_APPEAR_LOG("gwAppearLog", "ПУГВ"),
+    GW_STABLE_LOG("gwStableLog", "УУГВ"),
+    ACT("act", "Акт"),
+    ACT_NUMBER("actNumber", "№ акта"),
+    THERMAL_TUBE("thermalTube", "Т-трубка"),
+    ADDITIONAL_INFO("additionalInfo", "Комментарий"),
 
+        // Материалы (чекбоксы)
+    HAS_VIDEO("HasVideo", "Видео"),
+    HAS_DRILLING("HasDrilling", "Буровая"),
+    HAS_JOURNAL("HasJournal", "Журнал"),
+    HAS_CORE("HasCore", "Керн"),
+    HAS_STAKE("HasStake", "Штага"),
+    
     // Образцы
-    SAMPLES_THAWED("samplesThawed", "Образцы талые (шт)"),
-    SAMPLES_FROZEN("samplesFrozen", "Образцы мерзлые (шт)"),
-    SAMPLES_ROCKY("samplesRocky", "Образцы скальные (шт)")
+    SAMPLES_THAWED("samplesThawed", "Талые (шт)"),
+    SAMPLES_FROZEN("samplesFrozen", "Мерзлые (шт)"),
+    SAMPLES_ROCKY("samplesRocky", "Скальные (шт)"),
 }
 
-// ВОТ ЭТОТ КЛАСС БЫЛ ПОТЕРЯН:
 // Контейнер для строки, требующей исправления
 class CorrectionRow(val originalRowIndex: Int, var errorMsg: String, val rawValues: MutableMap<DbField, String>)

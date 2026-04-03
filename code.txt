@@ -1,0 +1,3208 @@
+package com.example.geoapp.api
+
+import retrofit2.Call
+import retrofit2.http.*
+
+interface GeoApi {
+
+    @POST("api/auth/login")
+    fun login(@Body request: LoginRequest): Call<LoginResponse>
+
+    // --- Чтение (GET) ---
+    @GET("api/references/contractors") fun getContractors(): Call<List<RefContractor>>
+    @GET("api/references/areas") fun getAreas(): Call<List<RefArea>>
+    @GET("api/references/geologists") fun getGeologists(): Call<List<RefGeologist>>
+    @GET("api/references/drilling-rigs") fun getDrillingRigs(): Call<List<RefDrillingRig>>
+    @GET("api/references/work-types") fun getWorkTypes(): Call<List<RefWorkType>>
+    @GET("api/references/geologists/by-contractor/{id}") fun getGeologistsByContractor(@Header("Authorization") token: String, @Path("id") id: Long): Call<List<RefGeologist>>
+
+    // --- Создание (POST) ---
+    @POST("api/references/areas") fun createArea(@Header("Authorization") token: String, @Body item: RefArea): Call<RefArea>
+    @POST("api/references/work-types") fun createWorkType(@Header("Authorization") token: String, @Body item: RefWorkType): Call<RefWorkType>
+    @POST("api/references/drilling-rigs") fun createDrillingRig(@Header("Authorization") token: String, @Body item: RefDrillingRig): Call<RefDrillingRig>
+    @POST("api/references/contractors") fun createContractor(@Header("Authorization") token: String, @Body item: RefContractor): Call<RefContractor>
+    @POST("api/references/geologists") fun createGeologist(@Header("Authorization") token: String, @Body item: RefGeologist): Call<RefGeologist>
+
+    // --- Обновление (PUT) ---
+    @PUT("api/references/areas/{id}") fun updateArea(@Header("Authorization") token: String, @Path("id") id: Long, @Body item: RefArea): Call<RefArea>
+    @PUT("api/references/work-types/{id}") fun updateWorkType(@Header("Authorization") token: String, @Path("id") id: Long, @Body item: RefWorkType): Call<RefWorkType>
+    @PUT("api/references/drilling-rigs/{id}") fun updateDrillingRig(@Header("Authorization") token: String, @Path("id") id: Long, @Body item: RefDrillingRig): Call<RefDrillingRig>
+    @PUT("api/references/contractors/{id}") fun updateContractor(@Header("Authorization") token: String, @Path("id") id: Long, @Body item: RefContractor): Call<RefContractor>
+    @PUT("api/references/geologists/{id}") fun updateGeologist(@Header("Authorization") token: String, @Path("id") id: Long, @Body item: RefGeologist): Call<RefGeologist>
+
+    // --- Удаление (DELETE) ---
+    @DELETE("api/references/areas/{id}") fun deleteArea(@Header("Authorization") token: String, @Path("id") id: Long): Call<Void>
+    @DELETE("api/references/work-types/{id}") fun deleteWorkType(@Header("Authorization") token: String, @Path("id") id: Long): Call<Void>
+    @DELETE("api/references/drilling-rigs/{id}") fun deleteDrillingRig(@Header("Authorization") token: String, @Path("id") id: Long): Call<Void>
+    @DELETE("api/references/contractors/{id}") fun deleteContractor(@Header("Authorization") token: String, @Path("id") id: Long): Call<Void>
+    @DELETE("api/references/geologists/{id}") fun deleteGeologist(@Header("Authorization") token: String, @Path("id") id: Long): Call<Void>
+
+    // --- Выработки ---
+    @GET("api/workings") fun getWorkings(@Header("Authorization") token: String): Call<List<Working>>
+    @GET("api/workings/{id}") fun getWorking(@Header("Authorization") token: String, @Path("id") id: Long): Call<Working>
+    @POST("api/workings") fun createWorking(@Header("Authorization") token: String, @Body working: Working): Call<Working>
+    @PUT("api/workings/{id}") fun updateWorking(@Header("Authorization") token: String, @Path("id") id: Long, @Body working: Working): Call<Working>
+    @DELETE("api/workings/{id}") fun deleteWorking(@Header("Authorization") token: String, @Path("id") id: Long): Call<Void>
+
+    // Метод для массовой загрузки выработок (например, из Excel)
+    @POST("api/workings/batch") fun createWorkingsBatch(@Header("Authorization") token: String, @Body workings: List<Working>): Call<List<Working>>
+}
+
+data class LoginRequest(val username: String, val password: String)
+data class LoginResponse(val token: String, val role: String)
+
+// Модели справочников
+data class RefArea(val id: Long = 0, val name: String, val comment: String? = null)
+data class RefContractor(val id: Long = 0, val name: String, val comment: String? = null)
+data class RefDrillingRig(val id: Long = 0, val name: String, val comment: String? = null)
+data class RefWorkType(val id: Long = 0, val name: String, val comment: String? = null)
+data class RefGeologist(val id: Long = 0, val name: String, var contractor: RefContractor? = null, val comment: String? = null)
+
+// Модель выработки (Working) - основная сущность, с которой будем работать в приложении
+data class Working(
+    val id: Long = 0,
+    val area: RefArea? = null,
+    var workType: RefWorkType? = null, 
+    var number: String,             
+    
+    var orderNum: Int? = null, // Для отображения порядкового номера в таблице
+    
+    val plannedX: Double? = null,
+    val plannedY: Double? = null,
+    val plannedDepth: Double? = null,
+
+    val actualX: Double? = null,
+    val actualY: Double? = null,
+    val actualZ: Double? = null,
+    val actualDepth: Double? = null,
+
+    val deltaS: Double? = null,
+
+    val startDate: String? = null,
+    val endDate: String? = null,
+    
+    val geologist: RefGeologist? = null,
+    val contractor: RefContractor? = null,
+    val drillingRig: RefDrillingRig? = null,
+    
+    val additionalInfo: String? = null,
+    
+    val coreRecovery: Double? = null,
+    val casing: Double? = null,
+    
+    val mmg1Top: Double? = null,
+    val mmg1Bottom: Double? = null,
+    val mmg2Top: Double? = null,
+    val mmg2Bottom: Double? = null,
+    
+    val gwAppearLog: Double? = null,
+    val gwStableLog: Double? = null,
+    val gwStableAbs: Double? = null,
+
+    // Чекбоксы (Boolean)
+    var act: Boolean = false,
+    val actNumber: String? = null,
+    var thermalTube: Boolean = false,
+    var hasVideo: Boolean = false,
+    var hasDrilling: Boolean = false,
+    var hasJournal: Boolean = false,
+    var hasCore: Boolean = false,
+    var hasStake: Boolean = false,
+
+    val samplesThawed: Int? = null,
+    val samplesFrozen: Int? = null,
+    val samplesRocky: Int? = null,
+
+    val isProject: Boolean = false
+)
+
+package org.example.geoapp.controller
+
+import com.example.geoapp.api.*
+import javafx.beans.property.SimpleStringProperty
+import javafx.collections.FXCollections
+import javafx.fxml.FXML
+import javafx.fxml.FXMLLoader
+import javafx.scene.Scene
+import javafx.scene.control.*
+import javafx.scene.layout.VBox
+import javafx.stage.Modality
+import javafx.stage.Stage
+import org.apache.poi.ss.usermodel.*
+import org.apache.poi.ss.util.CellReference
+import org.example.geoapp.MainApp
+import org.example.geoapp.util.DbField
+import org.example.geoapp.util.CorrectionRow
+import org.example.geoapp.util.await
+import org.example.geoapp.util.runOnFx
+import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.apache.poi.ss.usermodel.DateUtil
+import java.text.SimpleDateFormat
+
+class DynamicRow(val rowData: List<String>, val originalRowIndex: Int)
+
+class ExcelImportController {
+
+    @FXML private lateinit var fileInfoLabel: Label
+    @FXML private lateinit var sheetCombo: ComboBox<String>
+    @FXML private lateinit var startRowSpinner: Spinner<Int>
+    @FXML private lateinit var previewTable: TableView<DynamicRow>
+    @FXML private lateinit var statusLabel: Label
+    @FXML private lateinit var importButton: Button
+
+    @FXML private lateinit var importAreaCombo: ComboBox<RefArea>
+    private var isProjectImport: Boolean = false
+
+    private lateinit var token: String
+    private lateinit var userRole: String
+    private var workbook: Workbook? = null
+    private var onCompleteCallback: () -> Unit = {}
+    private val api = MainApp.api
+
+    val columnMapping = mutableMapOf<Int, ComboBox<DbField>>()
+    private val excelData = mutableListOf<DynamicRow>()
+
+    var cacheAreas = listOf<RefArea>()
+    var cacheWorkTypes = listOf<RefWorkType>()
+    var cacheContractors = listOf<RefContractor>()
+    var cacheGeologists = listOf<RefGeologist>()
+    var cacheDrillingRigs = listOf<RefDrillingRig>()
+
+    @FXML
+    fun initialize() {
+        startRowSpinner.valueFactory = SpinnerValueFactory.IntegerSpinnerValueFactory(1, 10000, 2)
+        startRowSpinner.isEditable = true
+    }
+
+    fun initData(token: String, role: String, file: File, isProject: Boolean, onComplete: () -> Unit) {
+        this.token = token
+        this.userRole = role
+        this.isProjectImport = isProject
+        this.onCompleteCallback = onComplete
+        fileInfoLabel.text = "Файл: ${file.name}"
+        
+        loadReferences { openWorkbook(file) }
+    }
+
+    fun loadReferences(onLoaded: () -> Unit = {}) {
+        runOnFx {
+            try {
+                cacheAreas = api.getAreas().await()
+                cacheWorkTypes = api.getWorkTypes().await()
+                cacheContractors = api.getContractors().await()
+                cacheGeologists = api.getGeologists().await()
+                cacheDrillingRigs = api.getDrillingRigs().await()
+                
+                // Настраиваем комбобокс участков
+                importAreaCombo.items = FXCollections.observableArrayList(cacheAreas)
+                importAreaCombo.converter = object : javafx.util.StringConverter<RefArea>() {
+                    override fun toString(obj: RefArea?) = obj?.name ?: ""
+                    override fun fromString(string: String) = cacheAreas.find { it.name == string }
+                }
+
+                onLoaded()
+            } catch (e: Exception) {
+                statusLabel.text = "Ошибка загрузки справочников: ${e.message}"
+            }
+        }
+    }
+
+    private fun openWorkbook(file: File) {
+        statusLabel.text = "Открытие файла..."
+        runOnFx {
+            try {
+                withContext(Dispatchers.IO) { workbook = WorkbookFactory.create(file) }
+                val sheetNames = (0 until (workbook?.numberOfSheets ?: 0)).map { workbook!!.getSheetName(it) }
+                sheetCombo.items = FXCollections.observableArrayList(sheetNames)
+                sheetCombo.selectionModel.selectedItemProperty().addListener { _, _, _ -> loadSheetData() }
+                if (sheetNames.isNotEmpty()) sheetCombo.selectionModel.select(0)
+                
+                statusLabel.text = "Укажите поля базы над нужными колонками."
+                importButton.isDisable = false
+            } catch (e: Exception) { statusLabel.text = "Ошибка: ${e.message}" }
+        }
+    }
+
+    private fun loadSheetData() {
+        val sheetIndex = sheetCombo.selectionModel.selectedIndex
+        if (sheetIndex < 0 || workbook == null) return
+
+        val sheet = workbook!!.getSheetAt(sheetIndex)
+        val formatter = DataFormatter()
+        val evaluator = workbook!!.creationHelper.createFormulaEvaluator()
+
+        excelData.clear()
+        var maxCols = 0
+
+        for (i in 0..sheet.lastRowNum) {
+            val row = sheet.getRow(i) ?: continue
+            val lastCol = row.lastCellNum.toInt()
+            if (lastCol > maxCols) maxCols = lastCol
+
+            val rowValues = (0 until lastCol).map { c ->
+                val cell = row.getCell(c, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL)
+                if (cell == null) {
+                    ""
+                } else if (cell.cellType == CellType.NUMERIC) {
+                    // Читаем точное число и конвертируем в обычную строку без "E"
+                    java.math.BigDecimal(cell.numericCellValue).stripTrailingZeros().toPlainString()
+                } else {
+                    try {
+                        formatter.formatCellValue(cell, evaluator).trim()
+                    } catch (e: Exception) {
+                        formatter.formatCellValue(cell).trim()
+                    }
+                }
+            }
+            excelData.add(DynamicRow(rowValues, i + 1))
+        }
+
+        buildDynamicTable(maxCols)
+        previewTable.items = FXCollections.observableArrayList(excelData)
+    }
+
+    private fun buildDynamicTable(colCount: Int) {
+        previewTable.columns.clear()
+        columnMapping.clear()
+
+        val availableFields = DbField.values().filter { it != DbField.AREA }.toTypedArray()
+        val dbFields = FXCollections.observableArrayList(*availableFields)
+        
+        val rowNumCol = TableColumn<DynamicRow, String>("№ стр.")
+        rowNumCol.setCellValueFactory { SimpleStringProperty(it.value.originalRowIndex.toString()) }
+        rowNumCol.prefWidth = 60.0
+        rowNumCol.isSortable = false
+        rowNumCol.style = "-fx-alignment: CENTER; -fx-background-color: #f0f0f0; -fx-font-weight: bold;"
+        previewTable.columns.add(rowNumCol)
+
+        for (i in 0 until colCount) {
+            val col = TableColumn<DynamicRow, String>()
+            val headerLabel = Label("Столбец ${CellReference.convertNumToColString(i)}")
+            val combo = ComboBox<DbField>()
+            combo.items = dbFields
+            combo.value = DbField.IGNORE
+            combo.prefWidth = 140.0
+            combo.converter = object : javafx.util.StringConverter<DbField>() {
+                override fun toString(obj: DbField?) = obj?.title ?: ""
+                override fun fromString(string: String) = dbFields.find { it.title == string }
+            }
+            
+            combo.valueProperty().addListener { _, _, newValue ->
+                if (newValue != null && newValue != DbField.IGNORE) {
+                    for ((otherIdx, otherCombo) in columnMapping) {
+                        if (otherIdx != i && otherCombo.value == newValue) {
+                            otherCombo.value = DbField.IGNORE
+                        }
+                    }
+                }
+            }
+
+            columnMapping[i] = combo
+            col.graphic = VBox(5.0, headerLabel, combo).apply { alignment = javafx.geometry.Pos.CENTER }
+            col.setCellValueFactory { SimpleStringProperty(it.value.rowData.getOrNull(i) ?: "") }
+            col.isSortable = false
+            previewTable.columns.add(col)
+        }
+    }
+
+    @FXML fun onAutoMap() {
+        for ((colIndex, combo) in columnMapping) {
+            var bestField = DbField.IGNORE
+            for (row in excelData.take(20)) {
+                val cellValue = row.rowData.getOrNull(colIndex)?.lowercase() ?: continue
+                val matchedField = DbField.values().find { 
+                    it != DbField.IGNORE && (cellValue == it.title.lowercase() || cellValue.contains(it.title.lowercase())) 
+                }
+                if (matchedField != null) { bestField = matchedField; break }
+            }
+            combo.value = bestField
+        }
+    }
+
+    @FXML fun onImport() {
+        if (importAreaCombo.value == null) {
+            statusLabel.text = "ОШИБКА: Сначала выберите Участок в верхней панели!"
+            return
+        }
+        
+        startRowSpinner.increment(0)
+        val startRow = startRowSpinner.value
+        
+        val validWorkings = mutableListOf<Working>()
+        val invalidRows = mutableListOf<CorrectionRow>()
+
+        for (row in excelData) {
+            if (row.originalRowIndex < startRow) continue
+
+            val rawValues = mutableMapOf<DbField, String>()
+            var hasAnyData = false // Флаг для отслеживания полностью пустых строк
+
+            for ((colIdx, combo) in columnMapping) {
+                if (combo.value != DbField.IGNORE) {
+                    val cellValue = row.rowData.getOrNull(colIdx) ?: ""
+                    rawValues[combo.value] = cellValue
+                    if (cellValue.isNotBlank()) hasAnyData = true
+                }
+            }
+
+            // Игнорируем строку, если все выбранные ячейки пустые (лечит "лишние 4 строки")
+            if (!hasAnyData) continue
+
+            try {
+                val working = validateAndParse(rawValues)
+                validWorkings.add(working)
+            } catch (e: Exception) {
+                invalidRows.add(CorrectionRow(row.originalRowIndex, e.message ?: "Ошибка", rawValues))
+            }
+        }
+
+        importButton.isDisable = true
+        statusLabel.text = "Обработка данных..."
+
+        runOnFx {
+            try {
+                if (validWorkings.isNotEmpty()) {
+                    api.createWorkingsBatch("Bearer $token", validWorkings).await()
+                }
+
+                if (invalidRows.isNotEmpty()) {
+                    showCorrectionWindow(invalidRows)
+                    // Восстанавливаем интерфейс после закрытия окна исправлений
+                    importButton.isDisable = false
+                    statusLabel.text = "Готово. Обработайте ошибки."
+                } else {
+                    onCompleteCallback()
+                    close()
+                }
+            } catch (e: Exception) {
+                statusLabel.text = "Ошибка сервера: ${e.message}"
+                importButton.isDisable = false
+            }
+        }
+    }
+
+    fun validateAndParse(raw: Map<DbField, String>): Working {
+        fun getNum(field: DbField): Double? {
+            val str = raw[field]?.replace(",", ".")?.trim()
+            if (str.isNullOrEmpty()) return null
+            return str.toDoubleOrNull() ?: throw Exception("Ожидается число для '${field.title}'")
+        }
+        
+        fun getStr(field: DbField): String? = raw[field]?.trim()?.ifEmpty { null }
+
+        fun getSafeStr(name: String): String? {
+            val key = raw.keys.find { it.name == name } ?: return null
+            return raw[key]?.trim()?.ifEmpty { null }
+        }
+
+        fun getSafeBool(name: String): Boolean {
+            val str = getSafeStr(name)?.lowercase()
+            return str == "да" || str == "true" || str == "1" || str == "+" || str == "yes"
+        }
+
+        // УМНЫЙ ПАРСЕР ДАТ
+        fun getDateStr(field: DbField): String? {
+            val str = getStr(field) ?: return null
+            // Список возможных форматов из Excel
+            val formats = listOf(
+                "yyyy-MM-dd", "dd.MM.yyyy", "dd.MM.yy", 
+                "MM/dd/yy", "dd/MM/yy", "MM/dd/yyyy", "dd/MM/yyyy", "yyyy.MM.dd"
+            )
+            for (pattern in formats) {
+                try {
+                    val formatter = java.time.format.DateTimeFormatter.ofPattern(pattern)
+                    val date = java.time.LocalDate.parse(str, formatter)
+                    // Возвращаем в стандарте ISO (yyyy-MM-dd), который ждет сервер
+                    return date.format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE)
+                } catch (e: Exception) { /* Пробуем следующий формат */ }
+            }
+            throw Exception("Неверный формат даты: '$str'. Ожидается ДД.ММ.ГГГГ")
+        }
+
+        val number = getStr(DbField.NUMBER) ?: ""
+        var parsedNumber = number
+        var parsedWorkType: RefWorkType? = null
+
+        val combinedName = getSafeStr("NAME_COMBINED")
+        if (combinedName != null) {
+            val matchResult = Regex("^([^\\d]*)([\\d]+.*)$").find(combinedName)
+            if (matchResult != null) {
+                val typePrefix = matchResult.groupValues[1].replace("-", "").trim()
+                parsedNumber = matchResult.groupValues[2].trim()
+                if (typePrefix.isNotEmpty()) {
+                    parsedWorkType = cacheWorkTypes.find { 
+                        it.name.contains(typePrefix, ignoreCase = true) || typePrefix.contains(it.name, ignoreCase = true)
+                    }
+                }
+            } else {
+                parsedNumber = combinedName
+            }
+        }
+
+        if (parsedNumber.isEmpty()) throw Exception("Обязательное поле Номер выработки пустое")
+
+        val area = importAreaCombo.value ?: throw Exception("Не выбран участок")
+
+        val workTypeName = getStr(DbField.WORK_TYPE)
+        val workType = parsedWorkType ?: if (workTypeName != null) cacheWorkTypes.find { it.name.equals(workTypeName, true) } ?: throw Exception("Тип выработки '$workTypeName' не найден") else null
+
+        val rigName = getStr(DbField.DRILLING_RIG)
+        val rig = if (rigName != null) cacheDrillingRigs.find { it.name.equals(rigName, true) } ?: throw Exception("Буровая '$rigName' не найдена") else null
+
+        val contractorName = getStr(DbField.CONTRACTOR)
+        val contractor = if (contractorName != null) cacheContractors.find { it.name.equals(contractorName, true) } ?: throw Exception("Подрядчик '$contractorName' не найден") else null
+
+        val geologistName = getStr(DbField.GEOLOGIST)
+        val geologist = if (geologistName != null) {
+            val geo = cacheGeologists.find { it.name.equals(geologistName, true) } ?: throw Exception("Геолог '$geologistName' не найден в базе")
+            if (contractor != null && geo.contractor?.id != contractor.id) throw Exception("Геолог относится к другому подрядчику")
+            geo
+        } else null
+
+        val coreRec = getNum(DbField.CORE_RECOVERY)
+        if (coreRec != null && (coreRec < 0 || coreRec > 100)) throw Exception("Выход керна должен быть от 0 до 100%")
+
+        if (!isProjectImport) {
+            if (contractor == null) throw Exception("Для фактической скважины обязателен 'Подрядчик'")
+            if (geologist == null) throw Exception("Для фактической скважины обязателен 'Геолог'")
+            if (rig == null) throw Exception("Для фактической скважины обязательна 'Буровая'")
+        }
+
+        return Working(
+            number = parsedNumber, 
+
+            area = area, 
+            isProject = isProjectImport,
+            workType = workType, 
+            contractor = contractor, 
+            geologist = geologist, 
+            drillingRig = rig, 
+
+            plannedX = getNum(DbField.PLANNED_X), 
+            plannedY = getNum(DbField.PLANNED_Y), 
+            plannedDepth = getNum(DbField.PLANNED_DEPTH), 
+            actualX = getNum(DbField.ACTUAL_X), 
+            actualY = getNum(DbField.ACTUAL_Y), 
+            actualZ = getNum(DbField.ACTUAL_Z),
+            actualDepth = getNum(DbField.ACTUAL_DEPTH), 
+            coreRecovery = coreRec, 
+            casing = getNum(DbField.CASING), 
+            
+            startDate = getDateStr(DbField.START_DATE), 
+            endDate = getDateStr(DbField.END_DATE),
+
+            mmg1Top = getNum(DbField.MMG1_TOP), 
+            mmg1Bottom = getNum(DbField.MMG1_BOTTOM),
+            mmg2Top = getNum(DbField.MMG2_TOP), 
+            mmg2Bottom = getNum(DbField.MMG2_BOTTOM),
+            gwAppearLog = getNum(DbField.GW_APPEAR_LOG), 
+            gwStableLog = getNum(DbField.GW_STABLE_LOG),
+
+            hasVideo = getSafeBool("HAS_VIDEO"), 
+            hasDrilling = getSafeBool("HAS_DRILLING"),
+            hasJournal = getSafeBool("HAS_JOURNAL"),
+            hasCore = getSafeBool("HAS_CORE"),
+            hasStake = getSafeBool("HAS_STAKE"),
+
+            act = getSafeBool("ACT"),
+            actNumber = getSafeStr("ACT_NUMBER"), 
+            thermalTube = getSafeBool("THERMAL_TUBE"),
+            additionalInfo = getSafeStr("ADDITIONAL_INFO") ?: getSafeStr("COMMENT")
+        )
+    }
+
+    private fun showCorrectionWindow(invalidRows: List<CorrectionRow>) {
+        val loader = FXMLLoader(javaClass.getResource("/importCorrection.fxml"))
+        val root = loader.load<VBox>()
+        val controller = loader.getController<ImportCorrectionController>()
+        
+        val mappedFields = columnMapping.values.map { it.value }.filter { it != DbField.IGNORE }.distinct()
+        
+        controller.initData(token, userRole, this, invalidRows, mappedFields) {
+            onCompleteCallback()
+            close()
+        }
+
+        val stage = Stage()
+        stage.initModality(Modality.WINDOW_MODAL)
+        stage.initOwner(previewTable.scene.window)
+        stage.scene = Scene(root)
+        stage.title = "Ошибки импорта"
+        stage.showAndWait()
+    }
+
+    @FXML fun onCancel() { workbook?.close(); close() }
+    private fun close() { (previewTable.scene.window as Stage).close() }
+}
+
+package org.example.geoapp.controller
+
+import com.example.geoapp.api.Working
+import javafx.beans.property.SimpleStringProperty
+import javafx.collections.FXCollections
+import javafx.fxml.FXML
+import javafx.fxml.FXMLLoader
+import javafx.scene.Scene
+import javafx.scene.control.*
+import javafx.scene.control.cell.ComboBoxTableCell
+import javafx.scene.control.cell.TextFieldTableCell
+import javafx.scene.layout.HBox
+import javafx.scene.layout.VBox
+import javafx.stage.Modality
+import javafx.stage.Stage
+import org.example.geoapp.MainApp
+import org.example.geoapp.util.CorrectionRow
+import org.example.geoapp.util.DbField
+import org.example.geoapp.util.await
+import org.example.geoapp.util.runOnFx
+
+class ImportCorrectionController {
+
+    @FXML private lateinit var adminPanel: HBox
+    @FXML private lateinit var correctionTable: TableView<CorrectionRow>
+    @FXML private lateinit var statusLabel: Label
+    @FXML private lateinit var retryButton: Button
+
+    private lateinit var token: String
+    private lateinit var parentController: ExcelImportController
+    private var onAllCompletedCallback: () -> Unit = {}
+    private val api = MainApp.api
+
+    fun initData(token: String, role: String, parent: ExcelImportController, errors: List<CorrectionRow>, mappedFields: List<DbField>, onCompleted: () -> Unit) {
+        this.token = token
+        this.parentController = parent
+        this.onAllCompletedCallback = onCompleted
+
+        // Панель админа
+        if (role == "ROLE_ADMIN") {
+            adminPanel.isVisible = true
+            adminPanel.isManaged = true
+        }
+
+        buildTable(mappedFields)
+        correctionTable.items = FXCollections.observableArrayList(errors)
+        statusLabel.text = "Ошибок найдено: ${errors.size}"
+    }
+
+    private fun buildTable(mappedFields: List<DbField>) {
+        correctionTable.columns.clear()
+
+        val rowCol = TableColumn<CorrectionRow, String>("Строка")
+        rowCol.setCellValueFactory { SimpleStringProperty(it.value.originalRowIndex.toString()) }
+        rowCol.prefWidth = 60.0
+        correctionTable.columns.add(rowCol)
+
+        val errCol = TableColumn<CorrectionRow, String>("Описание ошибки")
+        errCol.setCellValueFactory { SimpleStringProperty(it.value.errorMsg) }
+        errCol.style = "-fx-text-fill: red; -fx-font-weight: bold;"
+        errCol.prefWidth = 250.0
+        correctionTable.columns.add(errCol)
+
+        for (field in mappedFields) {
+            val col = TableColumn<CorrectionRow, String>(field.title)
+            col.setCellValueFactory { SimpleStringProperty(it.value.rawValues[field] ?: "") }
+            
+            // Если поле справочное, даем только выпадающий список существующих значений
+            if (field.isReference) {
+                val options = getOptionsForField(field)
+                col.cellFactory = ComboBoxTableCell.forTableColumn(*options.toTypedArray())
+            } else {
+                col.cellFactory = TextFieldTableCell.forTableColumn()
+            }
+            
+            col.setOnEditCommit { event ->
+                val row = event.tableView.items[event.tablePosition.row]
+                row.rawValues[field] = event.newValue
+            }
+            col.prefWidth = 120.0
+            correctionTable.columns.add(col)
+        }
+    }
+
+    private fun getOptionsForField(field: DbField): List<String> {
+        return when (field) {
+            DbField.AREA -> parentController.cacheAreas.map { it.name }
+            DbField.WORK_TYPE -> parentController.cacheWorkTypes.map { it.name }
+            DbField.CONTRACTOR -> parentController.cacheContractors.map { it.name }
+            DbField.GEOLOGIST -> parentController.cacheGeologists.map { it.name }
+            DbField.DRILLING_RIG -> parentController.cacheDrillingRigs.map { it.name }
+            else -> emptyList()
+        }
+    }
+
+    @FXML fun onRefreshAndRetry() {
+        statusLabel.text = "Синхронизация справочников..."
+        retryButton.isDisable = true
+        // Обновляем кэш и перестраиваем таблицу (чтобы в комбобоксах появились новые имена)
+        parentController.loadReferences {
+            val mappedFields = parentController.columnMapping.values.map { it.value }.filter { it != DbField.IGNORE }.distinct()
+            buildTable(mappedFields)
+            onRetry()
+        }
+    }
+
+    @FXML fun onRetry() {
+        val stillInvalid = mutableListOf<CorrectionRow>()
+        val validWorkings = mutableListOf<Working>()
+
+        for (row in correctionTable.items) {
+            try {
+                val working = parentController.validateAndParse(row.rawValues)
+                validWorkings.add(working)
+            } catch (e: Exception) {
+                row.errorMsg = e.message ?: "Ошибка"
+                stillInvalid.add(row)
+            }
+        }
+
+        retryButton.isDisable = true
+        statusLabel.text = "Отправка..."
+
+        runOnFx {
+            try {
+                if (validWorkings.isNotEmpty()) {
+                    api.createWorkingsBatch("Bearer $token", validWorkings).await()
+                }
+
+                if (stillInvalid.isNotEmpty()) {
+                    correctionTable.items = FXCollections.observableArrayList(stillInvalid)
+                    correctionTable.refresh()
+                    statusLabel.text = "Осталось ошибок: ${stillInvalid.size}"
+                    retryButton.isDisable = false
+                } else {
+                    onAllCompletedCallback()
+                    close()
+                }
+            } catch (e: Exception) {
+                statusLabel.text = "Ошибка сервера: ${e.message}"
+                retryButton.isDisable = false
+            }
+        }
+    }
+
+    // Вызовы стандартных справочников
+    @FXML fun openAreas() = openRefEditor(RefType.AREA)
+    @FXML fun openWorkTypes() = openRefEditor(RefType.WORK_TYPE)
+    @FXML fun openContractors() = openRefEditor(RefType.CONTRACTOR)
+    @FXML fun openGeologists() = openRefEditor(RefType.GEOLOGIST)
+    @FXML fun openDrillingRigs() = openRefEditor(RefType.DRILLING_RIG)
+
+    private fun openRefEditor(type: RefType) {
+        val loader = FXMLLoader(javaClass.getResource("/referenceEditor.fxml"))
+        val root = loader.load<VBox>()
+        val controller = loader.getController<ReferenceEditorController>()
+        controller.initData(token, type)
+
+        val stage = Stage()
+        stage.initModality(Modality.WINDOW_MODAL)
+        stage.initOwner(correctionTable.scene.window)
+        stage.scene = Scene(root)
+        stage.title = "Справочник: ${type.title}"
+        stage.showAndWait()
+    }
+
+    @FXML fun onCancel() { 
+        close() 
+    }
+    private fun close() { (correctionTable.scene.window as Stage).close() }
+}
+
+package org.example.geoapp.controller
+
+import com.example.geoapp.api.GeoApi
+import com.example.geoapp.api.LoginRequest
+import javafx.fxml.FXML
+import javafx.fxml.FXMLLoader
+import javafx.scene.control.*
+import javafx.scene.layout.VBox
+import javafx.stage.Stage
+import org.example.geoapp.MainApp
+import org.example.geoapp.util.runOnFx
+import org.example.geoapp.util.await
+import javafx.scene.Scene
+
+class LoginController {
+
+    @FXML
+    private lateinit var usernameField: TextField
+
+    @FXML
+    private lateinit var passwordField: PasswordField
+
+    @FXML
+    private lateinit var loginButton: Button
+
+    @FXML
+    private lateinit var errorLabel: Label
+
+    @FXML
+    private lateinit var progressIndicator: ProgressIndicator
+
+    @FXML
+    private lateinit var root: VBox
+
+    private val api: GeoApi = MainApp.api
+
+    @FXML
+    fun initialize() {
+        progressIndicator.isVisible = false
+        errorLabel.text = ""
+    }
+
+    @FXML
+    fun onLogin() {
+        val username = usernameField.text.trim()
+        val password = passwordField.text.trim()
+
+        if (username.isEmpty() || password.isEmpty()) {
+            errorLabel.text = "Заполните все поля"
+            return
+        }
+
+        loginButton.isDisable = true
+        progressIndicator.isVisible = true
+        errorLabel.text = ""
+
+        runOnFx {
+            try {
+                val response = api.login(LoginRequest(username, password)).await()
+                // Успешный вход
+                openMainWindow(response.token, response.role)
+            } catch (e: Exception) {
+                errorLabel.text = when {
+                    e.message?.contains("HTTP 401") == true -> "Неверный логин или пароль"
+                    else -> "Ошибка сети: ${e.message}"
+                }
+                loginButton.isDisable = false
+                progressIndicator.isVisible = false
+            }
+        }
+    }
+
+    private fun openMainWindow(token: String, role: String) {
+        val loader = FXMLLoader(javaClass.getResource("/main.fxml"))
+        val root = loader.load<javafx.scene.Parent>()
+        val controller = loader.getController<MainController>()
+        // Вызываем новый метод инициализации
+        controller.initData(token, role)
+
+        val stage = (this.root.scene.window as Stage)
+        stage.scene = Scene(root)
+        stage.title = "GeoApp - Главная"
+    }
+}
+
+package org.example.geoapp.controller
+
+import com.example.geoapp.api.GeoApi
+import com.example.geoapp.api.Working
+import javafx.beans.property.SimpleBooleanProperty
+import javafx.beans.property.SimpleStringProperty
+import javafx.beans.property.SimpleObjectProperty
+import javafx.collections.FXCollections
+import javafx.collections.ObservableList
+import javafx.fxml.FXML
+import javafx.fxml.FXMLLoader
+import javafx.scene.Scene
+import javafx.scene.control.*
+import javafx.scene.input.KeyCode
+import javafx.scene.input.KeyCodeCombination
+import javafx.scene.input.KeyCombination
+import javafx.scene.layout.VBox
+import javafx.stage.FileChooser
+import javafx.stage.Modality
+import javafx.stage.Stage
+import org.controlsfx.control.table.TableFilter
+import org.example.geoapp.MainApp
+import org.example.geoapp.util.FilterParser
+import org.example.geoapp.util.await
+import org.example.geoapp.util.awaitUnit
+import org.example.geoapp.util.runOnFx
+
+class MainController {
+
+    @FXML private lateinit var adminMenu: Menu
+    @FXML private lateinit var filterAreaCombo: ComboBox<String>
+    @FXML private lateinit var workingsTable: TableView<Working>
+
+    @FXML private lateinit var colRowNumber: TableColumn<Working, Number>
+    @FXML private lateinit var colName: TableColumn<Working, String>
+    @FXML private lateinit var colArea: TableColumn<Working, String>
+    @FXML private lateinit var colGeologist: TableColumn<Working, String>
+    @FXML private lateinit var colContractor: TableColumn<Working, String>
+    @FXML private lateinit var colPlannedX: TableColumn<Working, Double?>
+    @FXML private lateinit var colPlannedY: TableColumn<Working, Double?>
+    @FXML private lateinit var colPlannedDepth: TableColumn<Working, Double?>
+    @FXML private lateinit var colActualX: TableColumn<Working, Double?>
+    @FXML private lateinit var colActualY: TableColumn<Working, Double?>
+    @FXML private lateinit var colActualZ: TableColumn<Working, Double?>
+    @FXML private lateinit var colActualDepth: TableColumn<Working, Double?>
+    @FXML private lateinit var colDeltaS: TableColumn<Working, Double?>
+    @FXML private lateinit var colDepth: TableColumn<Working, Double?>
+    @FXML private lateinit var colCoreRecovery: TableColumn<Working, Double?>
+    @FXML private lateinit var colCasing: TableColumn<Working, Double?>
+    
+    // Чекбоксы
+    @FXML private lateinit var colHasVideo: TableColumn<Working, Boolean>
+    @FXML private lateinit var colHasDrilling: TableColumn<Working, Boolean>
+    @FXML private lateinit var colHasJournal: TableColumn<Working, Boolean>
+    @FXML private lateinit var colHasCore: TableColumn<Working, Boolean>
+    @FXML private lateinit var colHasStake: TableColumn<Working, Boolean>
+
+    // Образцы
+    @FXML private lateinit var colSamplesThawed: TableColumn<Working, Int?>
+    @FXML private lateinit var colSamplesFrozen: TableColumn<Working, Int?>
+    @FXML private lateinit var colSamplesRocky: TableColumn<Working, Int?>
+
+    @FXML private lateinit var colStartDate: TableColumn<Working, String>
+    @FXML private lateinit var colEndDate: TableColumn<Working, String>
+    @FXML private lateinit var colMmg1Top: TableColumn<Working, Double?>
+    @FXML private lateinit var colMmg1Bottom: TableColumn<Working, Double?>
+    @FXML private lateinit var colMmg2Top: TableColumn<Working, Double?>
+    @FXML private lateinit var colMmg2Bottom: TableColumn<Working, Double?>
+    @FXML private lateinit var colGwAppearLog: TableColumn<Working, Double?>
+    @FXML private lateinit var colGwStableLog: TableColumn<Working, Double?>
+    @FXML private lateinit var colGwStableAbs: TableColumn<Working, Double?>
+    @FXML private lateinit var colAct: TableColumn<Working, String>
+    @FXML private lateinit var colActNumber: TableColumn<Working, String?>
+    @FXML private lateinit var colThermalTube: TableColumn<Working, String>
+    @FXML private lateinit var colAdditionalInfo: TableColumn<Working, String>
+
+    @FXML private lateinit var addButton: Button
+    @FXML private lateinit var editButton: Button
+    @FXML private lateinit var deleteButton: Button
+
+    private lateinit var token: String
+    private lateinit var userRole: String
+    private val api: GeoApi = MainApp.api
+    private val allWorkings: MutableList<Working> = mutableListOf()
+    private val workingsList: ObservableList<Working> = FXCollections.observableArrayList()
+
+    private lateinit var tableFilter: TableFilter<Working>
+
+    fun initData(token: String, role: String) {
+        this.token = token
+        this.userRole = role
+        adminMenu.isVisible = (role == "ROLE_ADMIN")
+        loadWorkings()
+    }
+
+    @FXML fun initialize() {
+        workingsTable.selectionModel.selectionMode = SelectionMode.MULTIPLE
+
+        // Сборка Наименования (Тип + Номер)
+        colName.setCellValueFactory { cellData -> 
+            val w = cellData.value
+            val prefix = when(w.workType?.name?.lowercase()) {
+                "скважина" -> "С-"
+                "шурф" -> "Ш-"
+                "расчистка" -> "Р-"
+                else -> ""
+            }
+            SimpleStringProperty("$prefix${w.number}")
+        }
+
+        colRowNumber.setCellValueFactory { SimpleObjectProperty(it.value.orderNum) }
+        colArea.setCellValueFactory { SimpleStringProperty(it.value.area?.name ?: "") }
+        colGeologist.setCellValueFactory { SimpleStringProperty(it.value.geologist?.name ?: "") }
+        colContractor.setCellValueFactory { SimpleStringProperty(it.value.contractor?.name ?: "") }
+        
+        colPlannedX.setCellValueFactory { SimpleObjectProperty(it.value.plannedX) }
+        colPlannedY.setCellValueFactory { SimpleObjectProperty(it.value.plannedY) }
+        colPlannedDepth.setCellValueFactory { SimpleObjectProperty(it.value.plannedDepth) }
+        colActualX.setCellValueFactory { SimpleObjectProperty(it.value.actualX) }
+        colActualY.setCellValueFactory { SimpleObjectProperty(it.value.actualY) }
+        colActualZ.setCellValueFactory { SimpleObjectProperty(it.value.actualZ) }
+        colActualDepth.setCellValueFactory { SimpleObjectProperty(it.value.actualDepth) }
+        colDeltaS.setCellValueFactory { SimpleObjectProperty(it.value.deltaS) }
+        colCoreRecovery.setCellValueFactory { SimpleObjectProperty(it.value.coreRecovery) }
+        colCasing.setCellValueFactory { SimpleObjectProperty(it.value.casing) }
+
+        // Интерактивные чекбоксы в таблице
+        createInteractiveCheckbox(colHasVideo, { it.hasVideo }, { w, v -> w.hasVideo = v })
+        createInteractiveCheckbox(colHasDrilling, { it.hasDrilling }, { w, v -> w.hasDrilling = v })
+        createInteractiveCheckbox(colHasJournal, { it.hasJournal }, { w, v -> w.hasJournal = v })
+        createInteractiveCheckbox(colHasCore, { it.hasCore }, { w, v -> w.hasCore = v })
+        createInteractiveCheckbox(colHasStake, { it.hasStake }, { w, v -> w.hasStake = v })
+
+        colSamplesThawed.setCellValueFactory { SimpleObjectProperty(it.value.samplesThawed) }
+        colSamplesFrozen.setCellValueFactory { SimpleObjectProperty(it.value.samplesFrozen) }
+        colSamplesRocky.setCellValueFactory { SimpleObjectProperty(it.value.samplesRocky) }
+
+        colStartDate.setCellValueFactory { SimpleStringProperty(it.value.startDate ?: "") }
+        colEndDate.setCellValueFactory { SimpleStringProperty(it.value.endDate ?: "") }
+        colMmg1Top.setCellValueFactory { SimpleObjectProperty(it.value.mmg1Top) }
+        colMmg1Bottom.setCellValueFactory { SimpleObjectProperty(it.value.mmg1Bottom) }
+        colMmg2Top.setCellValueFactory { SimpleObjectProperty(it.value.mmg2Top) }
+        colMmg2Bottom.setCellValueFactory { SimpleObjectProperty(it.value.mmg2Bottom) }
+        colGwAppearLog.setCellValueFactory { SimpleObjectProperty(it.value.gwAppearLog) }
+        colGwStableLog.setCellValueFactory { SimpleObjectProperty(it.value.gwStableLog) }
+        colGwStableAbs.setCellValueFactory { SimpleObjectProperty(it.value.gwStableAbs) }
+        
+        colAct.setCellValueFactory { SimpleStringProperty(if (it.value.act) "Да" else "Нет") }
+        colActNumber.setCellValueFactory { SimpleStringProperty(it.value.actNumber ?: "") }
+        colThermalTube.setCellValueFactory { SimpleStringProperty(if (it.value.thermalTube) "Да" else "Нет") }
+        colAdditionalInfo.setCellValueFactory { SimpleStringProperty(it.value.additionalInfo ?: "") }
+
+        workingsTable.items = workingsList
+
+        // Контекстное меню
+        val contextMenu = ContextMenu()
+        val editItem = MenuItem("Редактировать").apply { setOnAction { onEdit() } }
+        val deleteItem = MenuItem("Удалить").apply { setOnAction { onDelete() } }
+        contextMenu.items.addAll(editItem, deleteItem)
+        workingsTable.contextMenu = contextMenu
+
+        editButton.disableProperty().bind(workingsTable.selectionModel.selectedItemProperty().isNull)
+        deleteButton.disableProperty().bind(workingsTable.selectionModel.selectedItemProperty().isNull)
+
+        workingsTable.setOnKeyPressed { event ->
+            if (event.code == javafx.scene.input.KeyCode.DELETE) {
+                onDelete()
+            }
+        }
+
+        workingsTable.setOnMouseClicked { event ->
+            if (event.clickCount == 2 && !workingsTable.selectionModel.isEmpty) onEdit()
+        }
+
+        workingsTable.sceneProperty().addListener { _, _, newScene ->
+            newScene?.accelerators?.put(KeyCodeCombination(KeyCode.E, KeyCombination.CONTROL_DOWN), Runnable { if (!editButton.isDisable) onEdit() })
+        }
+
+        // Цветовая раскраска строк (Оранжевый / Зеленый)
+        workingsTable.setRowFactory {
+            object : TableRow<Working>() {
+                override fun updateItem(item: Working?, empty: Boolean) {
+                    super.updateItem(item, empty)
+                    if (item == null || empty) {
+                        style = ""
+                    } else {
+                        if (item.isProject) {
+                            if (item.contractor != null && item.geologist != null && item.drillingRig != null) {
+                                style = "-fx-background-color: #c8e6c9;" // Зеленый (заполненная проектная)
+                            } else {
+                                style = "-fx-background-color: #ffe0b2;" // Оранжевый (пустая проектная)
+                            }
+                        } else {
+                            style = "-fx-background-color: #c8e6c9;" // Зеленый (фактическая)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun createInteractiveCheckbox(col: TableColumn<Working, Boolean>, getter: (Working) -> Boolean, setter: (Working, Boolean) -> Unit) {
+        col.setCellValueFactory { SimpleBooleanProperty(getter(it.value)) }
+        col.setCellFactory {
+            object : TableCell<Working, Boolean>() {
+                val checkBox = CheckBox()
+                init {
+                    checkBox.setOnAction {
+                        val working = tableView.items[index]
+                        setter(working, checkBox.isSelected)
+                        runOnFx {
+                            try {
+                                api.updateWorking("Bearer $token", working.id, working).await()
+                                updateStyle(checkBox.isSelected)
+                            } catch(e: Exception) {
+                                checkBox.isSelected = !checkBox.isSelected // Откат при ошибке
+                            }
+                        }
+                    }
+                    alignment = javafx.geometry.Pos.CENTER
+                }
+                override fun updateItem(item: Boolean?, empty: Boolean) {
+                    super.updateItem(item, empty)
+                    if (empty || item == null) {
+                        graphic = null
+                        style = ""
+                    } else {
+                        checkBox.isSelected = item
+                        graphic = checkBox
+                        updateStyle(item)
+                    }
+                }
+                private fun updateStyle(isChecked: Boolean) {
+                    style = if (isChecked) "-fx-background-color: #a5d6a7;" else "-fx-background-color: #ef9a9a;"
+                }
+            }
+        }
+    }
+
+    fun loadWorkings(onComplete: (() -> Unit)? = null) {
+        runOnFx {
+            try {
+                val fetched = api.getWorkings("Bearer $token").await().sortedBy { it.id }
+                allWorkings.clear()
+                allWorkings.addAll(fetched)
+                
+                applyFilter()
+
+                val selectedArea = filterAreaCombo.value
+                val areas = listOf("ВСЕ") + fetched.mapNotNull { it.area?.name }.distinct()
+                filterAreaCombo.items = FXCollections.observableArrayList(areas)
+                filterAreaCombo.value = selectedArea ?: "ВСЕ"
+                filterAreaCombo.setOnAction { applyFilter() }
+
+                if (!::tableFilter.isInitialized) {
+                    tableFilter = TableFilter.forTableView(workingsTable).lazy(false).apply()
+                    tableFilter.setSearchStrategy { input: String, target: String -> FilterParser.parse(input, target) }
+                }
+                
+                autoResizeColumns()
+                
+                // Вызываем колбэк после завершения всех обновлений
+                onComplete?.invoke()
+            } catch (e: Exception) {
+                showAlert("Ошибка", "Не удалось загрузить: ${e.message}")
+            }
+        }
+    }
+
+    private fun applyFilter() {
+        val selected = filterAreaCombo.value
+        val filtered = if (selected == null || selected == "ВСЕ") allWorkings else allWorkings.filter { it.area?.name == selected }
+        workingsList.setAll(filtered)
+    }
+
+    @FXML fun onAdd() = showWorkingForm(null)
+
+    @FXML fun onEdit() {
+        val selected = workingsTable.selectionModel.selectedItem
+        if (selected != null) showWorkingForm(selected)
+    }
+
+    @FXML fun onDelete() {
+        val selectedItems = workingsTable.selectionModel.selectedItems.toList()
+        if (selectedItems.isNotEmpty()) {
+            val alert = Alert(Alert.AlertType.CONFIRMATION, "Удалить ${selectedItems.size} записей?", ButtonType.YES, ButtonType.NO)
+            if (alert.showAndWait().get() == ButtonType.YES) {
+                val lastSelectedIndex = workingsTable.selectionModel.selectedIndex
+                runOnFx {
+                    try {
+                        selectedItems.forEach { api.deleteWorking("Bearer $token", it.id).awaitUnit() }
+                        // Передаём колбэк для выделения строки после обновления таблицы
+                        loadWorkings {
+                            if (workingsList.isNotEmpty()) {
+                                val newIdx = if (lastSelectedIndex >= workingsList.size) workingsList.size - 1 else lastSelectedIndex
+                                workingsTable.selectionModel.select(newIdx)
+                                workingsTable.requestFocus()
+                            }
+                        }
+                    } catch (e: Exception) {
+                        showAlert("Ошибка", e.message ?: "Ошибка удаления")
+                    }
+                }
+            }
+        }
+    }
+
+    private fun showWorkingForm(working: Working?) {
+        val loader = FXMLLoader(javaClass.getResource("/workingForm.fxml"))
+        val root = loader.load<VBox>()
+        val controller = loader.getController<WorkingFormController>()
+        controller.initData(token, working, this::loadWorkings)
+
+        val stage = Stage()
+        stage.initModality(Modality.WINDOW_MODAL)
+        stage.initOwner(workingsTable.scene.window)
+        stage.scene = Scene(root)
+        stage.title = if (working == null) "Новая выработка" else "Редактирование"
+        stage.showAndWait()
+    }
+
+    private fun showAlert(title: String, message: String) {
+        Alert(Alert.AlertType.ERROR).apply { this.title = title; headerText = null; contentText = message; showAndWait() }
+    }
+
+    @FXML fun openAreasEditor() = openRefEditor(RefType.AREA)
+    @FXML fun openWorkTypesEditor() = openRefEditor(RefType.WORK_TYPE)
+    @FXML fun openDrillingRigsEditor() = openRefEditor(RefType.DRILLING_RIG)
+    @FXML fun openContractorsEditor() = openRefEditor(RefType.CONTRACTOR)
+    @FXML fun openGeologistsEditor() = openRefEditor(RefType.GEOLOGIST)
+
+    private fun openRefEditor(type: RefType) {
+        val loader = FXMLLoader(javaClass.getResource("/referenceEditor.fxml"))
+        val root = loader.load<VBox>()
+        val controller = loader.getController<ReferenceEditorController>()
+        controller.initData(token, type)
+        val stage = Stage()
+        stage.initModality(Modality.WINDOW_MODAL)
+        stage.initOwner(workingsTable.scene.window)
+        stage.scene = Scene(root)
+        stage.title = "Справочник: ${type.title}"
+        stage.showAndWait()
+        loadWorkings() 
+    }
+
+    @FXML fun openProjectExcelImport() = openExcelImport(true)
+    @FXML fun openActualExcelImport() = openExcelImport(false)
+
+    private fun openExcelImport(isProject: Boolean) {
+        val fileChooser = FileChooser().apply {
+            title = "Выберите Excel файл"
+            extensionFilters.add(FileChooser.ExtensionFilter("Excel", "*.xls", "*.xlsx", "*.xlsm"))
+        }
+        val file = fileChooser.showOpenDialog(workingsTable.scene.window)
+        if (file != null) {
+            val loader = FXMLLoader(javaClass.getResource("/excelImport.fxml"))
+            val root = loader.load<VBox>()
+            // Передаем флаг isProject в контроллер импорта
+            loader.getController<ExcelImportController>().initData(token, userRole, file, isProject) { loadWorkings() }
+            Stage().apply {
+                initModality(Modality.WINDOW_MODAL)
+                initOwner(workingsTable.scene.window)
+                scene = Scene(root)
+                title = if (isProject) "Импорт ПРОЕКТНЫХ скважин" else "Импорт ФАКТИЧЕСКИХ скважин"
+                showAndWait()
+            }
+        }
+    }
+
+    private fun autoResizeColumns() {
+        workingsTable.columns.forEach { col ->
+            var maxWidth = javafx.scene.text.Text(col.text).layoutBounds.width + 25.0 // Ширина заголовка + отступ
+            for (i in 0 until minOf(workingsTable.items.size, 50)) {
+                val cellData = col.getCellData(i)?.toString() ?: ""
+                val width = javafx.scene.text.Text(cellData).layoutBounds.width + 15.0
+                if (width > maxWidth) {
+                    maxWidth = width
+                }
+            }
+            col.prefWidth = maxWidth
+        }
+    }
+}
+
+package org.example.geoapp.controller
+
+import com.example.geoapp.api.*
+import javafx.beans.property.SimpleStringProperty
+import javafx.collections.FXCollections
+import javafx.fxml.FXML
+import javafx.scene.control.*
+import javafx.scene.control.cell.TextFieldTableCell
+import org.example.geoapp.MainApp
+import org.example.geoapp.util.await
+import org.example.geoapp.util.awaitUnit
+import org.example.geoapp.util.runOnFx
+
+enum class RefType(val title: String) {
+    AREA("Участки"), WORK_TYPE("Типы выработок"), DRILLING_RIG("Буровые"),
+    CONTRACTOR("Подрядчики"), GEOLOGIST("Геологи")
+}
+
+data class RefUiModel(val id: Long, val name: String, val parent: RefContractor?, var comment: String?, val originalObj: Any)
+
+class ReferenceEditorController {
+
+    @FXML private lateinit var referenceTable: TableView<RefUiModel>
+    @FXML private lateinit var colId: TableColumn<RefUiModel, String>
+    @FXML private lateinit var colName: TableColumn<RefUiModel, String>
+    @FXML private lateinit var colParent: TableColumn<RefUiModel, String>
+    @FXML private lateinit var colComment: TableColumn<RefUiModel, String>
+
+    @FXML private lateinit var nameField: TextField
+    @FXML private lateinit var contractorLabel: Label
+    @FXML private lateinit var contractorCombo: ComboBox<RefContractor>
+    @FXML private lateinit var errorLabel: Label
+    @FXML private lateinit var deleteButton: Button
+    @FXML private lateinit var saveButton: Button
+
+    private lateinit var token: String
+    private lateinit var currentType: RefType
+    private val api = MainApp.api
+
+    @FXML
+fun initialize() {
+    // Разрешаем редактирование в самой таблице
+    referenceTable.isEditable = true
+
+    // Настраиваем колонку комментария, чтобы она была текстовым полем
+    colComment.cellFactory = TextFieldTableCell.forTableColumn()
+
+    // Обрабатываем сохранение при правке комментария прямо в таблице
+    colComment.setOnEditCommit { event ->
+        val uiModel = event.rowValue
+        val newComment = event.newValue
+        
+        uiModel.comment = newComment // Обновляем в локальной модели
+        
+        // Отправляем на сервер (асинхронно)
+        runOnFx {
+            try {
+                val tokenStr = "Bearer $token"
+                // Обновляем объект, подставляя новый комментарий
+                when (currentType) {
+                    RefType.AREA -> api.updateArea(tokenStr, uiModel.id, (uiModel.originalObj as RefArea).copy(comment = newComment)).await()
+                    RefType.WORK_TYPE -> api.updateWorkType(tokenStr, uiModel.id, (uiModel.originalObj as RefWorkType).copy(comment = newComment)).await()
+                    RefType.DRILLING_RIG -> api.updateDrillingRig(tokenStr, uiModel.id, (uiModel.originalObj as RefDrillingRig).copy(comment = newComment)).await()
+                    RefType.CONTRACTOR -> api.updateContractor(tokenStr, uiModel.id, (uiModel.originalObj as RefContractor).copy(comment = newComment)).await()
+                    RefType.GEOLOGIST -> api.updateGeologist(tokenStr, uiModel.id, (uiModel.originalObj as RefGeologist).copy(comment = newComment)).await()
+                }
+            } catch (e: Exception) {
+                errorLabel.text = "Ошибка при сохранении комментария: ${e.message}"
+            }
+        }
+    }
+}
+
+    fun initData(token: String, type: RefType) {
+        this.token = token
+        this.currentType = type
+
+        colId.setCellValueFactory { SimpleStringProperty(it.value.id.toString()) }
+        colName.setCellValueFactory { SimpleStringProperty(it.value.name) }
+        colComment.setCellValueFactory { SimpleStringProperty(it.value.comment ?: "") }
+        
+        if (type == RefType.GEOLOGIST) {
+            colParent.isVisible = true
+            colParent.setCellValueFactory { SimpleStringProperty(it.value.parent?.name ?: "") }
+            contractorLabel.isVisible = true
+            contractorLabel.isManaged = true
+            contractorCombo.isVisible = true
+            contractorCombo.isManaged = true
+            loadContractorsForCombo()
+        }
+
+        // Слушатель выделения строки
+        referenceTable.selectionModel.selectedItemProperty().addListener { _, _, selected ->
+            if (selected != null) {
+                // Если выбрали строку - переходим в режим РЕДАКТИРОВАНИЯ
+                nameField.text = selected.name
+                if (type == RefType.GEOLOGIST) contractorCombo.value = selected.parent
+                deleteButton.isDisable = false
+                saveButton.text = "Сохранить изменения" 
+            } else {
+                // Если ничего не выбрано - переходим в режим СОЗДАНИЯ
+                saveButton.text = "Добавить новую запись"
+                deleteButton.isDisable = true
+            }
+        }
+
+        loadData()
+    }
+
+    private fun loadData() {
+        runOnFx {
+            try {
+                val items = mutableListOf<RefUiModel>()
+               when (currentType) {
+                    RefType.AREA -> api.getAreas().await().forEach { items.add(RefUiModel(it.id, it.name, null, it.comment, it)) }
+                    RefType.WORK_TYPE -> api.getWorkTypes().await().forEach { items.add(RefUiModel(it.id, it.name, null, it.comment, it)) }
+                    RefType.DRILLING_RIG -> api.getDrillingRigs().await().forEach { items.add(RefUiModel(it.id, it.name, null, it.comment, it)) }
+                    RefType.CONTRACTOR -> api.getContractors().await().forEach { items.add(RefUiModel(it.id, it.name, null, it.comment, it)) }
+                    RefType.GEOLOGIST -> api.getGeologists().await().forEach { items.add(RefUiModel(it.id, it.name, it.contractor, it.comment, it)) }
+                }
+                referenceTable.items = FXCollections.observableArrayList(items)
+            } catch (e: Exception) {
+                errorLabel.text = "Ошибка загрузки: ${e.message}"
+            }
+        }
+    }
+
+    private fun loadContractorsForCombo() {
+        runOnFx {
+            val contractors = api.getContractors().await()
+            contractorCombo.items = FXCollections.observableArrayList(contractors)
+            contractorCombo.converter = object : javafx.util.StringConverter<RefContractor>() {
+                override fun toString(obj: RefContractor?) = obj?.name ?: ""
+                override fun fromString(string: String) = contractorCombo.items.find { it.name == string }
+            }
+        }
+    }
+
+    @FXML fun onSave() {
+        val name = nameField.text.trim()
+        if (name.isEmpty()) {
+            errorLabel.text = "Введите название!"
+            return
+        }
+        
+        val selected = referenceTable.selectionModel.selectedItem
+        val id = selected?.id ?: 0L
+        val tokenStr = "Bearer $token"
+
+        runOnFx {
+            try {
+                when (currentType) {
+                    RefType.AREA -> if (id == 0L) api.createArea(tokenStr, RefArea(name = name)).await() else api.updateArea(tokenStr, id, RefArea(name = name)).await()
+                    RefType.WORK_TYPE -> if (id == 0L) api.createWorkType(tokenStr, RefWorkType(name = name)).await() else api.updateWorkType(tokenStr, id, RefWorkType(name = name)).await()
+                    RefType.DRILLING_RIG -> if (id == 0L) api.createDrillingRig(tokenStr, RefDrillingRig(name = name)).await() else api.updateDrillingRig(tokenStr, id, RefDrillingRig(name = name)).await()
+                    RefType.CONTRACTOR -> if (id == 0L) api.createContractor(tokenStr, RefContractor(name = name)).await() else api.updateContractor(tokenStr, id, RefContractor(name = name)).await()
+                    RefType.GEOLOGIST -> {
+                        val c = contractorCombo.value
+                        if (c == null) { errorLabel.text = "Выберите подрядчика!"; return@runOnFx }
+                        if (id == 0L) api.createGeologist(tokenStr, RefGeologist(name = name, contractor = c)).await() 
+                        else api.updateGeologist(tokenStr, id, RefGeologist(name = name, contractor = c)).await()
+                    }
+                }
+                onClearSelection() // Сбрасываем форму после успешного сохранения
+                loadData()
+            } catch (e: Exception) { errorLabel.text = "Ошибка сохранения: ${e.message}" }
+        }
+    }
+
+    @FXML fun onDelete() {
+        val selected = referenceTable.selectionModel.selectedItem ?: return
+        runOnFx {
+            try {
+                val tokenStr = "Bearer $token"
+                when (currentType) {
+                    RefType.AREA -> api.deleteArea(tokenStr, selected.id).awaitUnit()
+                    RefType.WORK_TYPE -> api.deleteWorkType(tokenStr, selected.id).awaitUnit()
+                    RefType.DRILLING_RIG -> api.deleteDrillingRig(tokenStr, selected.id).awaitUnit()
+                    RefType.CONTRACTOR -> api.deleteContractor(tokenStr, selected.id).awaitUnit()
+                    RefType.GEOLOGIST -> api.deleteGeologist(tokenStr, selected.id).awaitUnit()
+                }
+                onClearSelection()
+                loadData()
+            } catch (e: Exception) { errorLabel.text = "Справочник используется. Нельзя удалить." }
+        }
+    }
+
+    @FXML fun onClearSelection() {
+        referenceTable.selectionModel.clearSelection()
+        nameField.clear()
+        contractorCombo.value = null
+        errorLabel.text = ""
+        // Кнопки изменятся автоматически благодаря слушателю selectedItemProperty
+    }
+}
+
+package org.example.geoapp.controller
+
+import com.example.geoapp.api.*
+import javafx.collections.FXCollections
+import javafx.fxml.FXML
+import javafx.scene.control.*
+import javafx.scene.input.KeyCode
+import javafx.scene.input.KeyCodeCombination
+import javafx.scene.layout.VBox
+import javafx.stage.Stage
+import javafx.util.StringConverter
+import java.time.LocalDate
+import org.example.geoapp.MainApp
+import org.example.geoapp.util.await
+import org.example.geoapp.util.runOnFx
+import org.example.geoapp.util.NumericFieldUtil
+import org.example.geoapp.util.NumberParsers.toDoubleSafe
+
+class WorkingFormController {
+
+    @FXML private lateinit var root: VBox
+    @FXML private lateinit var areaCombo: ComboBox<RefArea>
+    @FXML private lateinit var workTypeCombo: ComboBox<RefWorkType>
+    @FXML private lateinit var geologistCombo: ComboBox<RefGeologist>
+    @FXML private lateinit var contractorCombo: ComboBox<RefContractor>
+    @FXML private lateinit var drillingRigCombo: ComboBox<RefDrillingRig>
+    
+    @FXML private lateinit var numberField: TextField
+    @FXML private lateinit var plannedXField: TextField
+    @FXML private lateinit var plannedYField: TextField
+    @FXML private lateinit var plannedDepthField: TextField
+    @FXML private lateinit var actualXField: TextField
+    @FXML private lateinit var actualYField: TextField
+    @FXML private lateinit var actualZField: TextField
+    @FXML private lateinit var actualDepthField: TextField
+    @FXML private lateinit var deltaSLabel: Label
+    
+    @FXML private lateinit var casingField: TextField
+    @FXML private lateinit var coreRecoveryField: TextField
+    
+    @FXML private lateinit var startDatePicker: DatePicker
+    @FXML private lateinit var endDatePicker: DatePicker
+    @FXML private lateinit var additionalInfoArea: TextArea
+
+    @FXML private lateinit var mmg1TopField: TextField
+    @FXML private lateinit var mmg1BottomField: TextField
+    @FXML private lateinit var mmg2TopField: TextField
+    @FXML private lateinit var mmg2BottomField: TextField
+    
+    @FXML private lateinit var gwAppearLogField: TextField
+    @FXML private lateinit var gwStableLogField: TextField
+    @FXML private lateinit var gwStableAbsLabel: Label
+
+    @FXML private lateinit var actCheckBox: CheckBox
+    @FXML private lateinit var actNumberField: TextField
+    @FXML private lateinit var thermalTubeCheckBox: CheckBox
+
+    @FXML private lateinit var saveButton: Button
+    @FXML private lateinit var cancelButton: Button
+    @FXML private lateinit var errorLabel: Label
+
+    private lateinit var token: String
+    private var working: Working? = null
+    private var onSaveCallback: () -> Unit = {}
+    private val api = MainApp.api
+
+    @FXML
+    fun initialize() {
+        actNumberField.disableProperty().bind(actCheckBox.selectedProperty().not())
+        
+        // Настраиваем конвертеры сразу при инициализации окна
+        setupAllConverters()
+        setupNumericFields()
+
+        root.sceneProperty().addListener { _, _, newScene ->
+            newScene?.accelerators?.put(KeyCodeCombination(KeyCode.ESCAPE)) { onCancel() }
+        }
+    }
+
+    fun initData(token: String, working: Working?, onSave: () -> Unit) {
+        this.token = token
+        this.working = working
+        this.onSaveCallback = onSave
+
+        // 1. Сначала загружаем общие справочники
+        loadReferences {
+            // 2. После того как списки загружены, заполняем поля (если это редактирование)
+            if (working != null) {
+                fillFields()
+            }
+        }
+
+        // Слушатель для фильтрации геологов по подрядчику
+        contractorCombo.selectionModel.selectedItemProperty().addListener { _, _, newContractor ->
+            loadGeologistsForContractor(newContractor?.id)
+        }
+    }
+
+    private fun setupAllConverters() {
+        // Используем расширение для всех комбобоксов
+        areaCombo.setupNameConverter { it.name }
+        workTypeCombo.setupNameConverter { it.name }
+        contractorCombo.setupNameConverter { it.name }
+        geologistCombo.setupNameConverter { it.name }
+        drillingRigCombo.setupNameConverter { it.name }
+    }
+
+    private fun loadReferences(onReady: () -> Unit) {
+        runOnFx {
+            try {
+                // Загружаем данные с сервера
+                val areas = api.getAreas().await()
+                val types = api.getWorkTypes().await()
+                val contractors = api.getContractors().await()
+                val rigs = api.getDrillingRigs().await()
+
+                // Обновляем списки
+                areaCombo.items.setAll(areas)
+                workTypeCombo.items.setAll(types)
+                contractorCombo.items.setAll(contractors)
+                drillingRigCombo.items.setAll(rigs)
+
+                onReady()
+            } catch (e: Exception) {
+                errorLabel.text = "Ошибка загрузки справочников"
+            }
+        }
+    }
+
+    private fun fillFields() {
+        val w = working ?: return
+
+        numberField.text = w.number ?: ""
+        plannedXField.text = w.plannedX?.toString() ?: ""
+        plannedYField.text = w.plannedY?.toString() ?: ""
+        actualXField.text = w.actualX?.toString() ?: ""
+        actualYField.text = w.actualY?.toString() ?: ""
+        actualZField.text = w.actualZ?.toString() ?: ""
+        
+        //deltaSLabel.text = "Смещение от проекта: ${w.deltaS ?: "не определено"} м"
+
+        plannedDepthField.text = w.plannedDepth?.toString() ?: ""
+        actualDepthField.text = w.actualDepth?.toString() ?: ""
+        casingField.text = w.casing?.toString() ?: ""
+        coreRecoveryField.text = w.coreRecovery?.toString() ?: ""
+
+        startDatePicker.value = w.startDate?.let { LocalDate.parse(it) }
+        endDatePicker.value = w.endDate?.let { LocalDate.parse(it) }
+
+        additionalInfoArea.text = w.additionalInfo ?: ""
+
+        mmg1TopField.text = w.mmg1Top?.toString() ?: ""
+        mmg1BottomField.text = w.mmg1Bottom?.toString() ?: ""
+        mmg2TopField.text = w.mmg2Top?.toString() ?: ""
+        mmg2BottomField.text = w.mmg2Bottom?.toString() ?: ""
+
+        gwAppearLogField.text = w.gwAppearLog?.toString() ?: ""
+        gwStableLogField.text = w.gwStableLog?.toString() ?: ""
+        gwStableAbsLabel.text = "УУГВ абс: ${w.gwStableAbs ?: "не определено"}"
+
+        actCheckBox.isSelected = w.act == true
+        actNumberField.text = w.actNumber ?: ""
+        thermalTubeCheckBox.isSelected = w.thermalTube == true
+
+        // Важно: выбираем объекты из загруженных списков по ID
+        areaCombo.items.find { it.id == w.area?.id }?.let { areaCombo.value = it }
+        workTypeCombo.items.find { it.id == w.workType?.id }?.let { workTypeCombo.value = it }
+        contractorCombo.items.find { it.id == w.contractor?.id }?.let { contractorCombo.value = it }
+        drillingRigCombo.items.find { it.id == w.drillingRig?.id }?.let { drillingRigCombo.value = it }
+
+        // Если есть подрядчик, грузим его геологов
+        w.contractor?.id?.let { loadGeologistsForContractor(it, w.geologist?.id) }
+    }
+
+    private fun loadGeologistsForContractor(contractorId: Long?, selectedGeologistId: Long? = null) {
+        if (contractorId == null) {
+            geologistCombo.items.clear()
+            return
+        }
+        runOnFx {
+            try {
+                val geologists = api.getGeologistsByContractor("Bearer $token", contractorId).await()
+                geologistCombo.items.setAll(geologists)
+                
+                // Если мы передали ID (при первичной загрузке), выбираем его
+                if (selectedGeologistId != null) {
+                    geologistCombo.items.find { it.id == selectedGeologistId }?.let { 
+                        geologistCombo.value = it 
+                    }
+                }
+            } catch (e: Exception) {
+                geologistCombo.items.clear()
+            }
+        }
+    }
+
+    // Универсальное расширение для настройки отображения
+    private fun <T> ComboBox<T>.setupNameConverter(extractor: (T) -> String) {
+        this.converter = object : StringConverter<T>() {
+            override fun toString(obj: T?): String = obj?.let(extractor) ?: ""
+            override fun fromString(string: String?): T? {
+                return items.find { extractor(it) == string }
+            }
+        }
+    }
+
+    private fun setupNumericFields() {
+        listOf(
+            plannedXField, plannedYField, actualXField, actualYField, actualZField, 
+            plannedDepthField, actualDepthField, casingField, mmg1TopField, mmg1BottomField, mmg2TopField, 
+            mmg2BottomField, gwAppearLogField, gwStableLogField, coreRecoveryField
+        ).forEach { NumericFieldUtil.applyDecimalFilter(it) }
+
+        listOf(plannedXField, plannedYField, actualXField, actualYField).forEach { field ->
+            field.textProperty().addListener { _, _, _ -> updateDeltaS() }
+        }
+    }
+
+    private fun updateDeltaS() {
+        val plannedX = plannedXField.toDoubleSafe()
+        val plannedY = plannedYField.toDoubleSafe()
+        val actualX = actualXField.toDoubleSafe()
+        val actualY = actualYField.toDoubleSafe()
+
+        val deltaS = if (plannedX != null && plannedY != null && actualX != null && actualY != null) {
+            val dx = plannedX - actualX
+            val dy = plannedY - actualY
+            val distance = Math.sqrt(dx * dx + dy * dy)
+            "%.3f".format(distance)
+        } else {
+            "не определено"
+        }
+        deltaSLabel.text = "Смещение от проекта: $deltaS м"
+    }
+
+    @FXML fun onCancel() = close()
+    private fun close() = (root.scene.window as Stage).close()
+
+    @FXML fun onSave() {
+        if (!validateInputs()) return
+
+        val newWorking = Working(
+            id = working?.id ?: 0,
+            orderNum = working?.orderNum,
+            area = areaCombo.value,
+            workType = workTypeCombo.value,
+            number = numberField.text.trim(),
+            plannedX = plannedXField.toDoubleSafe(),
+            plannedY = plannedYField.toDoubleSafe(),
+            actualX = actualXField.toDoubleSafe(),
+            actualY = actualYField.toDoubleSafe(),
+            actualZ = actualZField.toDoubleSafe(),
+            actualDepth = actualDepthField.toDoubleSafe(),
+            plannedDepth = plannedDepthField.toDoubleSafe(),
+            startDate = startDatePicker.value?.toString(),
+            endDate = endDatePicker.value?.toString(),
+            geologist = geologistCombo.value,
+            contractor = contractorCombo.value,
+            drillingRig = drillingRigCombo.value,
+            additionalInfo = additionalInfoArea.text.ifBlank { null },
+            coreRecovery = coreRecoveryField.toDoubleSafe(),
+            casing = casingField.toDoubleSafe(),
+            mmg1Top = mmg1TopField.toDoubleSafe(),
+            mmg1Bottom = mmg1BottomField.toDoubleSafe(),
+            mmg2Top = mmg2TopField.toDoubleSafe(),
+            mmg2Bottom = mmg2BottomField.toDoubleSafe(),
+            gwAppearLog = gwAppearLogField.toDoubleSafe(),
+            gwStableLog = gwStableLogField.toDoubleSafe(),
+            act = actCheckBox.isSelected,
+            actNumber = if (actCheckBox.isSelected) actNumberField.text.ifBlank { null } else null,
+            thermalTube = thermalTubeCheckBox.isSelected,
+            hasVideo = working?.hasVideo ?: false,
+            hasDrilling = working?.hasDrilling ?: false,
+            hasJournal = working?.hasJournal ?: false,
+            hasCore = working?.hasCore ?: false,
+            hasStake = working?.hasStake ?: false,
+            isProject = working?.isProject ?: false
+        )
+
+        saveButton.isDisable = true
+        runOnFx {
+            try {
+                if (working == null) api.createWorking("Bearer $token", newWorking).await()
+                else api.updateWorking("Bearer $token", working!!.id, newWorking).await()
+                onSaveCallback()
+                close()
+            } catch (e: Exception) {
+                errorLabel.text = "Ошибка: ${e.message}"
+                saveButton.isDisable = false
+            }
+        }
+    }
+
+    private fun validateInputs(): Boolean {
+        var allValid = true
+        errorLabel.text = ""
+        // Упрощенная валидация для краткости
+        if (numberField.text.isNullOrBlank()) {
+            numberField.style = "-fx-border-color: red"
+            allValid = false
+        }
+        return allValid
+    }
+
+    private fun Double?.toPlain(): String = this?.let { java.math.BigDecimal(it).stripTrailingZeros().toPlainString() } ?: ""
+
+}
+
+package org.example.geoapp.util
+
+import javafx.application.Platform
+import kotlinx.coroutines.*
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
+import retrofit2.Call
+
+// Расширение для преобразования Call в Deferred (suspend)
+suspend fun <T> Call<T>.awaitVoid(): T = suspendCancellableCoroutine { continuation ->
+    enqueue(object : retrofit2.Callback<T> {
+        override fun onResponse(call: Call<T>, response: retrofit2.Response<T>) {
+            if (response.isSuccessful) {
+                continuation.resume(response.body()!!)
+            } else {
+                continuation.resumeWithException(RuntimeException("HTTP ${response.code()}"))
+            }
+        }
+        override fun onFailure(call: Call<T>, t: Throwable) {
+            continuation.resumeWithException(t)
+        }
+    })
+    continuation.invokeOnCancellation { this@awaitVoid.cancel() }
+}
+
+// Запуск корутины с автоматическим переключением на JavaFX thread
+fun runOnFx(block: suspend CoroutineScope.() -> Unit): Job {
+    return CoroutineScope(Dispatchers.Main).launch {
+        block()
+    }
+}
+
+suspend fun Call<Void>.awaitUnit(): Unit = suspendCancellableCoroutine { continuation ->
+    enqueue(object : retrofit2.Callback<Void> {
+        override fun onResponse(call: Call<Void>, response: retrofit2.Response<Void>) {
+            if (response.isSuccessful) {
+                continuation.resume(Unit)
+            } else {
+                continuation.resumeWithException(RuntimeException("HTTP ${response.code()}"))
+            }
+        }
+        override fun onFailure(call: Call<Void>, t: Throwable) {
+            continuation.resumeWithException(t)
+        }
+    })
+    continuation.invokeOnCancellation { cancel() }
+}
+
+// Общая версия await для Call<T>
+suspend fun <T> Call<T>.await(): T = suspendCancellableCoroutine { continuation ->
+    enqueue(object : retrofit2.Callback<T> {
+        override fun onResponse(call: Call<T>, response: retrofit2.Response<T>) {
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null) {
+                    continuation.resume(body)
+                } else {
+                    // Для случаев с пустым телом (например, Void) - вернуть Unit через исключение
+                    continuation.resumeWithException(RuntimeException("Empty response body"))
+                }
+            } else {
+                continuation.resumeWithException(RuntimeException("HTTP ${response.code()}"))
+            }
+        }
+
+        override fun onFailure(call: Call<T>, t: Throwable) {
+            continuation.resumeWithException(t)
+        }
+    })
+    continuation.invokeOnCancellation { this@await.cancel() }
+}
+
+package org.example.geoapp.util
+
+enum class DbField(val propKey: String, val title: String, val isReference: Boolean = false) {
+    IGNORE("ignore", "--- Пропустить ---"),
+    
+    // Виртуальное поле для склейки
+    NAME_COMBINED("nameCombined", "Наименование (Тип + Номер)"), 
+    NUMBER("number", "Номер выработки (только номер)"),
+    
+    // Справочники
+    AREA("area", "Участок", true),
+    WORK_TYPE("workType", "Тип выработки", true),
+    CONTRACTOR("contractor", "Подрядчик", true),
+    GEOLOGIST("geologist", "Геолог", true),
+    DRILLING_RIG("drillingRig", "Буровая", true),
+
+    // Числа и текст
+    PLANNED_X("plannedX", "План X"),
+    PLANNED_Y("plannedY", "План Y"),
+    PLANNED_DEPTH("plannedDepth", "План H"),
+    ACTUAL_X("actualX", "Факт X"),
+    ACTUAL_Y("actualY", "Факт Y"),
+    ACTUAL_Z("actualZ", "Факт Z"),
+    ACTUAL_DEPTH("actualDepth", "Факт H"),
+    CORE_RECOVERY("coreRecovery", "Выход керна, %"),
+    CASING("casing", "Обсад"),
+    START_DATE("startDate", "Дата начала"),
+    END_DATE("endDate", "Дата окончания"),
+    MMG1_TOP("mmg1Top", "ММГ1 кровля"),
+    MMG1_BOTTOM("mmg1Bottom", "ММГ1 подошва"),
+    MMG2_TOP("mmg2Top", "ММГ2 кровля"),
+    MMG2_BOTTOM("mmg2Bottom", "ММГ2 подошва"),
+    GW_APPEAR_LOG("gwAppearLog", "УГВ появ (журнал)"),
+    GW_STABLE_LOG("gwStableLog", "УУГВ устан (журнал)"),
+    ACT_NUMBER("actNumber", "Номер акта"),
+    ADDITIONAL_INFO("additionalInfo", "Примечание"),
+
+        // Материалы (чекбоксы)
+    HAS_VIDEO("HasVideo", "Видео"),
+    HAS_DRILLING("HasDrilling", "Бурение"),
+    HAS_JOURNAL("HasJournal", "Журнал"),
+    HAS_CORE("HasCore", "Керн"),
+    HAS_STAKE("HasStake", "Штага")
+    
+    // Образцы
+    SAMPLES_THAWED("samplesThawed", "Образцы талые (шт)"),
+    SAMPLES_FROZEN("samplesFrozen", "Образцы мерзлые (шт)"),
+    SAMPLES_ROCKY("samplesRocky", "Образцы скальные (шт)"),
+}
+
+// Контейнер для строки, требующей исправления
+class CorrectionRow(val originalRowIndex: Int, var errorMsg: String, val rawValues: MutableMap<DbField, String>)
+
+package org.example.geoapp.util
+
+object FilterParser {
+
+    fun parse(filter: String, value: Any?): Boolean {
+
+        val trimmedFilter = filter.trim()
+        val strValue = value?.toString()?.trim()
+
+        // ===== Пустые / непустые =====
+
+        if (trimmedFilter == "=") {
+            return strValue.isNullOrEmpty()
+        }
+
+        if (trimmedFilter == "<>") {
+            return !strValue.isNullOrEmpty()
+        }
+
+        if (strValue.isNullOrEmpty()) return false
+
+        // ===== Числовые операторы =====
+
+        if (trimmedFilter.startsWith(">=")) {
+            return compareNumeric(strValue, trimmedFilter.substring(2)) { a, b -> a >= b }
+        }
+
+        if (trimmedFilter.startsWith(">")) {
+            return compareNumeric(strValue, trimmedFilter.substring(1)) { a, b -> a > b }
+        }
+
+        if (trimmedFilter.startsWith("<>")) {
+            val term = trimmedFilter.substring(2)
+            return strValue != term
+        }
+
+        if (trimmedFilter.startsWith("=")) {
+            val term = trimmedFilter.substring(1)
+            return strValue == term
+        }
+
+        // ===== С маской в начале =====
+
+        if (trimmedFilter.startsWith("*")) {
+            val term = trimmedFilter.substring(1)
+            return strValue.contains(term, ignoreCase = true)
+        }
+
+        // ===== С маской в конце =====
+
+        if (trimmedFilter.endsWith("*")) {
+            val term = trimmedFilter.dropLast(1)
+            return strValue.startsWith(term, ignoreCase = true)
+        }
+
+        // ===== Без спецсимволов =====
+        // Если строка содержит "-" — считаем точным совпадением
+        if (trimmedFilter.contains("-")) {
+            return strValue.equals(trimmedFilter, ignoreCase = true)
+        }
+
+        // Если нет спецсимволов — считаем startsWith
+        return strValue.startsWith(trimmedFilter, ignoreCase = true)
+    }
+
+    private fun compareNumeric(
+        value: String,
+        filterValue: String,
+        comparator: (Double, Double) -> Boolean
+    ): Boolean {
+
+        val valNum = value.toDoubleOrNull() ?: return false
+        val filterNum = filterValue.toDoubleOrNull() ?: return false
+
+        return comparator(valNum, filterNum)
+    }
+}
+
+package org.example.geoapp.util
+
+import javafx.scene.control.TextField
+
+object NumberParsers {
+
+    fun TextField.toDoubleSafe(): Double? {
+
+        val txt = this.text.trim()
+
+        if (txt.isEmpty()) {
+            return null
+        }
+
+        return txt
+            .replace(",", ".")
+            .toDoubleOrNull()
+    }
+}
+
+package org.example.geoapp.util
+
+import javafx.scene.control.TextField
+import javafx.scene.control.TextFormatter
+import java.util.function.UnaryOperator
+
+object NumericFieldUtil {
+
+    private val decimalRegex = Regex("^\\d+([.,]\\d*)?$")
+
+    fun applyDecimalFilter(field: TextField) {
+
+        val filter = UnaryOperator<TextFormatter.Change> { change ->
+
+            val newText = change.controlNewText
+
+            if (newText.isEmpty()) {
+                return@UnaryOperator change
+            }
+
+            if (decimalRegex.matches(newText)) {
+                change
+            } else {
+                null
+            }
+        }
+
+        field.textFormatter = TextFormatter<String>(filter)
+    }
+
+}
+
+package org.example.geoapp.util
+
+import com.example.geoapp.api.Working
+import com.example.geoapp.api.RefWorkType
+
+object WorkingParser {
+    // Передаем список доступных типов выработок, чтобы парсер мог найти совпадение
+    fun parse(values: Map<DbField, String>, availableWorkTypes: List<RefWorkType> = emptyList()): Working {
+        fun getNum(field: DbField): Double? {
+            val str = values[field]?.replace(",", ".")?.trim()
+            if (str.isNullOrEmpty()) return null
+            return str.toDoubleOrNull() ?: throw Exception("Ожидается число для '${field.title}', найдено '$str'")
+        }
+
+        fun getInt(field: DbField): Int? {
+            val str = values[field]?.trim()
+            if (str.isNullOrEmpty()) return null
+            return str.toIntOrNull() ?: throw Exception("Ожидается целое число для '${field.title}', найдено '$str'")
+        }
+
+        fun getStr(field: DbField): String? {
+            val str = values[field]?.trim()
+            return if (str.isNullOrEmpty()) null else str
+        }
+
+        // Логика извлечения Номера и Типа выработки
+        var parsedNumber = getStr(DbField.NUMBER) ?: ""
+        var parsedWorkType: RefWorkType? = null
+
+        val combinedName = getStr(DbField.NAME_COMBINED)
+        if (combinedName != null) {
+            // Регулярное выражение: ищем место, где начинаются цифры. 
+            // Например "Скв-12а" разобьется на "Скв-" и "12а"
+            val matchResult = Regex("^([^\\d]*)([\\d]+.*)$").find(combinedName)
+            if (matchResult != null) {
+                val typePrefix = matchResult.groupValues[1].replace("-", "").trim()
+                parsedNumber = matchResult.groupValues[2].trim()
+
+                // Пытаемся сопоставить префикс с реальным справочником (например, "Скв" -> "Скважина")
+                if (typePrefix.isNotEmpty()) {
+                    parsedWorkType = availableWorkTypes.find { 
+                        it.name.contains(typePrefix, ignoreCase = true) || typePrefix.contains(it.name, ignoreCase = true)
+                    }
+                }
+            } else {
+                // Если цифр нет, просто пишем все в номер
+                parsedNumber = combinedName
+            }
+        }
+
+        if (parsedNumber.isEmpty()) {
+            throw Exception("Обязательное поле 'Номер' не может быть пустым")
+        }
+
+        val coreRec = getNum(DbField.CORE_RECOVERY)
+        if (coreRec != null && (coreRec < 0 || coreRec > 100)) {
+            throw Exception("Выход керна должен быть от 0 до 100")
+        }
+
+        return Working(
+            number = parsedNumber,
+            workType = parsedWorkType, // Это поле потом дополнится в ExcelImportController, если тут null
+            plannedX = getNum(DbField.PLANNED_X),
+            plannedY = getNum(DbField.PLANNED_Y),
+            plannedDepth = getNum(DbField.PLANNED_DEPTH),
+            actualX = getNum(DbField.ACTUAL_X),
+            actualY = getNum(DbField.ACTUAL_Y),
+            actualZ = getNum(DbField.ACTUAL_Z),
+            actualDepth = getNum(DbField.ACTUAL_DEPTH),
+            coreRecovery = coreRec,
+            casing = getNum(DbField.CASING),
+            startDate = getStr(DbField.START_DATE),
+            endDate = getStr(DbField.END_DATE),
+            mmg1Top = getNum(DbField.MMG1_TOP),
+            mmg1Bottom = getNum(DbField.MMG1_BOTTOM),
+            mmg2Top = getNum(DbField.MMG2_TOP),
+            mmg2Bottom = getNum(DbField.MMG2_BOTTOM),
+            gwAppearLog = getNum(DbField.GW_APPEAR_LOG),
+            gwStableLog = getNum(DbField.GW_STABLE_LOG),
+            actNumber = getStr(DbField.ACT_NUMBER),
+            additionalInfo = getStr(DbField.ADDITIONAL_INFO),
+            samplesThawed = getInt(DbField.SAMPLES_THAWED),
+            samplesFrozen = getInt(DbField.SAMPLES_FROZEN),
+            samplesRocky = getInt(DbField.SAMPLES_ROCKY)
+        )
+    }
+}
+
+package org.example.geoapp
+
+import javafx.application.Application
+import javafx.fxml.FXMLLoader
+import javafx.scene.Scene
+import javafx.stage.Stage
+import com.example.geoapp.api.GeoApi
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+
+class MainApp : Application() {
+
+
+    companion object {
+        val api: GeoApi by lazy {
+            Retrofit.Builder()
+                .baseUrl("http://localhost:8081/")
+                .addConverterFactory(GsonConverterFactory.create())
+                .build()
+                .create(GeoApi::class.java)
+        }
+
+        @JvmStatic
+        fun main(args: Array<String>) {
+            launch(MainApp::class.java, *args)
+        }
+    }
+
+    override fun start(primaryStage: Stage) {
+        showLoginWindow()
+    }
+
+    fun showLoginWindow() {
+        val loader = FXMLLoader(javaClass.getResource("/login.fxml"))
+        val root = loader.load<javafx.scene.Parent>()
+        val stage = Stage()
+        stage.scene = Scene(root)
+        stage.title = "GeoApp - Вход"
+        stage.show()
+    }
+}
+
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<VBox spacing="10" style="-fx-padding: 20;" prefWidth="1200" prefHeight="700"
+      xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+      fx:controller="org.example.geoapp.controller.ExcelImportController">
+
+    <Label fx:id="fileInfoLabel" text="Файл: не выбран" style="-fx-font-weight: bold; -fx-font-size: 14px;"/>
+    
+    <HBox spacing="15" alignment="CENTER_LEFT" style="-fx-background-color: #f4f4f4; -fx-padding: 10; -fx-border-color: #ccc; -fx-border-radius: 5;">
+        <VBox spacing="5">
+            <Label text="Участок (для всего файла):" style="-fx-font-weight: bold; -fx-text-fill: #1976d2;"/>
+            <ComboBox fx:id="importAreaCombo" prefWidth="200" promptText="Выберите участок..."/>
+        </VBox>
+        <VBox spacing="5">
+            <Label text="Лист Excel:"/>
+            <ComboBox fx:id="sheetCombo" prefWidth="150"/>
+        </VBox>
+        <VBox spacing="5">
+            <Label text="Начиная со строки:"/>
+            <Spinner fx:id="startRowSpinner" prefWidth="100" editable="true"/>
+        </VBox>
+        <VBox alignment="BOTTOM_CENTER">
+            <Button text="Авто-определение колонок" onAction="#onAutoMap" style="-fx-base: #b3e5fc; -fx-font-weight: bold;"/>
+        </VBox>
+        <Label text="(Уникально укажите колонки. Данные справочников будут взяты из ячеек Excel)" wrapText="true" HBox.hgrow="ALWAYS" style="-fx-text-fill: #666;"/>
+    </HBox>
+
+    <TableView fx:id="previewTable" VBox.vgrow="ALWAYS" style="-fx-font-size: 13px;"/>
+
+    <Label fx:id="statusLabel" textFill="red" wrapText="true"/>
+
+    <HBox spacing="10" alignment="CENTER_RIGHT">
+        <Button text="Отмена" onAction="#onCancel"/>
+        <Button fx:id="importButton" text="Начать импорт" onAction="#onImport" defaultButton="true" style="-fx-font-weight: bold; -fx-base: #81c784;" disable="true"/>
+    </HBox>
+</VBox>
+
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox spacing="10" style="-fx-padding: 20;" prefWidth="1200" prefHeight="600"
+      xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+      fx:controller="org.example.geoapp.controller.ImportCorrectionController">
+
+    <HBox fx:id="adminPanel" spacing="10" alignment="CENTER_LEFT" managed="false" visible="false" style="-fx-background-color: #fff3e0; -fx-padding: 10; -fx-border-color: #ffcc80; -fx-border-radius: 5;">
+        <Label text="Новые справочники:" style="-fx-font-weight: bold;"/>
+        <Button text="Участки" onAction="#openAreas"/>
+        <Button text="Типы" onAction="#openWorkTypes"/>
+        <Button text="Подрядчики" onAction="#openContractors"/>
+        <Button text="Геологи" onAction="#openGeologists"/>
+        <Button text="Буровые" onAction="#openDrillingRigs"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button text="Обновить и перепроверить" onAction="#onRefreshAndRetry" style="-fx-base: #ffb74d; -fx-font-weight: bold;"/>
+    </HBox>
+
+    <Label text="В строках обнаружены ошибки (неизвестные справочники, конфликты или формат). Выберите правильное значение в таблице или пропустите строку." wrapText="true" style="-fx-font-weight: bold; -fx-text-fill: #d32f2f;"/>
+
+    <TableView fx:id="correctionTable" VBox.vgrow="ALWAYS" editable="true" style="-fx-font-size: 13px;"/>
+
+    <Label fx:id="statusLabel" textFill="blue" wrapText="true"/>
+
+    <HBox spacing="10" alignment="CENTER_RIGHT">
+        <Button text="Пропустить все с ошибками (Отмена)" onAction="#onCancel"/>
+        <Button fx:id="retryButton" text="Повторить импорт исправленных" onAction="#onRetry" defaultButton="true" style="-fx-font-weight: bold; -fx-base: #81c784;"/>
+    </HBox>
+</VBox>
+
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Text?>
+
+<VBox fx:id="root" xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="org.example.geoapp.controller.LoginController"
+      alignment="CENTER" spacing="20" style="-fx-background-color: #f4f4f4;">
+
+    <padding>
+        <Insets top="40" right="40" bottom="40" left="40"/>
+    </padding>
+
+    <Text text="Вход в систему" style="-fx-font-size: 24px; -fx-font-weight: bold;"/>
+
+    <GridPane hgap="10" vgap="10" alignment="CENTER">
+        <Label text="Логин:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+        <TextField fx:id="usernameField" GridPane.rowIndex="0" GridPane.columnIndex="1" prefWidth="200"/>
+
+        <Label text="Пароль:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+        <PasswordField fx:id="passwordField" GridPane.rowIndex="1" GridPane.columnIndex="1" prefWidth="200"/>
+    </GridPane>
+
+    <HBox alignment="CENTER" spacing="10">
+        <Button fx:id="loginButton" text="Войти" onAction="#onLogin" prefWidth="100" defaultButton="true"/>
+        <ProgressIndicator fx:id="progressIndicator" prefWidth="25" prefHeight="25"/>
+    </HBox>
+
+    <Label fx:id="errorLabel" textFill="red" wrapText="true" maxWidth="300"/>
+</VBox>
+
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox stylesheets="@style.css" xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml" fx:controller="org.example.geoapp.controller.MainController" prefWidth="1400" prefHeight="700">
+    <MenuBar>
+        <Menu text="Инструменты">
+            <MenuItem text="Импорт проектных скважин" onAction="#openProjectExcelImport"/>
+            <MenuItem text="Импорт фактических скважин" onAction="#openActualExcelImport"/>
+        </Menu>
+        <Menu fx:id="adminMenu" text="Справочники" visible="false">
+            <MenuItem text="Участки" onAction="#openAreasEditor"/>
+            <MenuItem text="Типы выработок" onAction="#openWorkTypesEditor"/>
+            <MenuItem text="Буровые" onAction="#openDrillingRigsEditor"/>
+            <SeparatorMenuItem/>
+            <MenuItem text="Подрядчики" onAction="#openContractorsEditor"/>
+            <MenuItem text="Геологи" onAction="#openGeologistsEditor"/>
+        </Menu>
+    </MenuBar>
+
+    <HBox spacing="10" alignment="CENTER_LEFT" style="-fx-padding: 10;">
+        <Label text="Фильтр по участку:" style="-fx-font-weight: bold;"/>
+        <ComboBox fx:id="filterAreaCombo" prefWidth="200"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button fx:id="addButton" text="Добавить" onAction="#onAdd"/>
+        <Button fx:id="editButton" text="Редактировать" onAction="#onEdit"/>
+        <Button fx:id="deleteButton" text="Удалить" onAction="#onDelete"/>
+    </HBox>
+
+    <TableView fx:id="workingsTable" VBox.vgrow="ALWAYS">
+        <columns>
+            <TableColumn fx:id="colRowNumber" text="№" prefWidth="40"/>
+            <TableColumn fx:id="colName" text="Номер" prefWidth="120"/>
+            <TableColumn fx:id="colArea" text="Участок" prefWidth="100"/>
+            <TableColumn fx:id="colContractor" text="Подрядчик" prefWidth="100"/>
+            <TableColumn fx:id="colGeologist" text="Геолог" prefWidth="100"/>
+            <TableColumn fx:id="colPlannedX" text="план X" prefWidth="70"/>
+            <TableColumn fx:id="colPlannedY" text="план Y" prefWidth="70"/>
+            <TableColumn fx:id="colPlannedDepth" text="план H" prefWidth="60"/>
+            <TableColumn fx:id="colActualX" text="факт X" prefWidth="70"/>
+            <TableColumn fx:id="colActualY" text="факт Y" prefWidth="70"/>
+            <TableColumn fx:id="colActualZ" text="факт Z" prefWidth="70"/>
+            <TableColumn fx:id="colActualDepth" text="факт H" prefWidth="60"/>
+            <TableColumn fx:id="colDeltaS" text="ΔS" prefWidth="60"/>
+            <TableColumn fx:id="colCoreRecovery" text="Выход керна,%" prefWidth="60"/>
+            <TableColumn fx:id="colCasing" text="Обсад" prefWidth="60"/>
+            <TableColumn fx:id="colStartDate" text="Дата нач" prefWidth="80"/>
+            <TableColumn fx:id="colEndDate" text="Дата оконч" prefWidth="80"/>
+            
+            <TableColumn text="Материалы">
+                <columns>
+                    <TableColumn fx:id="colHasVideo" text="Видео" prefWidth="60"/>
+                    <TableColumn fx:id="colHasDrilling" text="Буровая" prefWidth="60"/>
+                    <TableColumn fx:id="colHasJournal" text="Журнал" prefWidth="60"/>
+                    <TableColumn fx:id="colHasCore" text="Керн" prefWidth="60"/>
+                    <TableColumn fx:id="colHasStake" text="Штага" prefWidth="60"/>
+                </columns>
+            </TableColumn>
+
+            <TableColumn text="Образцы (шт)">
+                <columns>
+                    <TableColumn fx:id="colSamplesThawed" text="Талые" prefWidth="50"/>
+                    <TableColumn fx:id="colSamplesFrozen" text="Мерзл" prefWidth="50"/>
+                    <TableColumn fx:id="colSamplesRocky" text="Скал" prefWidth="50"/>
+                </columns>
+            </TableColumn>
+
+            <TableColumn fx:id="colMmg1Top" text="ММГ1 кр." prefWidth="60"/>
+            <TableColumn fx:id="colMmg1Bottom" text="ММГ1 под." prefWidth="60"/>
+            <TableColumn fx:id="colMmg2Top" text="ММГ2 кр." prefWidth="60"/>
+            <TableColumn fx:id="colMmg2Bottom" text="ММГ2 под." prefWidth="60"/>
+            <TableColumn fx:id="colGwAppearLog" text="ПУГВ" prefWidth="60"/>
+            <TableColumn fx:id="colGwStableLog" text="УУГВ" prefWidth="60"/>
+            <TableColumn fx:id="colGwStableAbs" text="УУГВ абс" prefWidth="70"/>
+            <TableColumn fx:id="colAct" text="Акт" prefWidth="50"/>
+            <TableColumn fx:id="colActNumber" text="№ акта" prefWidth="60"/>
+            <TableColumn fx:id="colThermalTube" text="Т-трубка" prefWidth="70"/>
+            <TableColumn fx:id="colAdditionalInfo" text="Комментарий" prefWidth="150"/>
+        </columns>
+    </TableView>
+</VBox>
+
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox spacing="10" style="-fx-padding: 15;" prefWidth="500" prefHeight="550"
+      xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+      fx:controller="org.example.geoapp.controller.ReferenceEditorController">
+
+    <TableView fx:id="referenceTable" VBox.vgrow="ALWAYS">
+        <columns>
+            <TableColumn fx:id="colId" text="ID" prefWidth="50"/>
+            <TableColumn fx:id="colName" text="Наименование" prefWidth="250"/>
+            <TableColumn fx:id="colParent" text="Подрядчик" prefWidth="150" visible="false"/>
+            <TableColumn fx:id="colComment" text="Комментарий" prefWidth="200"/>
+        </columns>
+    </TableView>
+
+    <GridPane hgap="10" vgap="10">
+        <Label text="Название:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+        <TextField fx:id="nameField" GridPane.rowIndex="0" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS"/>
+
+        <Label fx:id="contractorLabel" text="Подрядчик:" GridPane.rowIndex="1" GridPane.columnIndex="0" managed="false" visible="false"/>
+        <ComboBox fx:id="contractorCombo" GridPane.rowIndex="1" GridPane.columnIndex="1" managed="false" visible="false" maxWidth="Infinity"/>
+    </GridPane>
+
+    <Label fx:id="errorLabel" textFill="red"/>
+
+    <HBox spacing="10" alignment="CENTER_RIGHT">
+        <Button text="Сбросить (для новой записи)" onAction="#onClearSelection"/>
+        <Button fx:id="deleteButton" text="Удалить" onAction="#onDelete" disable="true"/>
+        <Button fx:id="saveButton" text="Добавить новую запись" onAction="#onSave" defaultButton="true" style="-fx-font-weight: bold;"/>
+    </HBox>
+</VBox>
+
+/* Убираем синее выделение и делаем его серым */
+.table-view:focused .table-row-cell:selected, 
+.table-view .table-row-cell:selected {
+    -fx-background-color: #e0e0e0;
+    -fx-background-insets: 0;
+}
+
+/* Делаем текст всегда черным, даже при выделении */
+.table-view:focused .table-row-cell:selected .text, 
+.table-view .table-row-cell:selected .text {
+    -fx-fill: black;
+}
+
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox fx:id="root" xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml" fx:controller="org.example.geoapp.controller.WorkingFormController" prefWidth="550" prefHeight="750" spacing="0">
+    <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS" style="-fx-background-color: transparent;">
+        <VBox spacing="10" style="-fx-padding: 20;">
+            <Label text="* — обязательное поле, его нужно заполнить обязательно" style="-fx-text-fill: red; -fx-font-size: 12px;"/>
+
+            <Label text="Участок:"/> <ComboBox fx:id="areaCombo" prefWidth="400"/>
+            <Label text="Тип выработки:"/> <ComboBox fx:id="workTypeCombo" prefWidth="400"/>
+            <Label text="Подрядчик:"/> <ComboBox fx:id="contractorCombo" prefWidth="400"/>
+            <Label text="Геолог:"/> <ComboBox fx:id="geologistCombo" prefWidth="400"/>
+            <Label text="Буровая:"/> <ComboBox fx:id="drillingRigCombo" prefWidth="400"/>
+            
+            <Label text="Номер*:"/> <TextField fx:id="numberField"/>
+            
+            <HBox spacing="10">
+                <VBox HBox.hgrow="ALWAYS"><Label text="План X:"/><TextField fx:id="plannedXField"/></VBox>
+                <VBox HBox.hgrow="ALWAYS"><Label text="План Y:"/><TextField fx:id="plannedYField"/></VBox>
+                <VBox HBox.hgrow="ALWAYS"><Label text="План H:"/><TextField fx:id="plannedDepthField"/></VBox>
+            </HBox>
+            
+            <HBox spacing="10">
+                <VBox HBox.hgrow="ALWAYS"><Label text="Факт X:"/><TextField fx:id="actualXField"/></VBox>
+                <VBox HBox.hgrow="ALWAYS"><Label text="Факт Y:"/><TextField fx:id="actualYField"/></VBox>
+                <VBox HBox.hgrow="ALWAYS"><Label text="Факт Z:"/><TextField fx:id="actualZField"/></VBox>
+                <VBox HBox.hgrow="ALWAYS"><Label text="Факт H:"/><TextField fx:id="actualDepthField"/></VBox>
+            </HBox>
+            
+            <Label fx:id="deltaSLabel" text="Смещение от проекта: не определено" style="-fx-text-fill: #555; -fx-font-style: italic;"/>
+
+            <HBox spacing="10">
+                <VBox HBox.hgrow="ALWAYS"><Label text="Выход керна, %:"/><TextField fx:id="coreRecoveryField"/></VBox>
+                <VBox HBox.hgrow="ALWAYS"><Label text="Обсад:"/><TextField fx:id="casingField"/></VBox>
+            </HBox>
+
+            <HBox spacing="10">
+                <VBox HBox.hgrow="ALWAYS"><Label text="Дата начала:"/><DatePicker fx:id="startDatePicker" HBox.hgrow="ALWAYS"/></VBox>
+                <VBox HBox.hgrow="ALWAYS"><Label text="Дата окончания:"/><DatePicker fx:id="endDatePicker" HBox.hgrow="ALWAYS"/></VBox>
+            </HBox>
+
+            <HBox spacing="10">
+                <VBox HBox.hgrow="ALWAYS"><Label text="ММГ1 кровля:"/><TextField fx:id="mmg1TopField"/></VBox>
+                <VBox HBox.hgrow="ALWAYS"><Label text="ММГ1 подошва:"/><TextField fx:id="mmg1BottomField"/></VBox>
+            </HBox>
+
+            <HBox spacing="10">
+                <VBox HBox.hgrow="ALWAYS"><Label text="ММГ2 кровля:"/><TextField fx:id="mmg2TopField"/></VBox>
+                <VBox HBox.hgrow="ALWAYS"><Label text="ММГ2 подошва:"/><TextField fx:id="mmg2BottomField"/></VBox>
+            </HBox>
+
+            <HBox spacing="10">
+                <VBox HBox.hgrow="ALWAYS"><Label text="ПУГВ (УГВ появ):"/><TextField fx:id="gwAppearLogField"/></VBox>
+                <VBox HBox.hgrow="ALWAYS"><Label text="УУГВ (УГВ устан):"/><TextField fx:id="gwStableLogField"/></VBox>
+            </HBox>
+            <Label fx:id="gwStableAbsLabel" text="УУГВ абс: не определено" style="-fx-text-fill: #555;"/>
+
+            <HBox spacing="20" alignment="CENTER_LEFT" style="-fx-padding: 10 0 0 0;">
+                <CheckBox fx:id="actCheckBox" text="Акт"/>
+                <VBox><Label text="Номер акта:"/><TextField fx:id="actNumberField" prefWidth="150"/></VBox>
+            </HBox>
+
+            <CheckBox fx:id="thermalTubeCheckBox" text="Термотрубка" style="-fx-padding: 5 0 10 0;"/>
+
+            <Label text="Комментарий:"/><TextArea fx:id="additionalInfoArea" prefRowCount="3"/>
+            
+            <Label fx:id="errorLabel" textFill="red"/>
+        </VBox>
+    </ScrollPane>
+    <HBox spacing="10" alignment="CENTER_RIGHT" style="-fx-padding: 10; -fx-background-color: #f4f4f4;">
+        <Button fx:id="saveButton" text="Сохранить" onAction="#onSave" prefWidth="100" style="-fx-font-weight: bold;" defaultButton="true"/>
+        <Button fx:id="cancelButton" text="Отмена" onAction="#onCancel" prefWidth="100"/>
+    </HBox>
+</VBox>
+
+package com.example.geoserver.config
+
+import com.example.geoserver.entity.*
+import com.example.geoserver.repository.*
+import org.springframework.boot.CommandLineRunner
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
+import java.time.LocalDate
+
+@Configuration
+class DataInitializer(
+    private val userRepository: UserRepository,
+    private val passwordEncoder: BCryptPasswordEncoder,
+
+    private val contractorRepo: RefContractorRepository,
+    private val areaRepo: RefAreaRepository,
+    private val geologistRepo: RefGeologistRepository,
+    private val drillingRigRepo: RefDrillingRigRepository,
+    private val workTypeRepo: RefWorkTypeRepository,
+    private val workingRepo: WorkingRepository
+) {
+
+    @Bean
+    fun initData(): CommandLineRunner = CommandLineRunner {
+        if (userRepository.findByUsername("admin").isEmpty) {
+            val admin = User(
+                username = "admin",
+                password = passwordEncoder.encode("secret123"),
+                role = "ROLE_ADMIN"
+            )
+            userRepository.save(admin)
+            // println("Создан тестовый пользователь: admin / secret123")
+        }
+        if (userRepository.findByUsername("user").isEmpty) {
+            val user = User(
+                username = "user",
+                password = passwordEncoder.encode("password"),
+                role = "ROLE_USER"
+            )
+            userRepository.save(user)
+        }
+        println("Тестовые пользователи созданы")
+    }
+}
+
+package com.example.geoserver.controller
+
+import com.example.geoserver.security.JwtService
+import com.example.geoserver.service.UserService
+import org.springframework.http.ResponseEntity
+import org.springframework.security.authentication.AuthenticationManager
+import org.springframework.security.authentication.BadCredentialsException
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RestController
+
+@RestController
+@RequestMapping("/api/auth")
+class AuthController(
+    private val authenticationManager: AuthenticationManager,
+    private val jwtService: JwtService,
+    private val userService: UserService
+) {
+
+    data class LoginRequest(val username: String, val password: String)
+    data class LoginResponse(val token: String, val role: String)
+
+    @PostMapping("/login")
+    fun login(@RequestBody request: LoginRequest): ResponseEntity<Any> {
+        try {
+            authenticationManager.authenticate(
+                UsernamePasswordAuthenticationToken(request.username, request.password)
+            )
+            val user = userService.loadUserByUsername(request.username)
+            val token = jwtService.generateToken(user)
+            val role = user.authorities.firstOrNull()?.authority ?: "ROLE_USER"
+            
+            return ResponseEntity.ok(LoginResponse(token, role))
+        } catch (e: BadCredentialsException) {
+            return ResponseEntity.status(401).body(mapOf("error" to "Invalid credentials"))
+        }
+    }
+}
+
+package com.example.geoserver.controller
+
+import org.springframework.web.bind.annotation.*
+import com.example.geoserver.entity.*
+import com.example.geoserver.repository.*
+import org.springframework.http.HttpStatus
+import org.springframework.web.server.ResponseStatusException
+
+@RestController
+@RequestMapping("/api/references")
+class ReferenceController(
+    private val contractorRepo: RefContractorRepository,
+    private val areaRepo: RefAreaRepository,
+    private val geologistRepo: RefGeologistRepository,
+    private val drillingRigRepo: RefDrillingRigRepository,
+    private val workTypeRepo: RefWorkTypeRepository
+) {
+    // --- УЧАСТКИ ---
+    @GetMapping("/areas") fun getAreas() = areaRepo.findAll()
+    @PostMapping("/areas") fun createArea(@RequestBody item: RefArea) = areaRepo.save(item)
+    @PutMapping("/areas/{id}") fun updateArea(@PathVariable id: Long, @RequestBody item: RefArea): RefArea {
+        if (!areaRepo.existsById(id)) throw ResponseStatusException(HttpStatus.NOT_FOUND)
+        return areaRepo.save(item.copy(id = id))
+    }
+    @DeleteMapping("/areas/{id}") fun deleteArea(@PathVariable id: Long) = areaRepo.deleteById(id)
+
+    // --- ТИПЫ ВЫРАБОТОК ---
+    @GetMapping("/work-types") fun getWorkTypes() = workTypeRepo.findAll()
+    @PostMapping("/work-types") fun createWorkType(@RequestBody item: RefWorkType) = workTypeRepo.save(item)
+    @PutMapping("/work-types/{id}") fun updateWorkType(@PathVariable id: Long, @RequestBody item: RefWorkType): RefWorkType {
+        if (!workTypeRepo.existsById(id)) throw ResponseStatusException(HttpStatus.NOT_FOUND)
+        return workTypeRepo.save(item.copy(id = id))
+    }
+    @DeleteMapping("/work-types/{id}") fun deleteWorkType(@PathVariable id: Long) = workTypeRepo.deleteById(id)
+
+    // --- БУРОВЫЕ ---
+    @GetMapping("/drilling-rigs") fun getDrillingRigs() = drillingRigRepo.findAll()
+    @PostMapping("/drilling-rigs") fun createDrillingRig(@RequestBody item: RefDrillingRig) = drillingRigRepo.save(item)
+    @PutMapping("/drilling-rigs/{id}") fun updateDrillingRig(@PathVariable id: Long, @RequestBody item: RefDrillingRig): RefDrillingRig {
+        if (!drillingRigRepo.existsById(id)) throw ResponseStatusException(HttpStatus.NOT_FOUND)
+        return drillingRigRepo.save(item.copy(id = id))
+    }
+    @DeleteMapping("/drilling-rigs/{id}") fun deleteDrillingRig(@PathVariable id: Long) = drillingRigRepo.deleteById(id)
+
+    // --- ПОДРЯДЧИКИ ---
+    @GetMapping("/contractors") fun getContractors() = contractorRepo.findAll()
+    @PostMapping("/contractors") fun createContractor(@RequestBody item: RefContractor) = contractorRepo.save(item)
+    @PutMapping("/contractors/{id}") fun updateContractor(@PathVariable id: Long, @RequestBody item: RefContractor): RefContractor {
+        if (!contractorRepo.existsById(id)) throw ResponseStatusException(HttpStatus.NOT_FOUND)
+        return contractorRepo.save(item.copy(id = id))
+    }
+    @DeleteMapping("/contractors/{id}") fun deleteContractor(@PathVariable id: Long) = contractorRepo.deleteById(id)
+
+    // --- ГЕОЛОГИ ---
+    @GetMapping("/geologists") fun getGeologists() = geologistRepo.findAll()
+    @PostMapping("/geologists") fun createGeologist(@RequestBody item: RefGeologist) = geologistRepo.save(item)
+    @PutMapping("/geologists/{id}") fun updateGeologist(@PathVariable id: Long, @RequestBody item: RefGeologist): RefGeologist {
+        if (!geologistRepo.existsById(id)) throw ResponseStatusException(HttpStatus.NOT_FOUND)
+        item.contractor = contractorRepo.findById(item.contractor?.id ?: 0).orElse(null)
+        return geologistRepo.save(item.copy(id = id))
+    }
+    @DeleteMapping("/geologists/{id}") fun deleteGeologist(@PathVariable id: Long) = geologistRepo.deleteById(id)
+
+    @GetMapping("/geologists/by-contractor/{contractorId}")
+    fun getGeologistsByContractor(@PathVariable contractorId: Long) = geologistRepo.findByContractorId(contractorId)
+}
+
+package com.example.geoserver.controller
+
+import com.example.geoserver.entity.User
+import com.example.geoserver.repository.UserRepository
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.RequestMapping
+
+@RestController
+class TestController(
+    private val userRepository: UserRepository,
+    private val handlerMapping: org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping
+) {
+
+    @GetMapping("/hello")
+    fun hello(): String {
+        return "Hello from Geo Server! База подключена."
+    }
+
+    @GetMapping
+    fun getAllUsers(): List<User> {
+        return userRepository.findAll()
+    }
+
+    // Debug endpoint to list all registered request mappings (temporary)
+    @GetMapping("/_debug/mappings")
+    fun mappings(): List<String> {
+        return handlerMapping.handlerMethods.keys.flatMap { it.patternsCondition?.patterns ?: emptySet() }
+    }
+}
+
+package com.example.geoserver.controller
+
+import org.springframework.web.bind.annotation.*
+import org.springframework.web.server.ResponseStatusException
+import org.springframework.http.HttpStatus
+import com.example.geoserver.entity.*
+import com.example.geoserver.repository.*
+import com.example.geoserver.service.WorkingService
+import kotlin.math.sqrt
+import kotlin.math.round
+
+
+@RestController
+@RequestMapping("/api/workings")
+class WorkingController(private val repo: WorkingRepository,
+                        private val workingService: WorkingService
+) {
+
+    @GetMapping
+    fun getAll(): List<Working> = repo.findAll()
+
+    @GetMapping("/{id}")
+    fun getById(@PathVariable id: Long): Working? = repo.findById(id).orElse(null)
+
+    @PostMapping
+    fun create(@RequestBody working: Working) = workingService.saveWorking(working)
+
+    @PostMapping("/batch")
+    fun createBatch(@RequestBody workings: List<Working>): List<Working> {
+        val savedWorkings = mutableListOf<Working>()
+        for (w in workings) {
+            val processedWorking = calculateComputedFields(w)
+            val existing = repo.findByNumber(processedWorking.number)
+            if (existing != null) {
+                savedWorkings.add(repo.save(processedWorking.copy(id = existing.id)))
+            } else {
+                savedWorkings.add(repo.save(processedWorking))
+            }
+        }
+        return savedWorkings
+    }
+    
+    @PutMapping("/{id}")
+    fun update(@PathVariable id: Long, @RequestBody working: Working): Working {
+        if (repo.existsById(id)) {
+            return repo.save(calculateComputedFields(working).copy(id = id))
+        }
+        throw ResponseStatusException(HttpStatus.NOT_FOUND, "Working not found")
+    }
+
+    @DeleteMapping("/{id}")
+    fun delete(@PathVariable id: Long) {
+        repo.deleteById(id)
+    }
+
+    // ЛОГИКА РАСЧЕТОВ И ОКРУГЛЕНИЙ 
+    private fun calculateComputedFields(w: Working): Working {
+        // Округление до 3 знаков
+        fun round3(value: Double?): Double? {
+            return value?.let { round(it * 1000.0) / 1000.0 }
+        }
+
+        val px = round3(w.plannedX)
+        val py = round3(w.plannedY)
+        val ax = round3(w.actualX)
+        val ay = round3(w.actualY)
+        val az = round3(w.actualZ)
+
+        // Расчет Смещения (Delta S)
+        var dS: Double? = null
+        if (px != null && py != null && ax != null && ay != null) {
+            val dx = px - ax
+            val dy = py - ay
+            dS = round3(sqrt(dx * dx + dy * dy))
+        }
+
+        // Расчет УУГВ абс (ФактZ - УУГВ устан.)
+        var gwAbs: Double? = null
+        val stableLog = w.gwStableLog
+        if (az != null && stableLog != null) {
+            gwAbs = round3(az - stableLog)
+        }
+
+        return w.copy(
+            plannedX = px,
+            plannedY = py,
+            actualX = ax,
+            actualY = ay,
+            actualZ = az,
+            deltaS = dS,
+            gwStableAbs = gwAbs
+        )
+    }
+}
+
+
+package com.example.geoserver.entity
+
+import jakarta.persistence.*
+import com.fasterxml.jackson.annotation.JsonIgnore
+
+@Entity
+@Table(name = "ref_areas")
+data class RefArea(
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    val id: Long = 0,
+
+    @Column(unique = true, nullable = false)
+    val name: String, // Название участка
+
+    @Column(columnDefinition = "TEXT") 
+    var comment: String? = null
+)
+
+@Entity
+@Table(name = "ref_contractors")
+data class RefContractor(
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    val id: Long = 0,
+
+    @Column(unique = true, nullable = false)
+    val name: String,
+
+    @Column(columnDefinition = "TEXT")
+    var comment: String? = null
+) {
+    // связь один-ко-многим
+    @JsonIgnore
+    @OneToMany(mappedBy = "contractor", cascade = [CascadeType.ALL], orphanRemoval = true)
+    val geologists: MutableList<RefGeologist> = mutableListOf()
+}
+
+@Entity
+@Table(name = "ref_geologists")
+data class RefGeologist(
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    val id: Long = 0,
+
+    @Column(unique = true, nullable = false)
+    val name: String,
+
+    // Обратная связь (ManyToOne)
+    @ManyToOne
+    @JoinColumn(name = "contractor_id", nullable = false)
+    var contractor: RefContractor? = null,
+
+    @Column(columnDefinition = "TEXT")
+    var comment: String? = null
+)
+
+@Entity
+@Table(name = "ref_drilling_rigs")
+data class RefDrillingRig(
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    val id: Long = 0,
+
+    @Column(unique = true, nullable = false)
+    val name: String,  // Номер буровой
+
+    @Column(columnDefinition = "TEXT")
+    var comment: String? = null
+)
+
+@Entity
+@Table(name = "ref_work_types")
+data class RefWorkType(
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    val id: Long = 0,
+
+    @Column(unique = true, nullable = false)
+    val name: String,  // "Скважина", "Шурф", "Расчистка"
+
+    @Column(columnDefinition = "TEXT")
+    var comment: String? = null
+)
+
+package com.example.geoserver.entity
+
+import jakarta.persistence.*
+import org.springframework.security.core.GrantedAuthority
+import org.springframework.security.core.authority.SimpleGrantedAuthority
+import org.springframework.security.core.userdetails.UserDetails
+
+@Entity
+@Table(name = "users")
+class User(
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    val id: Long = 0,
+
+    @Column(unique = true, nullable = false)
+    private val username: String = "",
+
+    @Column(nullable = false)
+    private val password: String = "",
+
+    @Column(nullable = false)
+    val role: String = ""
+) : UserDetails {
+
+    override fun getAuthorities(): Collection<GrantedAuthority> {
+        return listOf(SimpleGrantedAuthority(role))
+    }
+
+    override fun getPassword(): String = password
+    
+    override fun getUsername(): String = username
+    
+    override fun isAccountNonExpired(): Boolean = true
+    override fun isAccountNonLocked(): Boolean = true
+    override fun isCredentialsNonExpired(): Boolean = true
+    override fun isEnabled(): Boolean = true
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is User) return false
+        return id == other.id && username == other.username && password == other.password && role == other.role
+    }
+
+    override fun hashCode(): Int {
+        return id.hashCode() + username.hashCode() + password.hashCode() + role.hashCode()
+    }
+
+    override fun toString(): String {
+        return "User(id=$id, username='$username', role='$role')"
+    }
+}
+
+/*Таблица для хранения информации о скважинах, шурфах и расчистках.
+Каждая запись соответствует одной скважине, шурфу или расчистке,
+с указанием их планировочных и фактических координат, глубины, 
+дат начала и окончания работ, ответственных геолога и подрядчика, 
+а также дополнительной информации. Таблица связана с другими 
+справочными таблицами для обеспечения целостности данных и удобства управления ими.*/
+
+package com.example.geoserver.entity
+
+import jakarta.persistence.*
+import java.time.LocalDate
+import java.time.Instant
+
+@Entity
+@Table(name = "workings")
+data class Working(
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    val id: Long = 0,
+
+    @ManyToOne @JoinColumn(name = "area_id")
+    val area: RefArea? = null,
+
+    @ManyToOne @JoinColumn(name = "work_type_id")
+    val workType: RefWorkType? = null,
+
+    @Column(nullable = true, unique = true)
+    val number: String,
+
+    @Column(name = "order_num") val orderNum: Int? = null,
+    
+    // Координаты
+    val plannedX: Double? = null,
+    val plannedY: Double? = null,
+    val plannedDepth: Double? = null,
+
+    val actualX: Double? = null,
+    val actualY: Double? = null,
+    val actualZ: Double? = null,
+    val actualDepth: Double? = null,
+
+    val deltaS: Double? = null, // Смещение от проекта
+
+    @Column(name = "start_date") val startDate: LocalDate? = null,
+    @Column(name = "end_date") val endDate: LocalDate? = null,
+
+    @ManyToOne @JoinColumn(name = "geologist_id") val geologist: RefGeologist? = null,
+    @ManyToOne @JoinColumn(name = "contractor_id") val contractor: RefContractor? = null,
+    @ManyToOne @JoinColumn(name = "drilling_rig_id") val drillingRig: RefDrillingRig? = null,
+
+    @Column(name = "additional_info", columnDefinition = "TEXT")
+    val additionalInfo: String? = null, // Комментарий
+
+    @Column(name = "created_at") val createdAt: Instant = Instant.now(),
+    @Column(name = "updated_at") val updatedAt: Instant? = null,
+
+    @Column(name = "core_recovery") val coreRecovery: Double? = null,
+    val casing: Double? = null,
+
+    @Column(name = "mmg1_top") val mmg1Top: Double? = null,
+    @Column(name = "mmg1_bottom") val mmg1Bottom: Double? = null,
+    @Column(name = "mmg2_top") val mmg2Top: Double? = null,
+    @Column(name = "mmg2_bottom") val mmg2Bottom: Double? = null,
+
+    @Column(name = "gw_appear_log") val gwAppearLog: Double? = null, // ПУГВ
+    @Column(name = "gw_stable_log") val gwStableLog: Double? = null, // УУГВ
+    @Column(name = "gw_stable_abs") val gwStableAbs: Double? = null, // УУГВ абс (расчетное)
+
+    // Чекбоксы (Акт и Термотрубка)
+    val act: Boolean = false,
+    @Column(name = "act_number") val actNumber: String? = null,
+    @Column(name = "thermal_tube") val thermalTube: Boolean = false,
+
+    // Новые поля: чекбоксы наличия материалов/журналов
+    @Column (name = "has_video") val hasVideo: Boolean = false,
+    @Column (name = "has_drilling") val hasDrilling: Boolean = false,
+    @Column (name = "has_journal") val hasJournal: Boolean = false,
+    @Column (name = "has_core") val hasCore: Boolean = false,
+    @Column (name = "has_stake") val hasStake: Boolean = false,
+
+    // Новые поля: образцы
+    val samplesThawed: Int? = null,
+    val samplesFrozen: Int? = null,
+    val samplesRocky: Int? = null,
+
+    // Флаг для определения проектной скважины
+    val isProject: Boolean = false
+)
+
+package com.example.geoserver.repository
+
+import com.example.geoserver.entity.*
+import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Modifying
+import org.springframework.data.jpa.repository.Query
+import java.util.Optional
+
+
+interface UserRepository : JpaRepository<User, Long> {
+    fun findByUsername(username: String): Optional<User>
+}
+
+// Справочники
+interface RefContractorRepository : JpaRepository<RefContractor, Long> {
+    fun findByName(name: String): RefContractor?
+}
+
+interface RefAreaRepository : JpaRepository<RefArea, Long>{
+    fun findByName(name: String): RefArea?
+}
+
+interface RefGeologistRepository : JpaRepository<RefGeologist, Long> {
+    fun findByName(name: String): RefGeologist?
+    fun findByContractorId(contractorId: Long): List<RefGeologist>
+}
+
+interface RefDrillingRigRepository : JpaRepository<RefDrillingRig, Long>{
+    fun findByName(name: String): RefDrillingRig?
+}
+
+interface RefWorkTypeRepository : JpaRepository<RefWorkType, Long>{
+    fun findByName(name: String): RefWorkType?
+}
+
+// Основная таблица выработок
+interface WorkingRepository : JpaRepository<Working, Long> {
+    fun findByNumber(number: String): Working?
+
+    // Находим текущий максимальный номер
+    @Query("SELECT MAX(w.orderNum) FROM Working w")
+    fun findMaxOrderNum(): Int?
+
+    // Сдвигаем все номера, которые больше удаленного, на 1 вниз
+    @Modifying
+    @Query("UPDATE Working w SET w.orderNum = w.orderNum - 1 WHERE w.orderNum > :deletedOrderNum")
+    fun shiftOrderNums(deletedOrderNum: Int)
+}
+
+package com.example.geoserver.security
+
+import jakarta.servlet.FilterChain
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
+import org.springframework.security.core.context.SecurityContextHolder
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource
+import org.springframework.stereotype.Component
+import org.springframework.web.filter.OncePerRequestFilter
+import com.example.geoserver.service.UserService
+
+@Component
+class JwtFilter(
+    private val jwtService: JwtService,
+    private val userService: UserService
+) : OncePerRequestFilter() {
+
+    override fun doFilterInternal(request: HttpServletRequest, response: HttpServletResponse, filterChain: FilterChain) {
+        val authHeader = request.getHeader("Authorization")
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            filterChain.doFilter(request, response)
+            return
+        }
+
+        val jwt = authHeader.substring(7).trim()
+        if (jwt.isEmpty() || jwt.equals("null", ignoreCase = true)) {
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "JWT token is missing")
+            return
+        }
+
+        try {
+            val username = jwtService.extractUsername(jwt)
+
+            if (username != null && SecurityContextHolder.getContext().authentication == null) {
+                val userDetails = userService.loadUserByUsername(username)
+                if (jwtService.isTokenValid(jwt, userDetails)) {
+                    val authToken = UsernamePasswordAuthenticationToken(
+                        userDetails, null, userDetails.authorities
+                    )
+                    authToken.details = WebAuthenticationDetailsSource().buildDetails(request)
+                    SecurityContextHolder.getContext().authentication = authToken
+                }
+            }
+        } catch (ex: io.jsonwebtoken.JwtException) {
+            // invalid / malformed / expired token
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid or expired JWT token")
+            return
+        } catch (ex: Exception) {
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Authentication error")
+            return
+        }
+
+        filterChain.doFilter(request, response)
+    }
+}
+
+package com.example.geoserver.security
+
+import io.jsonwebtoken.Claims
+import io.jsonwebtoken.Jwts
+import io.jsonwebtoken.io.Decoders
+import io.jsonwebtoken.security.Keys
+import org.springframework.beans.factory.annotation.Value
+import org.springframework.security.core.userdetails.UserDetails
+import org.springframework.stereotype.Service
+import java.util.Date
+
+@Service
+@Suppress("DEPRECATION")
+class JwtService {
+
+    @Value("\${jwt.secret}")
+    private lateinit var secretKey: String
+
+    @Value("\${jwt.expiration}")
+    private var expiration: Long = 0
+
+    fun generateToken(userDetails: UserDetails): String {
+        val key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secretKey))
+        return Jwts.builder()
+            .setSubject(userDetails.username)
+            .setIssuedAt(Date())
+            .setExpiration(Date(System.currentTimeMillis() + expiration))
+            .signWith(key)
+            .compact()
+    }
+
+    fun extractUsername(token: String): String? {
+        return extractClaim(token) { it.subject }
+    }
+
+    fun isTokenValid(token: String, userDetails: UserDetails): Boolean {
+        val username = extractUsername(token)
+        return username == userDetails.username && !isTokenExpired(token)
+    }
+
+    private fun isTokenExpired(token: String): Boolean {
+        return extractExpiration(token).before(Date())
+    }
+
+    private fun extractExpiration(token: String): Date {
+        return extractClaim(token) { it.expiration }
+    }
+
+    private fun <T> extractClaim(token: String, claimsResolver: (Claims) -> T): T {
+        val claims = extractAllClaims(token)
+        return claimsResolver(claims)
+    }
+
+    private fun extractAllClaims(token: String): Claims {
+        val key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secretKey))
+        return io.jsonwebtoken.Jwts.parser()
+            .setSigningKey(key)
+            .build()
+            .parseClaimsJws(token)
+            .body
+    }
+}
+
+package com.example.geoserver.security
+
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
+import org.springframework.security.authentication.AuthenticationManager
+import org.springframework.security.authentication.AuthenticationProvider
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration
+import org.springframework.security.config.annotation.web.builders.HttpSecurity
+import org.springframework.security.config.http.SessionCreationPolicy
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
+import org.springframework.security.web.SecurityFilterChain
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
+import com.example.geoserver.service.UserService
+import org.springframework.http.HttpMethod
+
+@Configuration
+class SecurityConfig(
+    private val jwtFilter: JwtFilter,
+    private val userService: UserService
+) {
+
+    @Bean
+    fun passwordEncoder() = BCryptPasswordEncoder()
+
+    @Bean
+    fun authenticationProvider(): AuthenticationProvider {
+        val provider = DaoAuthenticationProvider()
+        provider.setUserDetailsService(userService)
+        provider.setPasswordEncoder(passwordEncoder())
+        return provider
+    }
+
+    @Bean
+    fun authenticationManager(config: AuthenticationConfiguration): AuthenticationManager {
+        return config.authenticationManager
+    }
+
+    @Bean
+    fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
+        http
+            .csrf { it.disable() }
+            .authorizeHttpRequests {
+                it.requestMatchers(HttpMethod.POST, "/api/auth/**").permitAll()
+                it.requestMatchers(HttpMethod.GET, "/hello").permitAll()
+                
+                it.requestMatchers(HttpMethod.GET, "/api/references/**").permitAll()
+                it.requestMatchers(HttpMethod.POST, "/api/references/**").hasAuthority("ROLE_ADMIN")
+                it.requestMatchers(HttpMethod.PUT, "/api/references/**").hasAuthority("ROLE_ADMIN")
+                it.requestMatchers(HttpMethod.DELETE, "/api/references/**").hasAuthority("ROLE_ADMIN")
+                
+                it.requestMatchers("/api/users/**").authenticated()
+                it.requestMatchers("/api/workings/**").authenticated()
+                it.anyRequest().authenticated()
+            }
+            .exceptionHandling { it.authenticationEntryPoint(org.springframework.security.web.authentication.HttpStatusEntryPoint(org.springframework.http.HttpStatus.UNAUTHORIZED)) }
+            .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
+            .authenticationProvider(authenticationProvider())
+            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter::class.java)
+
+        return http.build()
+    }
+}
+
+package com.example.geoserver.service
+
+import com.example.geoserver.entity.User
+import com.example.geoserver.repository.UserRepository
+import org.springframework.security.core.userdetails.UserDetails
+import org.springframework.security.core.userdetails.UserDetailsService
+import org.springframework.security.core.userdetails.UsernameNotFoundException
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
+import org.springframework.stereotype.Service
+import org.springframework.context.annotation.Lazy
+
+@Service
+class UserService(
+    private val userRepository: UserRepository,
+    @Lazy private val passwordEncoder: BCryptPasswordEncoder
+) : UserDetailsService {
+
+    override fun loadUserByUsername(username: String): UserDetails {
+        return userRepository.findByUsername(username)
+            .orElseThrow { UsernameNotFoundException("User not found: $username") }
+    }
+
+    // Метод для создания пользователя
+    fun createUser(username: String, rawPassword: String, role: String): User {
+        val encodedPassword = passwordEncoder.encode(rawPassword)
+        val user = User(
+            username = username,
+            password = encodedPassword,
+            role = "ROLE_$role"  // Spring Security требует префикс ROLE_
+        )
+        return userRepository.save(user)
+    }
+}
+
+package com.example.geoserver.service
+
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
+import com.example.geoserver.repository.WorkingRepository
+import com.example.geoserver.entity.Working
+
+@Service
+class WorkingService(private val workingRepository: WorkingRepository) {
+
+    @Transactional
+    fun saveWorking(working: Working): Working {
+        // Если это новая запись (id = 0) и orderNum не задан
+        if (working.id == 0L && working.orderNum == null) {
+            val maxNum = workingRepository.findMaxOrderNum() ?: 0
+            // Присваиваем следующий номер
+            return workingRepository.save(working.copy(orderNum = maxNum + 1))
+        }
+        return workingRepository.save(working)
+    }
+
+    @Transactional
+    fun deleteWorking(id: Long) {
+        val working = workingRepository.findById(id).orElse(null) ?: return
+        val deletedOrderNum = working.orderNum
+        
+        // Удаляем запись
+        workingRepository.deleteById(id)
+
+        // Если у удаленной записи был порядковый номер, закрываем "дырку"
+        if (deletedOrderNum != null) {
+            workingRepository.shiftOrderNums(deletedOrderNum)
+        }
+    }
+}
+
+# Название приложения
+spring.application.name=geo-server
+
+# Подключение к PostgreSQL 16 
+spring.datasource.url=jdbc:postgresql://localhost:5431/geo_app
+spring.datasource.username=admin
+spring.datasource.password=secret123
+spring.datasource.driver-class-name=org.postgresql.Driver
+
+# Настройки JPA / Hibernate
+spring.jpa.hibernate.ddl-auto=update          
+spring.jpa.show-sql=true                      
+spring.jpa.properties.hibernate.format_sql=true
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
+
+# Сервер теперь слушает ВСЮ локальную сеть (не только localhost)
+server.address=0.0.0.0
+server.port=8081
+
+# Настройки JWT 
+jwt.secret=VGhpc0lzQVN1cGVyTG9uZ1NlY3JldEtlRm9ySlhUQnJvamVjdEdob3N0QQ==
+jwt.expiration=604800000                       
+
+# Дополнительно: отключаем предупреждение open-in-view 
+spring.jpa.open-in-view=false

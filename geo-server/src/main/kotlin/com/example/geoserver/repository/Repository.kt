@@ -45,4 +45,6 @@ interface WorkingRepository : JpaRepository<Working, Long> {
     @Modifying
     @Query("UPDATE Working w SET w.orderNum = w.orderNum - 1 WHERE w.orderNum > :deletedOrderNum")
     fun shiftOrderNums(deletedOrderNum: Int)
+
+    fun findByNumberAndAreaId(number: String, areaId: Long?): Working?
 }

@@ -20,10 +20,14 @@ import org.example.geoapp.util.runOnFx
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.math.BigDecimal
 
 class DynamicRow(val rowData: List<String>, val originalRowIndex: Int)
 
 class ExcelImportController {
+
+    private var existingWorkings: List<Working> = emptyList()
+    var nextOrderNum: Int = 1
 
     @FXML private lateinit var fileInfoLabel: Label
     @FXML private lateinit var sheetCombo: ComboBox<String>
@@ -75,6 +79,11 @@ class ExcelImportController {
                 cacheGeologists = api.getGeologists().await()
                 cacheDrillingRigs = api.getDrillingRigs().await()
                 
+                // Загружаем все выработки, чтобы определить следующий orderNum
+                existingWorkings = api.getWorkings("Bearer $token").await()
+                val maxOrderNum = existingWorkings.mapNotNull { it.orderNum }.maxOrNull() ?: 0
+                nextOrderNum = maxOrderNum + 1
+
                 // Настраиваем комбобокс участков
                 importAreaCombo.items = FXCollections.observableArrayList(cacheAreas)
                 importAreaCombo.converter = object : javafx.util.StringConverter<RefArea>() {
@@ -123,17 +132,16 @@ class ExcelImportController {
 
             val rowValues = (0 until lastCol).map { c ->
                 val cell = row.getCell(c, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL)
-                if (cell == null) {
-                    ""
-                } else if (cell.cellType == CellType.NUMERIC) {
-                    // Читаем точное число и конвертируем в обычную строку без "E"
-                    java.math.BigDecimal(cell.numericCellValue).stripTrailingZeros().toPlainString()
-                } else {
-                    try {
-                        formatter.formatCellValue(cell, evaluator).trim()
-                    } catch (e: Exception) {
-                        formatter.formatCellValue(cell).trim()
+                when {
+                    cell == null -> ""
+                    cell.cellType == CellType.NUMERIC -> {
+                        if (DateUtil.isCellDateFormatted(cell)) {
+                            cell.localDateTimeCellValue.toLocalDate().toString()
+                        } else {
+                            BigDecimal.valueOf(cell.numericCellValue).stripTrailingZeros().toPlainString()
+                        }
                     }
+                    else -> formatter.formatCellValue(cell, evaluator).trim()
                 }
             }
             excelData.add(DynamicRow(rowValues, i + 1))
@@ -201,7 +209,7 @@ class ExcelImportController {
         }
     }
 
-    @FXML fun onImport() {
+     @FXML fun onImport() {
         if (importAreaCombo.value == null) {
             statusLabel.text = "ОШИБКА: Сначала выберите Участок в верхней панели!"
             return
@@ -210,14 +218,16 @@ class ExcelImportController {
         startRowSpinner.increment(0)
         val startRow = startRowSpinner.value
         
+        // 1. Парсим все строки Excel, получаем валидные и невалидные записи
         val validWorkings = mutableListOf<Working>()
         val invalidRows = mutableListOf<CorrectionRow>()
+        var currentOrderNum = nextOrderNum
 
         for (row in excelData) {
             if (row.originalRowIndex < startRow) continue
 
             val rawValues = mutableMapOf<DbField, String>()
-            var hasAnyData = false // Флаг для отслеживания полностью пустых строк
+            var hasAnyData = false
 
             for ((colIdx, combo) in columnMapping) {
                 if (combo.value != DbField.IGNORE) {
@@ -227,31 +237,59 @@ class ExcelImportController {
                 }
             }
 
-            // Игнорируем строку, если все выбранные ячейки пустые (лечит "лишние 4 строки")
             if (!hasAnyData) continue
 
             try {
-                val working = validateAndParse(rawValues)
+                val working = validateAndParse(rawValues, currentOrderNum)
                 validWorkings.add(working)
+                currentOrderNum++
             } catch (e: Exception) {
                 invalidRows.add(CorrectionRow(row.originalRowIndex, e.message ?: "Ошибка", rawValues))
             }
         }
 
+        // 2. Обрабатываем конфликты (дубликаты)
+        val conflicts = findConflicts(validWorkings)
+        var finalToCreate: List<Working> = emptyList()
+        var finalToUpdate: List<Working> = emptyList()
+
+        if (conflicts.isNotEmpty()) {
+            val action = showConflictResolutionDialog(conflicts.size)
+            if (action == null) {
+                statusLabel.text = "Импорт отменён пользователем"
+                return
+            }
+            val (toCreate, toUpdate) = applyConflictResolution(validWorkings, conflicts, action)
+            finalToCreate = toCreate
+            finalToUpdate = toUpdate
+        } else {
+            finalToCreate = validWorkings
+            finalToUpdate = emptyList()
+        }
+
+        // 3. Выполняем импорт в корутине
         importButton.isDisable = true
         statusLabel.text = "Обработка данных..."
 
         runOnFx {
             try {
-                if (validWorkings.isNotEmpty()) {
-                    api.createWorkingsBatch("Bearer $token", validWorkings).await()
+                // Создаём новые записи
+                if (finalToCreate.isNotEmpty()) {
+                    api.createWorkingsBatch("Bearer $token", finalToCreate).await()
+                }
+                // Обновляем существующие
+                for (w in finalToUpdate) {
+                    api.updateWorking("Bearer $token", w.id, w).await()
                 }
 
+                // Обновляем nextOrderNum после импорта
+                updateNextOrderNum()
+
+                // Если есть ошибки, показываем окно коррекции
                 if (invalidRows.isNotEmpty()) {
                     showCorrectionWindow(invalidRows)
-                    // Восстанавливаем интерфейс после закрытия окна исправлений
-                    importButton.isDisable = false
                     statusLabel.text = "Готово. Обработайте ошибки."
+                    importButton.isDisable = false
                 } else {
                     onCompleteCallback()
                     close()
@@ -263,11 +301,17 @@ class ExcelImportController {
         }
     }
 
-    fun validateAndParse(raw: Map<DbField, String>): Working {
+    fun validateAndParse(raw: Map<DbField, String>, orderNum: Int): Working {
         fun getNum(field: DbField): Double? {
-            val str = raw[field]?.replace(",", ".")?.trim()
-            if (str.isNullOrEmpty()) return null
-            return str.toDoubleOrNull() ?: throw Exception("Ожидается число для '${field.title}'")
+            val rawStr = raw[field]?.replace(",", ".")?.trim()
+            if (rawStr.isNullOrEmpty()) return null
+            
+            // Очищаем строку от лишних символов (невидимые пробелы и т.д.), оставляя минус и точку
+            val cleanStr = rawStr.replace(Regex("[^0-9.\\-]"), "")
+            val value = cleanStr.toDoubleOrNull() ?: throw Exception("Ожидается число для '${field.title}' (введено: '$rawStr')")
+
+           return (value)
+            
         }
         
         fun getStr(field: DbField): String? = raw[field]?.trim()?.ifEmpty { null }
@@ -285,7 +329,19 @@ class ExcelImportController {
         // УМНЫЙ ПАРСЕР ДАТ
         fun getDateStr(field: DbField): String? {
             val str = getStr(field) ?: return null
-            // Список возможных форматов из Excel
+
+            // Проверка: если Excel прислал число (например, 45226)
+            val excelSerialDate = str.toDoubleOrNull()
+            if (excelSerialDate != null) {
+                try {
+                    // Превращаем число Excel в стандартную дату Java
+                    val javaDate = org.apache.poi.ss.usermodel.DateUtil.getJavaDate(excelSerialDate)
+                    return java.time.format.DateTimeFormatter.ISO_LOCAL_DATE
+                        .format(javaDate.toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate())
+                } catch (e: Exception) { /* если не вышло, пробуем текстовые форматы ниже */ }
+            }
+
+            // Список текстовых форматов
             val formats = listOf(
                 "yyyy-MM-dd", "dd.MM.yyyy", "dd.MM.yy", 
                 "MM/dd/yy", "dd/MM/yy", "MM/dd/yyyy", "dd/MM/yyyy", "yyyy.MM.dd"
@@ -294,11 +350,10 @@ class ExcelImportController {
                 try {
                     val formatter = java.time.format.DateTimeFormatter.ofPattern(pattern)
                     val date = java.time.LocalDate.parse(str, formatter)
-                    // Возвращаем в стандарте ISO (yyyy-MM-dd), который ждет сервер
                     return date.format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE)
-                } catch (e: Exception) { /* Пробуем следующий формат */ }
+                } catch (e: Exception) { }
             }
-            throw Exception("Неверный формат даты: '$str'. Ожидается ДД.ММ.ГГГГ")
+            throw Exception("Неверный формат даты: '$str'. Ожидается ДД.ММ.ГГГГ или числовой формат Excel")
         }
 
         val number = getStr(DbField.NUMBER) ?: ""
@@ -307,13 +362,18 @@ class ExcelImportController {
 
         val combinedName = getSafeStr("NAME_COMBINED")
         if (combinedName != null) {
-            val matchResult = Regex("^([^\\d]*)([\\d]+.*)$").find(combinedName)
-            if (matchResult != null) {
-                val typePrefix = matchResult.groupValues[1].replace("-", "").trim()
-                parsedNumber = matchResult.groupValues[2].trim()
+            // Разбиваем по первому дефису
+            val parts = combinedName.split("-", limit = 2)
+            if (parts.size == 2) {
+                val typePrefix = parts[0].trim()
+                parsedNumber = parts[1].trim()
                 if (typePrefix.isNotEmpty()) {
-                    parsedWorkType = cacheWorkTypes.find { 
-                        it.name.contains(typePrefix, ignoreCase = true) || typePrefix.contains(it.name, ignoreCase = true)
+                    // Сопоставляем префикс с типом выработки
+                    parsedWorkType = when (typePrefix) {
+                        "С", "с" -> cacheWorkTypes.find { it.name.equals("скважина", ignoreCase = true) }
+                        "Ш", "ш" -> cacheWorkTypes.find { it.name.equals("шурф", ignoreCase = true) }
+                        "Р", "р" -> cacheWorkTypes.find { it.name.equals("расчистка", ignoreCase = true) }
+                        else -> cacheWorkTypes.find { it.name.startsWith(typePrefix, ignoreCase = true) }
                     }
                 }
             } else {
@@ -329,15 +389,23 @@ class ExcelImportController {
         val workType = parsedWorkType ?: if (workTypeName != null) cacheWorkTypes.find { it.name.equals(workTypeName, true) } ?: throw Exception("Тип выработки '$workTypeName' не найден") else null
 
         val rigName = getStr(DbField.DRILLING_RIG)
-        val rig = if (rigName != null) cacheDrillingRigs.find { it.name.equals(rigName, true) } ?: throw Exception("Буровая '$rigName' не найдена") else null
+        val rig = if (rigName != null) {
+            cacheDrillingRigs.find { it.name.equals(rigName, true) }
+                ?: cacheDrillingRigs.find { it.alias?.equals(rigName, true) == true }
+                ?: throw Exception("Буровая '$rigName' не найдена")
+        } else null
 
         val contractorName = getStr(DbField.CONTRACTOR)
         val contractor = if (contractorName != null) cacheContractors.find { it.name.equals(contractorName, true) } ?: throw Exception("Подрядчик '$contractorName' не найден") else null
 
         val geologistName = getStr(DbField.GEOLOGIST)
         val geologist = if (geologistName != null) {
-            val geo = cacheGeologists.find { it.name.equals(geologistName, true) } ?: throw Exception("Геолог '$geologistName' не найден в базе")
-            if (contractor != null && geo.contractor?.id != contractor.id) throw Exception("Геолог относится к другому подрядчику")
+            val geo = cacheGeologists.find { it.name.equals(geologistName, true) }
+                ?: cacheGeologists.find { it.alias?.equals(geologistName, true) == true }
+                ?: throw Exception("Геолог '$geologistName' не найден в базе")
+            if (contractor != null && geo.contractor?.id != contractor.id) {
+                throw Exception("Геолог относится к другому подрядчику")
+            }
             geo
         } else null
 
@@ -352,12 +420,14 @@ class ExcelImportController {
 
         return Working(
             number = parsedNumber, 
+            orderNum = orderNum,
             area = area, 
             isProject = isProjectImport,
             workType = workType, 
             contractor = contractor, 
             geologist = geologist, 
             drillingRig = rig, 
+
             plannedX = getNum(DbField.PLANNED_X), 
             plannedY = getNum(DbField.PLANNED_Y), 
             plannedDepth = getNum(DbField.PLANNED_DEPTH), 
@@ -367,20 +437,41 @@ class ExcelImportController {
             actualDepth = getNum(DbField.ACTUAL_DEPTH), 
             coreRecovery = coreRec, 
             casing = getNum(DbField.CASING), 
-            // Используем новый парсер дат!
+            
             startDate = getDateStr(DbField.START_DATE), 
             endDate = getDateStr(DbField.END_DATE),
+
             mmg1Top = getNum(DbField.MMG1_TOP), 
             mmg1Bottom = getNum(DbField.MMG1_BOTTOM),
             mmg2Top = getNum(DbField.MMG2_TOP), 
             mmg2Bottom = getNum(DbField.MMG2_BOTTOM),
             gwAppearLog = getNum(DbField.GW_APPEAR_LOG), 
             gwStableLog = getNum(DbField.GW_STABLE_LOG),
+
+            hasVideo = getSafeBool("HAS_VIDEO"), 
+            hasDrilling = getSafeBool("HAS_DRILLING"),
+            hasJournal = getSafeBool("HAS_JOURNAL"),
+            hasCore = getSafeBool("HAS_CORE"),
+            hasStake = getSafeBool("HAS_STAKE"),
+
             act = getSafeBool("ACT"),
             actNumber = getSafeStr("ACT_NUMBER"), 
             thermalTube = getSafeBool("THERMAL_TUBE"),
             additionalInfo = getSafeStr("ADDITIONAL_INFO") ?: getSafeStr("COMMENT")
         )
+    }
+
+    fun updateNextOrderNum() {
+        runOnFx {
+            try {
+                val allWorkings = api.getWorkings("Bearer $token").await()
+                existingWorkings = allWorkings
+                val maxOrderNum = allWorkings.mapNotNull { it.orderNum }.maxOrNull() ?: 0
+                nextOrderNum = maxOrderNum + 1
+            } catch (e: Exception) {
+                // игнорируем ошибки обновления
+            }
+        }
     }
 
     private fun showCorrectionWindow(invalidRows: List<CorrectionRow>) {
@@ -390,7 +481,7 @@ class ExcelImportController {
         
         val mappedFields = columnMapping.values.map { it.value }.filter { it != DbField.IGNORE }.distinct()
         
-        controller.initData(token, userRole, this, invalidRows, mappedFields) {
+        controller.initData(token, userRole, this, invalidRows, mappedFields, nextOrderNum) {
             onCompleteCallback()
             close()
         }
@@ -405,4 +496,68 @@ class ExcelImportController {
 
     @FXML fun onCancel() { workbook?.close(); close() }
     private fun close() { (previewTable.scene.window as Stage).close() }
+
+    // Метод для поиска конфликтов (не suspend)
+    private fun findConflicts(validWorkings: List<Working>): List<Working> {
+        val conflicts = mutableListOf<Working>()
+
+        println("=== DEBUG ===")
+        println("Existing workings count: ${existingWorkings.size}")
+        println("Valid workings count: ${validWorkings.size}")
+        for (w in validWorkings.take(3)) {
+            println("Valid: area=${w.area?.id} number='${w.number}'")
+        }
+        println("Conflicts count: ${conflicts.size}")
+
+
+        for (w in validWorkings) {
+            val exists = existingWorkings.any { 
+                it.area?.id == w.area?.id && it.number == w.number 
+            }
+            if (exists) conflicts.add(w)
+        }
+        return conflicts
+    }
+
+    // Показываем диалог выбора действия (блокирующий, не suspend)
+    private fun showConflictResolutionDialog(conflictCount: Int): String? {
+        val options = arrayOf("Пропустить дубликаты", "Обновить существующие")
+        val dialog = ChoiceDialog("Пропустить дубликаты", *options)
+        dialog.title = "Конфликт дубликатов"
+        dialog.headerText = "Найдено $conflictCount дублирующихся записей"
+        dialog.contentText = "Выберите действие:"
+        return dialog.showAndWait().orElse(null)
+    }
+
+    // Применяем решение
+    private fun applyConflictResolution(
+        validWorkings: List<Working>, 
+        conflicts: List<Working>, 
+        action: String
+    ): Pair<List<Working>, List<Working>> {
+        return if (action == "Пропустить дубликаты") {
+            val toCreate = validWorkings.filter { it !in conflicts }
+            Pair(toCreate, emptyList())
+        } else { // Обновить существующие
+            val toUpdate = mutableListOf<Working>()
+            val toCreate = mutableListOf<Working>()
+            for (w in validWorkings) {
+                val existing = existingWorkings.find { 
+                    it.area?.id == w.area?.id && it.number == w.number 
+                }
+                if (existing != null) {
+                    val updated = w.copy(
+                        id = existing.id,
+                        orderNum = existing.orderNum
+                        // остальные поля уже из w (кроме id и orderNum)
+                    )
+                    toUpdate.add(updated)
+                } else {
+                    toCreate.add(w)
+                }
+            }
+            Pair(toCreate, toUpdate)
+        }
+    }
+
 }

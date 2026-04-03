@@ -12,8 +12,9 @@ import kotlin.math.round
 
 @RestController
 @RequestMapping("/api/workings")
-class WorkingController(private val repo: WorkingRepository,
-                        private val workingService: WorkingService
+class WorkingController(
+    private val repo: WorkingRepository,
+    private val workingService: WorkingService
 ) {
 
     @GetMapping
@@ -30,12 +31,12 @@ class WorkingController(private val repo: WorkingRepository,
         val savedWorkings = mutableListOf<Working>()
         for (w in workings) {
             val processedWorking = calculateComputedFields(w)
-            val existing = repo.findByNumber(processedWorking.number)
+            // Проверка на существование по номеру и участку (как на клиенте)
+            val existing = repo.findByNumberAndAreaId(processedWorking.number, processedWorking.area?.id)
             if (existing != null) {
-                savedWorkings.add(repo.save(processedWorking.copy(id = existing.id)))
-            } else {
-                savedWorkings.add(repo.save(processedWorking))
+                throw ResponseStatusException(HttpStatus.CONFLICT, "Duplicate: ${processedWorking.number} on area ${processedWorking.area?.name}")
             }
+            savedWorkings.add(repo.save(processedWorking))
         }
         return savedWorkings
     }

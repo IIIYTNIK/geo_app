@@ -11,6 +11,7 @@
             <TableColumn fx:id="colId" text="ID" prefWidth="50"/>
             <TableColumn fx:id="colName" text="Наименование" prefWidth="250"/>
             <TableColumn fx:id="colParent" text="Подрядчик" prefWidth="150" visible="false"/>
+            <TableColumn fx:id="colAlias" text="Псевдоним" prefWidth="100"/>
             <TableColumn fx:id="colComment" text="Комментарий" prefWidth="200"/>
         </columns>
     </TableView>
@@ -21,6 +22,9 @@
 
         <Label fx:id="contractorLabel" text="Подрядчик:" GridPane.rowIndex="1" GridPane.columnIndex="0" managed="false" visible="false"/>
         <ComboBox fx:id="contractorCombo" GridPane.rowIndex="1" GridPane.columnIndex="1" managed="false" visible="false" maxWidth="Infinity"/>
+    
+        <Label text="Псевдоним (цифровой код):" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+        <TextField fx:id="aliasField" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
     </GridPane>
 
     <Label fx:id="errorLabel" textFill="red"/>

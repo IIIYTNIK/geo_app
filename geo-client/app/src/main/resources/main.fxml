@@ -34,6 +34,7 @@
             <TableColumn fx:id="colArea" text="Участок" prefWidth="100"/>
             <TableColumn fx:id="colContractor" text="Подрядчик" prefWidth="100"/>
             <TableColumn fx:id="colGeologist" text="Геолог" prefWidth="100"/>
+            <TableColumn fx:id="colDrillingRig" text="Буровая" prefWidth="120"/>
             <TableColumn fx:id="colPlannedX" text="план X" prefWidth="70"/>
             <TableColumn fx:id="colPlannedY" text="план Y" prefWidth="70"/>
             <TableColumn fx:id="colPlannedDepth" text="план H" prefWidth="60"/>

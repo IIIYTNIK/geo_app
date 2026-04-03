@@ -21,6 +21,8 @@ import org.example.geoapp.util.runOnFx
 
 class ImportCorrectionController {
 
+     private var currentNextOrderNum: Int = 1
+
     @FXML private lateinit var adminPanel: HBox
     @FXML private lateinit var correctionTable: TableView<CorrectionRow>
     @FXML private lateinit var statusLabel: Label
@@ -31,10 +33,11 @@ class ImportCorrectionController {
     private var onAllCompletedCallback: () -> Unit = {}
     private val api = MainApp.api
 
-    fun initData(token: String, role: String, parent: ExcelImportController, errors: List<CorrectionRow>, mappedFields: List<DbField>, onCompleted: () -> Unit) {
+    fun initData(token: String, role: String, parent: ExcelImportController, errors: List<CorrectionRow>, mappedFields: List<DbField>, startOrderNum: Int, onCompleted: () -> Unit) {
         this.token = token
         this.parentController = parent
         this.onAllCompletedCallback = onCompleted
+        this.currentNextOrderNum = startOrderNum
 
         // Панель админа
         if (role == "ROLE_ADMIN") {
@@ -47,6 +50,7 @@ class ImportCorrectionController {
         statusLabel.text = "Ошибок найдено: ${errors.size}"
     }
 
+    
     private fun buildTable(mappedFields: List<DbField>) {
         correctionTable.columns.clear()
 
@@ -96,8 +100,11 @@ class ImportCorrectionController {
     @FXML fun onRefreshAndRetry() {
         statusLabel.text = "Синхронизация справочников..."
         retryButton.isDisable = true
-        // Обновляем кэш и перестраиваем таблицу (чтобы в комбобоксах появились новые имена)
+        // Обновляем справочники и заодно orderNum
         parentController.loadReferences {
+            // После обновления справочников перестраиваем таблицу и обновляем nextOrderNum
+            parentController.updateNextOrderNum()
+            currentNextOrderNum = parentController.nextOrderNum
             val mappedFields = parentController.columnMapping.values.map { it.value }.filter { it != DbField.IGNORE }.distinct()
             buildTable(mappedFields)
             onRetry()
@@ -107,15 +114,23 @@ class ImportCorrectionController {
     @FXML fun onRetry() {
         val stillInvalid = mutableListOf<CorrectionRow>()
         val validWorkings = mutableListOf<Working>()
+        var orderNum = currentNextOrderNum  // начинаем с текущего номера
 
         for (row in correctionTable.items) {
             try {
-                val working = parentController.validateAndParse(row.rawValues)
+                val working = parentController.validateAndParse(row.rawValues, orderNum)
                 validWorkings.add(working)
+                orderNum++  // увеличиваем для следующей строки
             } catch (e: Exception) {
                 row.errorMsg = e.message ?: "Ошибка"
                 stillInvalid.add(row)
             }
+        }
+
+        if (validWorkings.isEmpty()) {
+            statusLabel.text = "Нет исправленных данных"
+            retryButton.isDisable = false
+            return
         }
 
         retryButton.isDisable = true
@@ -125,14 +140,19 @@ class ImportCorrectionController {
             try {
                 if (validWorkings.isNotEmpty()) {
                     api.createWorkingsBatch("Bearer $token", validWorkings).await()
+                    // После успешного сохранения обновляем следующий номер в родителе
+                    parentController.updateNextOrderNum()
                 }
 
                 if (stillInvalid.isNotEmpty()) {
+                    // Оставшиеся ошибки – обновляем таблицу и currentNextOrderNum для следующей попытки
                     correctionTable.items = FXCollections.observableArrayList(stillInvalid)
                     correctionTable.refresh()
+                    currentNextOrderNum = orderNum  // запоминаем, на каком номере остановились
                     statusLabel.text = "Осталось ошибок: ${stillInvalid.size}"
                     retryButton.isDisable = false
                 } else {
+                    // Все ошибки исправлены – закрываем окно и вызываем колбэк
                     onAllCompletedCallback()
                     close()
                 }

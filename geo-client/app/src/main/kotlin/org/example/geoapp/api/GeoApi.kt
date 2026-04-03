@@ -54,9 +54,9 @@ data class LoginResponse(val token: String, val role: String)
 // Модели справочников
 data class RefArea(val id: Long = 0, val name: String, val comment: String? = null)
 data class RefContractor(val id: Long = 0, val name: String, val comment: String? = null)
-data class RefDrillingRig(val id: Long = 0, val name: String, val comment: String? = null)
+data class RefDrillingRig(val id: Long = 0, val name: String, val alias: String? = null, val comment: String? = null)
 data class RefWorkType(val id: Long = 0, val name: String, val comment: String? = null)
-data class RefGeologist(val id: Long = 0, val name: String, var contractor: RefContractor? = null, val comment: String? = null)
+data class RefGeologist(val id: Long = 0, val name: String, val alias: String? = null, var contractor: RefContractor? = null, val comment: String? = null)
 
 // Модель выработки (Working) - основная сущность, с которой будем работать в приложении
 data class Working(
@@ -65,7 +65,7 @@ data class Working(
     var workType: RefWorkType? = null, 
     var number: String,             
     
-    var orderNum: Int? = null, // Для отображения порядкового номера в таблице (не сохраняется на сервере)
+    var orderNum: Int? = null, // Для отображения порядкового номера в таблице
     
     val plannedX: Double? = null,
     val plannedY: Double? = null,

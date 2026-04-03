@@ -36,6 +36,7 @@ class MainController {
     @FXML private lateinit var colArea: TableColumn<Working, String>
     @FXML private lateinit var colGeologist: TableColumn<Working, String>
     @FXML private lateinit var colContractor: TableColumn<Working, String>
+    @FXML private lateinit var colDrillingRig: TableColumn<Working, String>
     @FXML private lateinit var colPlannedX: TableColumn<Working, Double?>
     @FXML private lateinit var colPlannedY: TableColumn<Working, Double?>
     @FXML private lateinit var colPlannedDepth: TableColumn<Working, Double?>
@@ -44,7 +45,6 @@ class MainController {
     @FXML private lateinit var colActualZ: TableColumn<Working, Double?>
     @FXML private lateinit var colActualDepth: TableColumn<Working, Double?>
     @FXML private lateinit var colDeltaS: TableColumn<Working, Double?>
-    @FXML private lateinit var colDepth: TableColumn<Working, Double?>
     @FXML private lateinit var colCoreRecovery: TableColumn<Working, Double?>
     @FXML private lateinit var colCasing: TableColumn<Working, Double?>
     
@@ -112,17 +112,25 @@ class MainController {
         colArea.setCellValueFactory { SimpleStringProperty(it.value.area?.name ?: "") }
         colGeologist.setCellValueFactory { SimpleStringProperty(it.value.geologist?.name ?: "") }
         colContractor.setCellValueFactory { SimpleStringProperty(it.value.contractor?.name ?: "") }
+        colDrillingRig.setCellValueFactory { SimpleStringProperty(it.value.drillingRig?.name ?: "") }
         
-        colPlannedX.setCellValueFactory { SimpleObjectProperty(it.value.plannedX) }
-        colPlannedY.setCellValueFactory { SimpleObjectProperty(it.value.plannedY) }
-        colPlannedDepth.setCellValueFactory { SimpleObjectProperty(it.value.plannedDepth) }
-        colActualX.setCellValueFactory { SimpleObjectProperty(it.value.actualX) }
-        colActualY.setCellValueFactory { SimpleObjectProperty(it.value.actualY) }
-        colActualZ.setCellValueFactory { SimpleObjectProperty(it.value.actualZ) }
-        colActualDepth.setCellValueFactory { SimpleObjectProperty(it.value.actualDepth) }
-        colDeltaS.setCellValueFactory { SimpleObjectProperty(it.value.deltaS) }
-        colCoreRecovery.setCellValueFactory { SimpleObjectProperty(it.value.coreRecovery) }
-        colCasing.setCellValueFactory { SimpleObjectProperty(it.value.casing) }
+        setupDoubleColumn(colPlannedX) { it.plannedX }
+        setupDoubleColumn(colPlannedY) { it.plannedY }
+        setupDoubleColumn(colPlannedDepth) { it.plannedDepth }
+        setupDoubleColumn(colActualX) { it.actualX }
+        setupDoubleColumn(colActualY) { it.actualY }
+        setupDoubleColumn(colActualZ) { it.actualZ }
+        setupDoubleColumn(colActualDepth) { it.actualDepth }
+        setupDoubleColumn(colDeltaS) { it.deltaS }
+        setupDoubleColumn(colCoreRecovery) { it.coreRecovery }
+        setupDoubleColumn(colCasing) { it.casing }
+        setupDoubleColumn(colMmg1Top) { it.mmg1Top }
+        setupDoubleColumn(colMmg1Bottom) { it.mmg1Bottom }
+        setupDoubleColumn(colMmg2Top) { it.mmg2Top }
+        setupDoubleColumn(colMmg2Bottom) { it.mmg2Bottom }
+        setupDoubleColumn(colGwAppearLog) { it.gwAppearLog }
+        setupDoubleColumn(colGwStableLog) { it.gwStableLog }
+        setupDoubleColumn(colGwStableAbs) { it.gwStableAbs }
 
         // Интерактивные чекбоксы в таблице
         createInteractiveCheckbox(colHasVideo, { it.hasVideo }, { w, v -> w.hasVideo = v })
@@ -181,19 +189,46 @@ class MainController {
             object : TableRow<Working>() {
                 override fun updateItem(item: Working?, empty: Boolean) {
                     super.updateItem(item, empty)
+                    updateRowStyle(item, empty)
+                }
+
+                override fun updateSelected(selected: Boolean) {
+                    super.updateSelected(selected)
+                    // При изменении выделения обновляем стиль строки
+                    updateRowStyle(item, isEmpty)
+                }
+
+                private fun updateRowStyle(item: Working?, empty: Boolean) {
                     if (item == null || empty) {
                         style = ""
-                    } else {
-                        if (item.isProject) {
-                            if (item.contractor != null && item.geologist != null && item.drillingRig != null) {
-                                style = "-fx-background-color: #c8e6c9;" // Зеленый (заполненная проектная)
-                            } else {
-                                style = "-fx-background-color: #ffe0b2;" // Оранжевый (пустая проектная)
-                            }
-                        } else {
-                            style = "-fx-background-color: #c8e6c9;" // Зеленый (фактическая)
-                        }
+                        return
                     }
+
+                    // Определяем базовый цвет строки
+                    val baseColor = when {
+                        item.isProject && item.contractor != null && item.geologist != null && item.drillingRig != null -> "#c8e6c9" // зелёный
+                        item.isProject -> "#ffe0b2" // оранжевый
+                        else -> "#c8e6c9" // зелёный для фактических
+                    }
+
+                    // Если строка выделена, используем серый цвет, иначе базовый
+                    style = if (isSelected) {
+                        "-fx-background-color: #e0e0e0;"
+                    } else {
+                        "-fx-background-color: $baseColor;"
+                    }
+                }
+            }
+        }
+    }
+
+    private fun setupDoubleColumn(col: TableColumn<Working, Double?>, getter: (Working) -> Double?) {
+        col.setCellValueFactory { SimpleObjectProperty(getter(it.value)) }
+        col.setCellFactory {
+            object : TableCell<Working, Double?>() {
+                override fun updateItem(item: Double?, empty: Boolean) {
+                    super.updateItem(item, empty)
+                    text = if (empty || item == null) "" else formatDouble(item)
                 }
             }
         }
@@ -379,5 +414,9 @@ class MainController {
             }
             col.prefWidth = maxWidth
         }
+    }
+
+    private fun formatDouble(value: Double?): String {
+        return if (value == null) "" else "%.3f".format(value).replace(",", ".")
     }
 }

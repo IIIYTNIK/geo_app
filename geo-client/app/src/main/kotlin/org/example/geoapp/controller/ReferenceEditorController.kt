@@ -16,18 +16,20 @@ enum class RefType(val title: String) {
     CONTRACTOR("Подрядчики"), GEOLOGIST("Геологи")
 }
 
-data class RefUiModel(val id: Long, val name: String, val parent: RefContractor?, var comment: String?, val originalObj: Any)
+data class RefUiModel(val id: Long, val name: String, val alias: String?, val parent: RefContractor?, var comment: String?, val originalObj: Any)
 
 class ReferenceEditorController {
 
     @FXML private lateinit var referenceTable: TableView<RefUiModel>
     @FXML private lateinit var colId: TableColumn<RefUiModel, String>
     @FXML private lateinit var colName: TableColumn<RefUiModel, String>
+    @FXML private lateinit var colAlias: TableColumn<RefUiModel, String>
     @FXML private lateinit var colParent: TableColumn<RefUiModel, String>
     @FXML private lateinit var colComment: TableColumn<RefUiModel, String>
 
     @FXML private lateinit var nameField: TextField
-    @FXML private lateinit var contractorLabel: Label
+    @FXML private lateinit var contractorLabel: Label 
+    @FXML private lateinit var aliasField: TextField
     @FXML private lateinit var contractorCombo: ComboBox<RefContractor>
     @FXML private lateinit var errorLabel: Label
     @FXML private lateinit var deleteButton: Button
@@ -78,7 +80,8 @@ fun initialize() {
         colId.setCellValueFactory { SimpleStringProperty(it.value.id.toString()) }
         colName.setCellValueFactory { SimpleStringProperty(it.value.name) }
         colComment.setCellValueFactory { SimpleStringProperty(it.value.comment ?: "") }
-        
+        colAlias.setCellValueFactory { SimpleStringProperty(it.value.alias ?: "") }
+
         if (type == RefType.GEOLOGIST) {
             colParent.isVisible = true
             colParent.setCellValueFactory { SimpleStringProperty(it.value.parent?.name ?: "") }
@@ -112,11 +115,11 @@ fun initialize() {
             try {
                 val items = mutableListOf<RefUiModel>()
                when (currentType) {
-                    RefType.AREA -> api.getAreas().await().forEach { items.add(RefUiModel(it.id, it.name, null, it.comment, it)) }
-                    RefType.WORK_TYPE -> api.getWorkTypes().await().forEach { items.add(RefUiModel(it.id, it.name, null, it.comment, it)) }
-                    RefType.DRILLING_RIG -> api.getDrillingRigs().await().forEach { items.add(RefUiModel(it.id, it.name, null, it.comment, it)) }
-                    RefType.CONTRACTOR -> api.getContractors().await().forEach { items.add(RefUiModel(it.id, it.name, null, it.comment, it)) }
-                    RefType.GEOLOGIST -> api.getGeologists().await().forEach { items.add(RefUiModel(it.id, it.name, it.contractor, it.comment, it)) }
+                    RefType.AREA -> api.getAreas().await().forEach { items.add(RefUiModel(it.id, it.name, null, null, it.comment, it)) }
+                    RefType.WORK_TYPE -> api.getWorkTypes().await().forEach { items.add(RefUiModel(it.id, it.name, null, null, it.comment, it)) }
+                    RefType.DRILLING_RIG -> api.getDrillingRigs().await().forEach { items.add(RefUiModel(it.id, it.name, it.alias, null, it.comment, it)) }
+                    RefType.CONTRACTOR -> api.getContractors().await().forEach { items.add(RefUiModel(it.id, it.name, null, null, it.comment, it)) }
+                    RefType.GEOLOGIST -> api.getGeologists().await().forEach { items.add(RefUiModel(it.id, it.name, it.alias, it.contractor, it.comment, it)) }
                 }
                 referenceTable.items = FXCollections.observableArrayList(items)
             } catch (e: Exception) {
@@ -152,8 +155,10 @@ fun initialize() {
                 when (currentType) {
                     RefType.AREA -> if (id == 0L) api.createArea(tokenStr, RefArea(name = name)).await() else api.updateArea(tokenStr, id, RefArea(name = name)).await()
                     RefType.WORK_TYPE -> if (id == 0L) api.createWorkType(tokenStr, RefWorkType(name = name)).await() else api.updateWorkType(tokenStr, id, RefWorkType(name = name)).await()
-                    RefType.DRILLING_RIG -> if (id == 0L) api.createDrillingRig(tokenStr, RefDrillingRig(name = name)).await() else api.updateDrillingRig(tokenStr, id, RefDrillingRig(name = name)).await()
-                    RefType.CONTRACTOR -> if (id == 0L) api.createContractor(tokenStr, RefContractor(name = name)).await() else api.updateContractor(tokenStr, id, RefContractor(name = name)).await()
+                    RefType.DRILLING_RIG -> {
+                        if (id == 0L) api.createDrillingRig(tokenStr, RefDrillingRig(name = name, alias = aliasField.text.trim().ifEmpty { null })).await()
+                        else api.updateDrillingRig(tokenStr, id, RefDrillingRig(name = name, alias = aliasField.text.trim().ifEmpty { null })).await()
+                    }                    RefType.CONTRACTOR -> if (id == 0L) api.createContractor(tokenStr, RefContractor(name = name)).await() else api.updateContractor(tokenStr, id, RefContractor(name = name)).await()
                     RefType.GEOLOGIST -> {
                         val c = contractorCombo.value
                         if (c == null) { errorLabel.text = "Выберите подрядчика!"; return@runOnFx }
@@ -188,6 +193,7 @@ fun initialize() {
     @FXML fun onClearSelection() {
         referenceTable.selectionModel.clearSelection()
         nameField.clear()
+        aliasField.clear()
         contractorCombo.value = null
         errorLabel.text = ""
         // Кнопки изменятся автоматически благодаря слушателю selectedItemProperty

@@ -131,32 +131,32 @@ class WorkingFormController {
         val w = working ?: return
 
         numberField.text = w.number ?: ""
-        plannedXField.text = w.plannedX?.toString() ?: ""
-        plannedYField.text = w.plannedY?.toString() ?: ""
-        actualXField.text = w.actualX?.toString() ?: ""
-        actualYField.text = w.actualY?.toString() ?: ""
-        actualZField.text = w.actualZ?.toString() ?: ""
+        plannedXField.text = w.plannedX?.let { "%.3f".format(it).replace(",", ".") } ?: ""
+        plannedYField.text = w.plannedY?.let { "%.3f".format(it).replace(",", ".") } ?: ""
+        actualXField.text = w.actualX?.let { "%.3f".format(it).replace(",", ".") } ?: ""
+        actualYField.text = w.actualY?.let { "%.3f".format(it).replace(",", ".") } ?: ""
+        actualZField.text = w.actualZ?.let { "%.3f".format(it).replace(",", ".") } ?: ""
         
-        //deltaSLabel.text = "Смещение от проекта: ${w.deltaS ?: "не определено"} м"
+        deltaSLabel.text = "Смещение от проекта: ${w.deltaS?.let { "%.3f".format(it).replace(",", ".") } ?: "не определено"} м"
 
-        plannedDepthField.text = w.plannedDepth?.toString() ?: ""
-        actualDepthField.text = w.actualDepth?.toString() ?: ""
-        casingField.text = w.casing?.toString() ?: ""
-        coreRecoveryField.text = w.coreRecovery?.toString() ?: ""
+        plannedDepthField.text = w.plannedDepth?.let { "%.3f".format(it).replace(",", ".") } ?: ""
+        actualDepthField.text = w.actualDepth?.let { "%.3f".format(it).replace(",", ".") } ?: ""
+        casingField.text = w.casing?.let { "%.3f".format(it).replace(",", ".") } ?: ""
+        coreRecoveryField.text = w.coreRecovery?.let { "%.3f".format(it).replace(",", ".") } ?: ""
 
         startDatePicker.value = w.startDate?.let { LocalDate.parse(it) }
         endDatePicker.value = w.endDate?.let { LocalDate.parse(it) }
 
         additionalInfoArea.text = w.additionalInfo ?: ""
 
-        mmg1TopField.text = w.mmg1Top?.toString() ?: ""
-        mmg1BottomField.text = w.mmg1Bottom?.toString() ?: ""
-        mmg2TopField.text = w.mmg2Top?.toString() ?: ""
-        mmg2BottomField.text = w.mmg2Bottom?.toString() ?: ""
+        mmg1TopField.text = w.mmg1Top?.let { "%.3f".format(it).replace(",", ".") } ?: ""
+        mmg1BottomField.text = w.mmg1Bottom?.let { "%.3f".format(it).replace(",", ".") } ?: ""
+        mmg2TopField.text = w.mmg2Top?.let { "%.3f".format(it).replace(",", ".") } ?: ""
+        mmg2BottomField.text = w.mmg2Bottom?.let { "%.3f".format(it).replace(",", ".") } ?: ""
 
-        gwAppearLogField.text = w.gwAppearLog?.toString() ?: ""
-        gwStableLogField.text = w.gwStableLog?.toString() ?: ""
-        gwStableAbsLabel.text = "УУГВ абс: ${w.gwStableAbs ?: "не определено"}"
+        gwAppearLogField.text = w.gwAppearLog?.let { "%.3f".format(it).replace(",", ".") } ?: ""
+        gwStableLogField.text = w.gwStableLog?.let { "%.3f".format(it).replace(",", ".") } ?: ""
+        gwStableAbsLabel.text = "УУГВ абс: ${w.gwStableAbs?.let { "%.3f".format(it).replace(",", ".") } ?: "не определено"}"
 
         actCheckBox.isSelected = w.act == true
         actNumberField.text = w.actNumber ?: ""
@@ -211,8 +211,14 @@ class WorkingFormController {
             mmg2BottomField, gwAppearLogField, gwStableLogField, coreRecoveryField
         ).forEach { NumericFieldUtil.applyDecimalFilter(it) }
 
+        // Пересчёт смещения
         listOf(plannedXField, plannedYField, actualXField, actualYField).forEach { field ->
             field.textProperty().addListener { _, _, _ -> updateDeltaS() }
+        }
+
+        // Пересчёт абсолютной отметки УГВ
+        listOf(actualZField, gwStableLogField).forEach { field ->
+            field.textProperty().addListener { _, _, _ -> updateGwStableAbs() }
         }
     }
 
@@ -247,10 +253,10 @@ class WorkingFormController {
             number = numberField.text.trim(),
             plannedX = plannedXField.toDoubleSafe(),
             plannedY = plannedYField.toDoubleSafe(),
+            actualDepth = actualDepthField.toDoubleSafe(),
             actualX = actualXField.toDoubleSafe(),
             actualY = actualYField.toDoubleSafe(),
             actualZ = actualZField.toDoubleSafe(),
-            actualDepth = actualDepthField.toDoubleSafe(),
             plannedDepth = plannedDepthField.toDoubleSafe(),
             startDate = startDatePicker.value?.toString(),
             endDate = endDatePicker.value?.toString(),
@@ -303,5 +309,18 @@ class WorkingFormController {
     }
 
     private fun Double?.toPlain(): String = this?.let { java.math.BigDecimal(it).stripTrailingZeros().toPlainString() } ?: ""
+
+    private fun updateGwStableAbs() {
+        val actualZ = actualZField.toDoubleSafe()
+        val gwStableLog = gwStableLogField.toDoubleSafe()
+
+        val absValue = if (actualZ != null && gwStableLog != null) {
+            val result = actualZ - gwStableLog
+            "%.3f".format(result).replace(",", ".")
+        } else {
+            "не определено"
+        }
+        gwStableAbsLabel.text = "УУГВ абс: $absValue"
+    }
 
 }

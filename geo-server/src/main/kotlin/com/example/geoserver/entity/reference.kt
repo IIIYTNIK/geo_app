@@ -48,6 +48,9 @@ data class RefGeologist(
     @JoinColumn(name = "contractor_id", nullable = false)
     var contractor: RefContractor? = null,
 
+    @Column(unique = false) // Имя геолога может повторяться у разных подрядчиков
+    val alias: String? = null,
+
     @Column(columnDefinition = "TEXT")
     var comment: String? = null
 )
@@ -60,6 +63,9 @@ data class RefDrillingRig(
 
     @Column(unique = true, nullable = false)
     val name: String,  // Номер буровой
+
+    @Column(unique = false)
+    val alias: String? = null,
 
     @Column(columnDefinition = "TEXT")
     var comment: String? = null

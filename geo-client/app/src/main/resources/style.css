@@ -1,12 +1,24 @@
-/* Убираем синее выделение и делаем его серым */
-.table-view:focused .table-row-cell:selected, 
-.table-view .table-row-cell:selected {
-    -fx-background-color: #e0e0e0;
-    -fx-background-insets: 0;
+/* Цвета для разных типов строк */
+.table-row-cell.project-filled {
+    -fx-background-color: #c8e6c9; /* зелёный */
+}
+.table-row-cell.project-empty {
+    -fx-background-color: #ffe0b2; /* оранжевый */
+}
+.table-row-cell.actual {
+    -fx-background-color: #c8e6c9; /* зелёный */
 }
 
-/* Делаем текст всегда черным, даже при выделении */
-.table-view:focused .table-row-cell:selected .text, 
-.table-view .table-row-cell:selected .text {
-    -fx-fill: black;
+/* Выделение строки – серым цветом (перекрывает базовый цвет) */
+.table-row-cell:selected {
+    -fx-background-color: #e0e0e0;
+}
+/* Для фокусированной таблицы тоже серый */
+.table-view:focused .table-row-cell:selected {
+    -fx-background-color: #e0e0e0;
+}
+
+/* Текст всегда чёрный, даже при выделении */
+.table-row-cell .text {
+    -fx-fill: black !important;
 }

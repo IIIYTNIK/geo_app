@@ -23,7 +23,7 @@ data class Working(
     @ManyToOne @JoinColumn(name = "work_type_id")
     val workType: RefWorkType? = null,
 
-    @Column(nullable = true, unique = true)
+    @Column(nullable = true)
     val number: String,
 
     @Column(name = "order_num") val orderNum: Int? = null,

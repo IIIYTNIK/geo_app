@@ -1,0 +1,272 @@
+C:.
+├───.idea
+├───.vs
+│   ├───Geo_app
+│   │   ├───CopilotIndices
+│   │   │   └───17.14.1231.31060
+│   │   ├───FileContentIndex
+│   │   └───v17
+│   └───testproject — копия
+│       ├───CopilotIndices
+│       │   └───17.14.1231.31060
+│       ├───FileContentIndex
+│       └───v17
+├───.vscode
+├───geo-client
+│   ├───.gradle
+│   │   ├───9.3.1
+│   │   │   ├───checksums
+│   │   │   ├───executionHistory
+│   │   │   ├───expanded
+│   │   │   ├───fileChanges
+│   │   │   ├───fileHashes
+│   │   │   └───vcsMetadata
+│   │   ├───buildOutputCleanup
+│   │   ├───configuration-cache
+│   │   │   ├───1ixkfuu2kxwqjbdp8me8qdxkh
+│   │   │   ├───249b4cb8-3cd0-4759-a054-d8a2053dbc79
+│   │   │   ├───2vxnetet85ghpxgydoxx66iy1
+│   │   │   ├───46353b27-e9dd-4985-9049-e9683e317628
+│   │   │   ├───57e23208-f2ec-4be8-a428-29d1f347b1cd
+│   │   │   ├───58d78c3c-e6d4-431e-9663-3c0957c1d577
+│   │   │   ├───81604579-ed9f-4e5e-a707-d1d563006fc6
+│   │   │   ├───86fb34f6-38e1-4a11-96ce-356a21473c20
+│   │   │   ├───8721c183-0af4-48a9-b82d-6694a451fa44
+│   │   │   ├───90fa8baf-c26a-442c-80e5-9774a1c7d8ae
+│   │   │   ├───9yiw1vabwz1cukp1d20c95d4h
+│   │   │   ├───aa5e2c95-8136-4c59-9fc6-ece10d9be7bf
+│   │   │   ├───ad53d8e1-2d57-4b7c-ae75-8bbfa6525544
+│   │   │   ├───aokjm2ut05yuixk9rw19cz8md
+│   │   │   ├───b0c33fcc-216b-4b1e-956d-ed4ac00b0455
+│   │   │   ├───c4dab005-0f96-459a-a446-4cd0aeb1472e
+│   │   │   ├───da55062b-61d2-4e91-97ad-1f5e1b0de24b
+│   │   │   ├───efjzzlg862w1gwzzhboyyt5m7
+│   │   │   └───f8a685f9-1ed4-4389-892d-724ff8ab1fa8
+│   │   ├───kotlin
+│   │   │   └───errors
+│   │   └───vcs-1
+│   ├───.kotlin
+│   │   ├───errors
+│   │   └───sessions
+│   ├───.vscode
+│   ├───app
+│   │   ├───bin
+│   │   │   ├───main
+│   │   │   │   └───org
+│   │   │   │       └───example
+│   │   │   │           └───geoapp
+│   │   │   │               ├───api
+│   │   │   │               ├───controller
+│   │   │   │               └───util
+│   │   │   └───test
+│   │   │       └───org
+│   │   │           └───example
+│   │   ├───build
+│   │   │   ├───classes
+│   │   │   │   └───kotlin
+│   │   │   │       ├───main
+│   │   │   │       │   ├───com
+│   │   │   │       │   │   └───example
+│   │   │   │       │   │       └───geoapp
+│   │   │   │       │   │           └───api
+│   │   │   │       │   ├───META-INF
+│   │   │   │       │   └───org
+│   │   │   │       │       └───example
+│   │   │   │       │           └───geoapp
+│   │   │   │       │               ├───controller
+│   │   │   │       │               └───util
+│   │   │   │       └───test
+│   │   │   ├───kotlin
+│   │   │   │   ├───compileKotlin
+│   │   │   │   │   ├───cacheable
+│   │   │   │   │   │   └───caches-jvm
+│   │   │   │   │   │       ├───inputs
+│   │   │   │   │   │       ├───jvm
+│   │   │   │   │   │       │   └───kotlin
+│   │   │   │   │   │       └───lookups
+│   │   │   │   │   ├───classpath-snapshot
+│   │   │   │   │   └───local-state
+│   │   │   │   └───compileTestKotlin
+│   │   │   │       ├───cacheable
+│   │   │   │       │   └───caches-jvm
+│   │   │   │       │       ├───inputs
+│   │   │   │       │       ├───jvm
+│   │   │   │       │       └───lookups
+│   │   │   │       ├───classpath-snapshot
+│   │   │   │       └───local-state
+│   │   │   ├───libs
+│   │   │   ├───resources
+│   │   │   │   └───main
+│   │   │   └───tmp
+│   │   │       └───jar
+│   │   └───src
+│   │       ├───main
+│   │       │   ├───kotlin
+│   │       │   │   └───org
+│   │       │   │       └───example
+│   │       │   │           └───geoapp
+│   │       │   │               ├───api
+│   │       │   │               ├───controller
+│   │       │   │               └───util
+│   │       │   └───resources
+│   │       └───test
+│   │           ├───kotlin
+│   │           │   └───org
+│   │           │       └───example
+│   │           └───resources
+│   ├───build
+│   │   └───reports
+│   │       ├───configuration-cache
+│   │       │   ├───1ixkfuu2kxwqjbdp8me8qdxkh
+│   │       │   │   └───2ffr15j72yg9862jwm54vvnll
+│   │       │   ├───2vxnetet85ghpxgydoxx66iy1
+│   │       │   │   └───bqpkj93pl3msqb5t5mqj4ud0q
+│   │       │   ├───9yiw1vabwz1cukp1d20c95d4h
+│   │       │   │   ├───5girm1aythmejhaod4f1wr01k
+│   │       │   │   ├───67pcb3bamrfa7h9rvjkzgtspz
+│   │       │   │   └───c79knpzecyjnb1v1xzpg7y8ib
+│   │       │   ├───aokjm2ut05yuixk9rw19cz8md
+│   │       │   │   ├───1k7d0jrpbbj7jse53rmv0m8my
+│   │       │   │   ├───75jn7gzg3nkjgf06coh7jgs87
+│   │       │   │   ├───8kr2128wcvxingdype98twxzy
+│   │       │   │   └───d8c0jj7jebe0cbk0curkuckdf
+│   │       │   └───efjzzlg862w1gwzzhboyyt5m7
+│   │       │       └───bn66ojov2oxzq1qm953ddw34x
+│   │       └───problems
+│   └───gradle
+│       └───wrapper
+└───geo-server
+    ├───.gradle
+    │   ├───8.14.4
+    │   │   ├───checksums
+    │   │   ├───executionHistory
+    │   │   ├───expanded
+    │   │   ├───fileChanges
+    │   │   ├───fileHashes
+    │   │   └───vcsMetadata
+    │   ├───buildOutputCleanup
+    │   ├───kotlin
+    │   │   ├───errors
+    │   │   └───sessions
+    │   └───vcs-1
+    ├───.kotlin
+    │   └───sessions
+    ├───.vscode
+    ├───bin
+    │   ├───main
+    │   │   ├───com
+    │   │   │   └───example
+    │   │   │       └───geoserver
+    │   │   │           ├───config
+    │   │   │           ├───controller
+    │   │   │           ├───entity
+    │   │   │           ├───repository
+    │   │   │           ├───security
+    │   │   │           └───service
+    │   │   ├───migration
+    │   │   └───templates
+    │   └───test
+    │       └───com
+    │           └───example
+    │               └───geoserver
+    ├───build
+    │   ├───classes
+    │   │   └───kotlin
+    │   │       ├───main
+    │   │       │   ├───com
+    │   │       │   │   └───example
+    │   │       │   │       └───geoserver
+    │   │       │   │           ├───config
+    │   │       │   │           ├───controller
+    │   │       │   │           ├───entity
+    │   │       │   │           ├───repository
+    │   │       │   │           ├───security
+    │   │       │   │           └───service
+    │   │       │   └───META-INF
+    │   │       └───test
+    │   │           ├───com
+    │   │           │   └───example
+    │   │           │       └───geoserver
+    │   │           └───META-INF
+    │   ├───kotlin
+    │   │   ├───compileKotlin
+    │   │   │   ├───cacheable
+    │   │   │   │   └───caches-jvm
+    │   │   │   │       ├───compilerPluginFiles
+    │   │   │   │       ├───inputs
+    │   │   │   │       ├───jvm
+    │   │   │   │       │   └───kotlin
+    │   │   │   │       └───lookups
+    │   │   │   ├───classpath-snapshot
+    │   │   │   └───local-state
+    │   │   ├───compileTestKotlin
+    │   │   │   ├───cacheable
+    │   │   │   │   └───caches-jvm
+    │   │   │   │       ├───compilerPluginFiles
+    │   │   │   │       ├───inputs
+    │   │   │   │       ├───jvm
+    │   │   │   │       │   └───kotlin
+    │   │   │   │       └───lookups
+    │   │   │   ├───classpath-snapshot
+    │   │   │   └───local-state
+    │   │   ├───kaptGenerateStubsKotlin
+    │   │   │   ├───cacheable
+    │   │   │   │   └───caches-jvm
+    │   │   │   │       ├───compilerPluginFiles
+    │   │   │   │       ├───inputs
+    │   │   │   │       ├───jvm
+    │   │   │   │       └───lookups
+    │   │   │   ├───classpath-snapshot
+    │   │   │   └───local-state
+    │   │   └───kaptGenerateStubsTestKotlin
+    │   │       ├───cacheable
+    │   │       │   └───caches-jvm
+    │   │       │       ├───compilerPluginFiles
+    │   │       │       ├───inputs
+    │   │       │       ├───jvm
+    │   │       │       └───lookups
+    │   │       ├───classpath-snapshot
+    │   │       └───local-state
+    │   ├───libs
+    │   ├───reports
+    │   │   └───problems
+    │   ├───resources
+    │   │   └───main
+    │   │       ├───migration
+    │   │       ├───static
+    │   │       └───templates
+    │   ├───snapshot
+    │   │   └───kotlin
+    │   └───tmp
+    │       ├───jar
+    │       └───kapt3
+    │           ├───incrementalData
+    │           │   ├───main
+    │           │   └───test
+    │           └───stubs
+    │               ├───main
+    │               └───test
+    ├───gradle
+    │   └───wrapper
+    └───src
+        ├───main
+        │   ├───kotlin
+        │   │   └───com
+        │   │       └───example
+        │   │           └───geoserver
+        │   │               ├───config
+        │   │               ├───controller
+        │   │               ├───entity
+        │   │               ├───repository
+        │   │               ├───security
+        │   │               └───service
+        │   └───resources
+        │       ├───migration
+        │       ├───static
+        │       └───templates
+        └───test
+            ├───kotlin
+            │   └───com
+            │       └───example
+            │           └───geoserver
+            └───resources
