@@ -59,6 +59,8 @@ class WorkingFormController {
     @FXML private lateinit var cancelButton: Button
     @FXML private lateinit var errorLabel: Label
 
+    private var updatingContractor = false
+
     private lateinit var token: String
     private var working: Working? = null
     private var onSaveCallback: () -> Unit = {}
@@ -92,7 +94,10 @@ class WorkingFormController {
 
         // Слушатель для фильтрации геологов по подрядчику
         contractorCombo.selectionModel.selectedItemProperty().addListener { _, _, newContractor ->
-            loadGeologistsForContractor(newContractor?.id)
+            if (!updatingContractor) {
+                val currentGeologistId = geologistCombo.value?.id
+                loadGeologistsForContractor(newContractor?.id, currentGeologistId)
+            }
         }
     }
 
@@ -165,7 +170,10 @@ class WorkingFormController {
         // Важно: выбираем объекты из загруженных списков по ID
         areaCombo.items.find { it.id == w.area?.id }?.let { areaCombo.value = it }
         workTypeCombo.items.find { it.id == w.workType?.id }?.let { workTypeCombo.value = it }
+        //contractorCombo.items.find { it.id == w.contractor?.id }?.let { contractorCombo.value = it }
+        updatingContractor = true
         contractorCombo.items.find { it.id == w.contractor?.id }?.let { contractorCombo.value = it }
+        updatingContractor = false
         drillingRigCombo.items.find { it.id == w.drillingRig?.id }?.let { drillingRigCombo.value = it }
 
         // Если есть подрядчик, грузим его геологов
@@ -181,14 +189,18 @@ class WorkingFormController {
             try {
                 val geologists = api.getGeologistsByContractor("Bearer $token", contractorId).await()
                 geologistCombo.items.setAll(geologists)
-                
-                // Если мы передали ID (при первичной загрузке), выбираем его
                 if (selectedGeologistId != null) {
-                    geologistCombo.items.find { it.id == selectedGeologistId }?.let { 
-                        geologistCombo.value = it 
+                    val found = geologists.find { it.id == selectedGeologistId }
+                    println("Looking for geologist id $selectedGeologistId, found = $found")
+                    if (found != null) {
+                        geologistCombo.value = found
+                        println("geologistCombo.value set to $found")
+                    } else {
+                        println("Geologist with id $selectedGeologistId not found in loaded list. Available ids: ${geologists.map { it.id }}")
                     }
                 }
             } catch (e: Exception) {
+                println("Error loading geologists: ${e.message}")
                 geologistCombo.items.clear()
             }
         }

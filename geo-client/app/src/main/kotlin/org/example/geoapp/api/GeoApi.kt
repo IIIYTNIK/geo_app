@@ -109,9 +109,9 @@ data class Working(
     var hasCore: Boolean = false,
     var hasStake: Boolean = false,
 
-    val samplesThawed: Int? = null,
-    val samplesFrozen: Int? = null,
-    val samplesRocky: Int? = null,
+    var samplesThawed: Int? = null,
+    var samplesFrozen: Int? = null,
+    var samplesRocky: Int? = null,
 
     val isProject: Boolean = false
 )

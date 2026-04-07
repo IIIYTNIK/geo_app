@@ -15,6 +15,9 @@ import javafx.scene.input.KeyCode
 import javafx.scene.input.KeyCodeCombination
 import javafx.scene.input.KeyCombination
 import javafx.scene.layout.VBox
+import javafx.scene.control.cell.TextFieldTableCell
+import javafx.util.converter.IntegerStringConverter
+import javafx.util.converter.DoubleStringConverter
 import javafx.stage.FileChooser
 import javafx.stage.Modality
 import javafx.stage.Stage
@@ -24,6 +27,7 @@ import org.example.geoapp.util.FilterParser
 import org.example.geoapp.util.await
 import org.example.geoapp.util.awaitUnit
 import org.example.geoapp.util.runOnFx
+
 
 class MainController {
 
@@ -94,7 +98,9 @@ class MainController {
     }
 
     @FXML fun initialize() {
+        workingsTable.isEditable = true
         workingsTable.selectionModel.selectionMode = SelectionMode.MULTIPLE
+
 
         // Сборка Наименования (Тип + Номер)
         colName.setCellValueFactory { cellData -> 
@@ -108,7 +114,22 @@ class MainController {
             SimpleStringProperty("$prefix${w.number}")
         }
 
-        colRowNumber.setCellValueFactory { SimpleObjectProperty(it.value.orderNum) }
+        colRowNumber.isSortable = false
+
+        colRowNumber.setCellValueFactory { 
+            javafx.beans.property.ReadOnlyObjectWrapper(0 as Number) 
+        }
+        
+        colRowNumber.setCellFactory {
+            object : javafx.scene.control.TableCell<Working, Number>() {
+                override fun updateItem(item: Number?, empty: Boolean) {
+                    super.updateItem(item, empty)
+                    text = if (empty || tableRow == null) null else (tableRow.index + 1).toString()
+                }
+            }
+        }
+
+        //colRowNumber.setCellValueFactory { SimpleObjectProperty(it.value.orderNum) }
         colArea.setCellValueFactory { SimpleStringProperty(it.value.area?.name ?: "") }
         colGeologist.setCellValueFactory { SimpleStringProperty(it.value.geologist?.name ?: "") }
         colContractor.setCellValueFactory { SimpleStringProperty(it.value.contractor?.name ?: "") }
@@ -159,6 +180,21 @@ class MainController {
         colAdditionalInfo.setCellValueFactory { SimpleStringProperty(it.value.additionalInfo ?: "") }
 
         workingsTable.items = workingsList
+
+        formatColumn(colActualDepth, 1) // Факт Н
+        formatColumn(colCoreRecovery, 0) // Выход керна
+        formatColumn(colCasing, 1)       // Обсад
+
+        formatColumn(colMmg1Top, 1)
+        formatColumn(colMmg1Bottom, 1)
+        formatColumn(colMmg2Top, 1)
+        formatColumn(colMmg2Bottom, 1)
+        formatColumn(colGwAppearLog, 1)
+        formatColumn(colGwStableLog, 1)
+
+        setupEditableIntCol(colSamplesThawed) { w, v -> w.samplesThawed = v }
+        setupEditableIntCol(colSamplesFrozen) { w, v -> w.samplesFrozen = v }
+        setupEditableIntCol(colSamplesRocky) { w, v -> w.samplesRocky = v }
 
         // Контекстное меню
         val contextMenu = ContextMenu()
@@ -419,4 +455,34 @@ class MainController {
     private fun formatDouble(value: Double?): String {
         return if (value == null) "" else "%.3f".format(value).replace(",", ".")
     }
+
+    private fun formatColumn(column: TableColumn<Working, Double?>, decimals: Int) {
+        column.cellFactory = javafx.util.Callback {
+            object : javafx.scene.control.TableCell<Working, Double?>() {
+                override fun updateItem(item: Double?, empty: Boolean) {
+                    super.updateItem(item, empty)
+                    text = if (empty || item == null) "" else String.format(java.util.Locale.US, "%.${decimals}f", item)
+                }
+            }
+        }
+    }
+
+    fun setupEditableIntCol(column: TableColumn<Working, Int?>, setter: (Working, Int?) -> Unit) {
+        column.cellFactory = TextFieldTableCell.forTableColumn(IntegerStringConverter())
+        column.setOnEditCommit { event ->
+            val working = event.rowValue
+            val newValue = event.newValue
+            setter(working, newValue)
+              
+            // Сразу сохраняем изменения на сервер
+            runOnFx {
+                try {
+                    api.updateWorking("Bearer $token", working.id, working).await()
+                } catch (e: Exception) {
+                    //showAlert("Ошибка", "Не удалось сохранить значение: ${e.message}")
+                }
+            }
+        }
+    }
+
 }

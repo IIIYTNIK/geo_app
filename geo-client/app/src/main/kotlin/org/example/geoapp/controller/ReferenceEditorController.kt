@@ -40,38 +40,38 @@ class ReferenceEditorController {
     private val api = MainApp.api
 
     @FXML
-fun initialize() {
-    // Разрешаем редактирование в самой таблице
-    referenceTable.isEditable = true
+    fun initialize() {
+        // Разрешаем редактирование в самой таблице
+        referenceTable.isEditable = true
 
-    // Настраиваем колонку комментария, чтобы она была текстовым полем
-    colComment.cellFactory = TextFieldTableCell.forTableColumn()
+        // Настраиваем колонку комментария, чтобы она была текстовым полем
+        colComment.cellFactory = TextFieldTableCell.forTableColumn()
 
-    // Обрабатываем сохранение при правке комментария прямо в таблице
-    colComment.setOnEditCommit { event ->
-        val uiModel = event.rowValue
-        val newComment = event.newValue
-        
-        uiModel.comment = newComment // Обновляем в локальной модели
-        
-        // Отправляем на сервер (асинхронно)
-        runOnFx {
-            try {
-                val tokenStr = "Bearer $token"
-                // Обновляем объект, подставляя новый комментарий
-                when (currentType) {
-                    RefType.AREA -> api.updateArea(tokenStr, uiModel.id, (uiModel.originalObj as RefArea).copy(comment = newComment)).await()
-                    RefType.WORK_TYPE -> api.updateWorkType(tokenStr, uiModel.id, (uiModel.originalObj as RefWorkType).copy(comment = newComment)).await()
-                    RefType.DRILLING_RIG -> api.updateDrillingRig(tokenStr, uiModel.id, (uiModel.originalObj as RefDrillingRig).copy(comment = newComment)).await()
-                    RefType.CONTRACTOR -> api.updateContractor(tokenStr, uiModel.id, (uiModel.originalObj as RefContractor).copy(comment = newComment)).await()
-                    RefType.GEOLOGIST -> api.updateGeologist(tokenStr, uiModel.id, (uiModel.originalObj as RefGeologist).copy(comment = newComment)).await()
+        // Обрабатываем сохранение при правке комментария прямо в таблице
+        colComment.setOnEditCommit { event ->
+            val uiModel = event.rowValue
+            val newComment = event.newValue
+            
+            uiModel.comment = newComment // Обновляем в локальной модели
+            
+            // Отправляем на сервер (асинхронно)
+            runOnFx {
+                try {
+                    val tokenStr = "Bearer $token"
+                    // Обновляем объект, подставляя новый комментарий
+                    when (currentType) {
+                        RefType.AREA -> api.updateArea(tokenStr, uiModel.id, (uiModel.originalObj as RefArea).copy(comment = newComment)).await()
+                        RefType.WORK_TYPE -> api.updateWorkType(tokenStr, uiModel.id, (uiModel.originalObj as RefWorkType).copy(comment = newComment)).await()
+                        RefType.DRILLING_RIG -> api.updateDrillingRig(tokenStr, uiModel.id, (uiModel.originalObj as RefDrillingRig).copy(comment = newComment)).await()
+                        RefType.CONTRACTOR -> api.updateContractor(tokenStr, uiModel.id, (uiModel.originalObj as RefContractor).copy(comment = newComment)).await()
+                        RefType.GEOLOGIST -> api.updateGeologist(tokenStr, uiModel.id, (uiModel.originalObj as RefGeologist).copy(comment = newComment)).await()
+                    }
+                } catch (e: Exception) {
+                    errorLabel.text = "Ошибка при сохранении комментария: ${e.message}"
                 }
-            } catch (e: Exception) {
-                errorLabel.text = "Ошибка при сохранении комментария: ${e.message}"
             }
         }
     }
-}
 
     fun initData(token: String, type: RefType) {
         this.token = token
@@ -92,16 +92,33 @@ fun initialize() {
             loadContractorsForCombo()
         }
 
+        val showAlias = type == RefType.GEOLOGIST || type == RefType.DRILLING_RIG
+        colAlias.isVisible = showAlias
+        aliasField.isVisible = showAlias
+
         // Слушатель выделения строки
         referenceTable.selectionModel.selectedItemProperty().addListener { _, _, selected ->
             if (selected != null) {
                 // Если выбрали строку - переходим в режим РЕДАКТИРОВАНИЯ
                 nameField.text = selected.name
-                if (type == RefType.GEOLOGIST) contractorCombo.value = selected.parent
+
+                if (type == RefType.GEOLOGIST) {
+                    contractorCombo.value = selected.parent
+                }
+                
+                aliasField.text = when (selected.originalObj) {
+                    is RefGeologist -> selected.originalObj.alias ?: ""
+                    is RefDrillingRig -> selected.originalObj.alias ?: ""
+                    else -> ""
+                }
+
                 deleteButton.isDisable = false
                 saveButton.text = "Сохранить изменения" 
             } else {
                 // Если ничего не выбрано - переходим в режим СОЗДАНИЯ
+                nameField.clear()
+                aliasField.clear()
+                contractorCombo.value = null
                 saveButton.text = "Добавить новую запись"
                 deleteButton.isDisable = true
             }
@@ -114,7 +131,7 @@ fun initialize() {
         runOnFx {
             try {
                 val items = mutableListOf<RefUiModel>()
-               when (currentType) {
+                when (currentType) {
                     RefType.AREA -> api.getAreas().await().forEach { items.add(RefUiModel(it.id, it.name, null, null, it.comment, it)) }
                     RefType.WORK_TYPE -> api.getWorkTypes().await().forEach { items.add(RefUiModel(it.id, it.name, null, null, it.comment, it)) }
                     RefType.DRILLING_RIG -> api.getDrillingRigs().await().forEach { items.add(RefUiModel(it.id, it.name, it.alias, null, it.comment, it)) }
@@ -122,6 +139,11 @@ fun initialize() {
                     RefType.GEOLOGIST -> api.getGeologists().await().forEach { items.add(RefUiModel(it.id, it.name, it.alias, it.contractor, it.comment, it)) }
                 }
                 referenceTable.items = FXCollections.observableArrayList(items)
+                val sortedList = items.sortedBy { it.id }
+                runOnFx {
+                    referenceTable.items = FXCollections.observableArrayList(sortedList)
+                    autoSizeColumnsAndWindow()
+                }
             } catch (e: Exception) {
                 errorLabel.text = "Ошибка загрузки: ${e.message}"
             }
@@ -149,21 +171,23 @@ fun initialize() {
         val selected = referenceTable.selectionModel.selectedItem
         val id = selected?.id ?: 0L
         val tokenStr = "Bearer $token"
-
+        
         runOnFx {
             try {
+                val aliasStr = if (aliasField.isVisible) aliasField.text.trim().ifEmpty { null } else null
                 when (currentType) {
                     RefType.AREA -> if (id == 0L) api.createArea(tokenStr, RefArea(name = name)).await() else api.updateArea(tokenStr, id, RefArea(name = name)).await()
                     RefType.WORK_TYPE -> if (id == 0L) api.createWorkType(tokenStr, RefWorkType(name = name)).await() else api.updateWorkType(tokenStr, id, RefWorkType(name = name)).await()
                     RefType.DRILLING_RIG -> {
-                        if (id == 0L) api.createDrillingRig(tokenStr, RefDrillingRig(name = name, alias = aliasField.text.trim().ifEmpty { null })).await()
-                        else api.updateDrillingRig(tokenStr, id, RefDrillingRig(name = name, alias = aliasField.text.trim().ifEmpty { null })).await()
-                    }                    RefType.CONTRACTOR -> if (id == 0L) api.createContractor(tokenStr, RefContractor(name = name)).await() else api.updateContractor(tokenStr, id, RefContractor(name = name)).await()
+                        if (id == 0L) api.createDrillingRig(tokenStr, RefDrillingRig(name = name, alias = aliasStr)).await()
+                        else api.updateDrillingRig(tokenStr, id, RefDrillingRig(name = name, alias = aliasStr)).await()
+                    }                    
+                    RefType.CONTRACTOR -> if (id == 0L) api.createContractor(tokenStr, RefContractor(name = name)).await() else api.updateContractor(tokenStr, id, RefContractor(name = name)).await()
                     RefType.GEOLOGIST -> {
                         val c = contractorCombo.value
                         if (c == null) { errorLabel.text = "Выберите подрядчика!"; return@runOnFx }
-                        if (id == 0L) api.createGeologist(tokenStr, RefGeologist(name = name, contractor = c)).await() 
-                        else api.updateGeologist(tokenStr, id, RefGeologist(name = name, contractor = c)).await()
+                        if (id == 0L) api.createGeologist(tokenStr, RefGeologist(name = name, contractor = c, alias = aliasStr)).await() 
+                        else api.updateGeologist(tokenStr, id, RefGeologist(name = name, contractor = c, alias = aliasStr)).await()
                     }
                 }
                 onClearSelection() // Сбрасываем форму после успешного сохранения
@@ -197,5 +221,34 @@ fun initialize() {
         contractorCombo.value = null
         errorLabel.text = ""
         // Кнопки изменятся автоматически благодаря слушателю selectedItemProperty
+    }
+
+
+    private fun autoSizeColumnsAndWindow() {
+        // 1. Считаем ширину по содержимому
+        referenceTable.columns.forEach { col ->
+            // Базовая ширина по заголовку
+            var maxWidth = javafx.scene.text.Text(col.text).layoutBounds.width + 30.0
+            
+            // Перебираем первые 50 строк для скорости
+            for (i in 0 until minOf(referenceTable.items.size, 50)) {
+                val cellData = col.getCellData(i)?.toString() ?: ""
+                val width = javafx.scene.text.Text(cellData).layoutBounds.width + 20.0
+                if (width > maxWidth) maxWidth = width
+            }
+            col.prefWidth = maxWidth
+        }
+
+        // 2. Подгоняем размер самого окна под сумму ширин колонок
+        val totalWidth = referenceTable.columns.filter { it.isVisible }.sumOf { it.prefWidth } + 40.0
+        val stage = referenceTable.scene?.window as? javafx.stage.Stage
+        if (stage != null) {
+            // Устанавливаем минимальную ширину окна, чтобы оно не было меньше таблицы
+            stage.minWidth = totalWidth
+            // Если текущая ширина меньше расчетной — расширяем
+            if (stage.width < totalWidth) {
+                stage.width = totalWidth
+            }
+        }
     }
 }

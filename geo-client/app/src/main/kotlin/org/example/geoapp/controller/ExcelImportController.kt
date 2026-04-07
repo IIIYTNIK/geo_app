@@ -240,7 +240,8 @@ class ExcelImportController {
             if (!hasAnyData) continue
 
             try {
-                val working = validateAndParse(rawValues, currentOrderNum)
+                val working = validateAndParse(rawValues)
+                if (working == null) continue
                 validWorkings.add(working)
                 currentOrderNum++
             } catch (e: Exception) {
@@ -301,7 +302,7 @@ class ExcelImportController {
         }
     }
 
-    fun validateAndParse(raw: Map<DbField, String>, orderNum: Int): Working {
+    fun validateAndParse(raw: Map<DbField, String>): Working? {
         fun getNum(field: DbField): Double? {
             val rawStr = raw[field]?.replace(",", ".")?.trim()
             if (rawStr.isNullOrEmpty()) return null
@@ -318,7 +319,8 @@ class ExcelImportController {
 
         fun getSafeStr(name: String): String? {
             val key = raw.keys.find { it.name == name } ?: return null
-            return raw[key]?.trim()?.ifEmpty { null }
+        val value = raw[key]?.trim()?.replace("\\s+".toRegex(), " ")
+        return if (value.isNullOrEmpty()) null else value
         }
 
         fun getSafeBool(name: String): Boolean {
@@ -356,19 +358,28 @@ class ExcelImportController {
             throw Exception("Неверный формат даты: '$str'. Ожидается ДД.ММ.ГГГГ или числовой формат Excel")
         }
 
-        val number = getStr(DbField.NUMBER) ?: ""
+        println("=== validateAndParse ===")
+        println("raw keys: ${raw.keys.map { it.name }}")
+        println("NUMBER value: ${getSafeStr("NUMBER")}")
+        println("NAME_COMBINED value: ${getSafeStr("NAME_COMBINED")}")
+
+        val number = getSafeStr("NUMBER") ?: ""
         var parsedNumber = number
         var parsedWorkType: RefWorkType? = null
 
         val combinedName = getSafeStr("NAME_COMBINED")
-        if (combinedName != null) {
+        // Если оба ключевых поля пустые, считаем строку пустой и пропускаем
+        if (number.isEmpty() && (combinedName == null || combinedName.isEmpty())) {
+            return null 
+        }
+
+        if (combinedName != null && combinedName.isNotEmpty()) {
             // Разбиваем по первому дефису
             val parts = combinedName.split("-", limit = 2)
             if (parts.size == 2) {
                 val typePrefix = parts[0].trim()
                 parsedNumber = parts[1].trim()
                 if (typePrefix.isNotEmpty()) {
-                    // Сопоставляем префикс с типом выработки
                     parsedWorkType = when (typePrefix) {
                         "С", "с" -> cacheWorkTypes.find { it.name.equals("скважина", ignoreCase = true) }
                         "Ш", "ш" -> cacheWorkTypes.find { it.name.equals("шурф", ignoreCase = true) }
@@ -420,7 +431,7 @@ class ExcelImportController {
 
         return Working(
             number = parsedNumber, 
-            orderNum = orderNum,
+            //orderNum = orderNum,
             area = area, 
             isProject = isProjectImport,
             workType = workType, 
@@ -500,14 +511,6 @@ class ExcelImportController {
     // Метод для поиска конфликтов (не suspend)
     private fun findConflicts(validWorkings: List<Working>): List<Working> {
         val conflicts = mutableListOf<Working>()
-
-        println("=== DEBUG ===")
-        println("Existing workings count: ${existingWorkings.size}")
-        println("Valid workings count: ${validWorkings.size}")
-        for (w in validWorkings.take(3)) {
-            println("Valid: area=${w.area?.id} number='${w.number}'")
-        }
-        println("Conflicts count: ${conflicts.size}")
 
 
         for (w in validWorkings) {

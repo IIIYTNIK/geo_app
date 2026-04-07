@@ -118,7 +118,8 @@ class ImportCorrectionController {
 
         for (row in correctionTable.items) {
             try {
-                val working = parentController.validateAndParse(row.rawValues, orderNum)
+                val working = parentController.validateAndParse(row.rawValues)
+                if (working == null) throw Exception("Строка пуста и не может быть обработана")
                 validWorkings.add(working)
                 orderNum++  // увеличиваем для следующей строки
             } catch (e: Exception) {
