@@ -63,7 +63,9 @@ data class Working(
     val id: Long = 0,
     val area: RefArea? = null,
     var workType: RefWorkType? = null, 
-    var number: String,             
+    var plannedContractor: RefContractor? = null,
+    var number: String, 
+    var structure: String? = null,            
     
     var orderNum: Int? = null, // Для отображения порядкового номера в таблице
     
@@ -101,7 +103,7 @@ data class Working(
 
     // Чекбоксы (Boolean)
     var act: Boolean = false,
-    val actNumber: String? = null,
+    var actNumber: String? = null,
     var thermalTube: Boolean = false,
     var hasVideo: Boolean = false,
     var hasDrilling: Boolean = false,
@@ -113,5 +115,9 @@ data class Working(
     var samplesFrozen: Int? = null,
     var samplesRocky: Int? = null,
 
-    val isProject: Boolean = false
+    var isProject: Boolean = false,
+
+    var cat1_4: Double? = null,
+    var cat5_8: Double? = null,
+    var cat9_12: Double? = null,
 )

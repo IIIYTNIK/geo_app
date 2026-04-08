@@ -43,10 +43,13 @@ class WorkingController(
     
     @PutMapping("/{id}")
     fun update(@PathVariable id: Long, @RequestBody working: Working): Working {
-        if (repo.existsById(id)) {
-            return repo.save(calculateComputedFields(working).copy(id = id))
+        if (!repo.existsById(id)) throw ResponseStatusException(HttpStatus.NOT_FOUND, "Working not found")
+        val toSave = if (working.contractor != null && working.drillingRig != null && working.number.isNotBlank()) {
+            calculateComputedFields(working).copy(id = id, plannedContractor = null)
+        } else {
+            calculateComputedFields(working).copy(id = id)
         }
-        throw ResponseStatusException(HttpStatus.NOT_FOUND, "Working not found")
+        return repo.save(toSave)
     }
 
     @DeleteMapping("/{id}")

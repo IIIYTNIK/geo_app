@@ -13,6 +13,8 @@ enum class DbField(val propKey: String, val title: String, val isReference: Bool
     CONTRACTOR("contractor", "Подрядчик", true),
     GEOLOGIST("geologist", "Геолог", true),
     DRILLING_RIG("drillingRig", "Буровая", true),
+    STRUCTURE("structure", "Сооружение"),
+    PLANNED_CONTRACTOR("plannedContractor", "Запланированный подрядчик", true),
 
     // Числа и текст
     PLANNED_X("plannedX", "План X"),
@@ -48,6 +50,10 @@ enum class DbField(val propKey: String, val title: String, val isReference: Bool
     SAMPLES_THAWED("samplesThawed", "Талые (шт)"),
     SAMPLES_FROZEN("samplesFrozen", "Мерзлые (шт)"),
     SAMPLES_ROCKY("samplesRocky", "Скальные (шт)"),
+
+    CAT1_4("cat1_4", "1-4, n.м."),
+    CAT5_8("cat5_8", "5-8, П.м."),
+    CAT9_12("cat9_12", "9-12, п.м."),
 }
 
 // Контейнер для строки, требующей исправления

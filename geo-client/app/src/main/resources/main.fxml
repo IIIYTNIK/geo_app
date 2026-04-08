@@ -43,11 +43,12 @@
             <TableColumn fx:id="colActualZ" text="факт Z" prefWidth="70"/>
             <TableColumn fx:id="colActualDepth" text="факт H" prefWidth="60"/>
             <TableColumn fx:id="colDeltaS" text="ΔS" prefWidth="60"/>
+            <TableColumn fx:id="colStructure" text="Сооружение" prefWidth="100"/>
             <TableColumn fx:id="colCoreRecovery" text="Выход керна,%" prefWidth="60"/>
             <TableColumn fx:id="colCasing" text="Обсад" prefWidth="60"/>
             <TableColumn fx:id="colStartDate" text="Дата нач" prefWidth="80"/>
             <TableColumn fx:id="colEndDate" text="Дата оконч" prefWidth="80"/>
-            
+            <TableColumn fx:id="colPlannedContractor" text="Запланировано" prefWidth="100"/>
             <TableColumn text="Материалы">
                 <columns>
                     <TableColumn fx:id="colHasVideo" text="Видео" prefWidth="60"/>
@@ -55,6 +56,13 @@
                     <TableColumn fx:id="colHasJournal" text="Журнал" prefWidth="60"/>
                     <TableColumn fx:id="colHasCore" text="Керн" prefWidth="60"/>
                     <TableColumn fx:id="colHasStake" text="Штага" prefWidth="60"/>
+                </columns>
+            </TableColumn>
+            <TableColumn text="Категория породы">
+                <columns>
+                    <TableColumn fx:id="colCat1_4" text="1-4, n.м." prefWidth="70"/>
+                    <TableColumn fx:id="colCat5_8" text="5-8, П.м." prefWidth="70"/>
+                    <TableColumn fx:id="colCat9_12" text="9-12, п.м." prefWidth="70"/>
                 </columns>
             </TableColumn>
 

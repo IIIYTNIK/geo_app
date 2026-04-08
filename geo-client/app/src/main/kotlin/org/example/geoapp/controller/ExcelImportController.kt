@@ -177,15 +177,15 @@ class ExcelImportController {
                 override fun fromString(string: String) = dbFields.find { it.title == string }
             }
             
-            combo.valueProperty().addListener { _, _, newValue ->
-                if (newValue != null && newValue != DbField.IGNORE) {
-                    for ((otherIdx, otherCombo) in columnMapping) {
-                        if (otherIdx != i && otherCombo.value == newValue) {
-                            otherCombo.value = DbField.IGNORE
-                        }
-                    }
-                }
-            }
+            // combo.valueProperty().addListener { _, _, newValue ->
+            //     if (newValue != null && newValue != DbField.IGNORE) {
+            //         for ((otherIdx, otherCombo) in columnMapping) {
+            //             if (otherIdx != i && otherCombo.value == newValue) {
+            //                 otherCombo.value = DbField.IGNORE
+            //             }
+            //         }
+            //     }
+            // }
 
             columnMapping[i] = combo
             col.graphic = VBox(5.0, headerLabel, combo).apply { alignment = javafx.geometry.Pos.CENTER }
@@ -214,7 +214,16 @@ class ExcelImportController {
             statusLabel.text = "ОШИБКА: Сначала выберите Участок в верхней панели!"
             return
         }
-        
+
+        // Проверка уникальности выбранных полей
+        val selectedFields = columnMapping.values.map { it.value }.filter { it != DbField.IGNORE }
+        val duplicates = selectedFields.groupBy { it }.filter { it.value.size > 1 }.keys
+        if (duplicates.isNotEmpty()) {
+            val duplicateNames = duplicates.joinToString(", ") { it.title }
+            statusLabel.text = "ОШИБКА: Поля '$duplicateNames' назначены нескольким колонкам. Устраните дублирование."
+            return
+        }
+                
         startRowSpinner.increment(0)
         val startRow = startRowSpinner.value
         
@@ -358,10 +367,10 @@ class ExcelImportController {
             throw Exception("Неверный формат даты: '$str'. Ожидается ДД.ММ.ГГГГ или числовой формат Excel")
         }
 
-        println("=== validateAndParse ===")
-        println("raw keys: ${raw.keys.map { it.name }}")
-        println("NUMBER value: ${getSafeStr("NUMBER")}")
-        println("NAME_COMBINED value: ${getSafeStr("NAME_COMBINED")}")
+        // println("=== validateAndParse ===")
+        // println("raw keys: ${raw.keys.map { it.name }}")
+        // println("NUMBER value: ${getSafeStr("NUMBER")}")
+        // println("NAME_COMBINED value: ${getSafeStr("NAME_COMBINED")}")
 
         val number = getSafeStr("NUMBER") ?: ""
         var parsedNumber = number
@@ -438,6 +447,7 @@ class ExcelImportController {
             contractor = contractor, 
             geologist = geologist, 
             drillingRig = rig, 
+            structure = getSafeStr("STRUCTURE"),
 
             plannedX = getNum(DbField.PLANNED_X), 
             plannedY = getNum(DbField.PLANNED_Y), 

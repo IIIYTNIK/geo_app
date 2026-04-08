@@ -2,6 +2,7 @@ package org.example.geoapp.controller
 
 import com.example.geoapp.api.GeoApi
 import com.example.geoapp.api.Working
+import com.example.geoapp.api.RefContractor
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleStringProperty
 import javafx.beans.property.SimpleObjectProperty
@@ -18,6 +19,7 @@ import javafx.scene.layout.VBox
 import javafx.scene.control.cell.TextFieldTableCell
 import javafx.util.converter.IntegerStringConverter
 import javafx.util.converter.DoubleStringConverter
+import javafx.util.StringConverter
 import javafx.stage.FileChooser
 import javafx.stage.Modality
 import javafx.stage.Stage
@@ -41,6 +43,8 @@ class MainController {
     @FXML private lateinit var colGeologist: TableColumn<Working, String>
     @FXML private lateinit var colContractor: TableColumn<Working, String>
     @FXML private lateinit var colDrillingRig: TableColumn<Working, String>
+    @FXML private lateinit var colStructure: TableColumn<Working, String>
+    @FXML private lateinit var colPlannedContractor: TableColumn<Working, String>
     @FXML private lateinit var colPlannedX: TableColumn<Working, Double?>
     @FXML private lateinit var colPlannedY: TableColumn<Working, Double?>
     @FXML private lateinit var colPlannedDepth: TableColumn<Working, Double?>
@@ -82,6 +86,10 @@ class MainController {
     @FXML private lateinit var editButton: Button
     @FXML private lateinit var deleteButton: Button
 
+    @FXML private lateinit var colCat1_4: TableColumn<Working, Double?>
+    @FXML private lateinit var colCat5_8: TableColumn<Working, Double?>
+    @FXML private lateinit var colCat9_12: TableColumn<Working, Double?>
+
     private lateinit var token: String
     private lateinit var userRole: String
     private val api: GeoApi = MainApp.api
@@ -100,6 +108,8 @@ class MainController {
     @FXML fun initialize() {
         workingsTable.isEditable = true
         workingsTable.selectionModel.selectionMode = SelectionMode.MULTIPLE
+        //выделение ячейки вместо строки
+        //(workingsTable.selectionModel as TableView.TableViewSelectionModel<Working>).isCellSelectionEnabled = true
 
 
         // Сборка Наименования (Тип + Номер)
@@ -134,7 +144,9 @@ class MainController {
         colGeologist.setCellValueFactory { SimpleStringProperty(it.value.geologist?.name ?: "") }
         colContractor.setCellValueFactory { SimpleStringProperty(it.value.contractor?.name ?: "") }
         colDrillingRig.setCellValueFactory { SimpleStringProperty(it.value.drillingRig?.name ?: "") }
-        
+        colStructure.setCellValueFactory { SimpleStringProperty(it.value.structure ?: "") }
+        colPlannedContractor.setCellValueFactory { SimpleStringProperty(it.value.plannedContractor?.name ?: "") }
+
         setupDoubleColumn(colPlannedX) { it.plannedX }
         setupDoubleColumn(colPlannedY) { it.plannedY }
         setupDoubleColumn(colPlannedDepth) { it.plannedDepth }
@@ -152,6 +164,9 @@ class MainController {
         setupDoubleColumn(colGwAppearLog) { it.gwAppearLog }
         setupDoubleColumn(colGwStableLog) { it.gwStableLog }
         setupDoubleColumn(colGwStableAbs) { it.gwStableAbs }
+        setupDoubleColumn(colCat1_4) { it.cat1_4 }
+        setupDoubleColumn(colCat5_8) { it.cat5_8 }
+        setupDoubleColumn(colCat9_12) { it.cat9_12 }
 
         // Интерактивные чекбоксы в таблице
         createInteractiveCheckbox(colHasVideo, { it.hasVideo }, { w, v -> w.hasVideo = v })
@@ -192,15 +207,27 @@ class MainController {
         formatColumn(colGwAppearLog, 1)
         formatColumn(colGwStableLog, 1)
 
+        formatColumn(colCat1_4, 1)
+        formatColumn(colCat5_8, 1)
+        formatColumn(colCat9_12, 1)
+        
         setupEditableIntCol(colSamplesThawed) { w, v -> w.samplesThawed = v }
         setupEditableIntCol(colSamplesFrozen) { w, v -> w.samplesFrozen = v }
         setupEditableIntCol(colSamplesRocky) { w, v -> w.samplesRocky = v }
 
+        setupEditableDoubleColumn(colCat1_4) { w, v -> w.cat1_4 = v }
+        setupEditableDoubleColumn(colCat5_8) { w, v -> w.cat5_8 = v }
+        setupEditableDoubleColumn(colCat9_12) { w, v -> w.cat9_12 = v }
+
         // Контекстное меню
         val contextMenu = ContextMenu()
+        val assignStructureItem = MenuItem("Присвоить сооружение").apply { setOnAction { onAssignStructure() } }
+        val assignPlannedContractorItem = MenuItem("Назначить подрядчика").apply { setOnAction { onAssignPlannedContractor() } }
+        contextMenu.items.addAll(assignStructureItem, assignPlannedContractorItem) 
         val editItem = MenuItem("Редактировать").apply { setOnAction { onEdit() } }
         val deleteItem = MenuItem("Удалить").apply { setOnAction { onDelete() } }
         contextMenu.items.addAll(editItem, deleteItem)
+
         workingsTable.contextMenu = contextMenu
 
         editButton.disableProperty().bind(workingsTable.selectionModel.selectedItemProperty().isNull)
@@ -220,38 +247,22 @@ class MainController {
             newScene?.accelerators?.put(KeyCodeCombination(KeyCode.E, KeyCombination.CONTROL_DOWN), Runnable { if (!editButton.isDisable) onEdit() })
         }
 
-        // Цветовая раскраска строк (Оранжевый / Зеленый)
+        //Цветовая раскраска строк (Оранжевый / Зеленый)
         workingsTable.setRowFactory {
             object : TableRow<Working>() {
                 override fun updateItem(item: Working?, empty: Boolean) {
                     super.updateItem(item, empty)
-                    updateRowStyle(item, empty)
-                }
-
-                override fun updateSelected(selected: Boolean) {
-                    super.updateSelected(selected)
-                    // При изменении выделения обновляем стиль строки
-                    updateRowStyle(item, isEmpty)
-                }
-
-                private fun updateRowStyle(item: Working?, empty: Boolean) {
                     if (item == null || empty) {
-                        style = ""
-                        return
-                    }
-
-                    // Определяем базовый цвет строки
-                    val baseColor = when {
-                        item.isProject && item.contractor != null && item.geologist != null && item.drillingRig != null -> "#c8e6c9" // зелёный
-                        item.isProject -> "#ffe0b2" // оранжевый
-                        else -> "#c8e6c9" // зелёный для фактических
-                    }
-
-                    // Если строка выделена, используем серый цвет, иначе базовый
-                    style = if (isSelected) {
-                        "-fx-background-color: #e0e0e0;"
+                        styleClass.removeAll("project-filled", "project-empty", "actual")
                     } else {
-                        "-fx-background-color: $baseColor;"
+                        when {
+                            item.isProject && item.contractor != null && item.geologist != null && item.drillingRig != null -> 
+                                styleClass.add("project-filled")
+                            item.isProject -> 
+                                styleClass.add("project-empty")
+                            else -> 
+                                styleClass.add("actual")
+                        }
                     }
                 }
             }
@@ -376,6 +387,93 @@ class MainController {
         }
     }
 
+    private fun onAssignStructure() {
+        val selectedItems = workingsTable.selectionModel.selectedItems
+        if (selectedItems.isEmpty()) return
+
+        val currentStructure = selectedItems.first().structure 
+        val textInput = TextInputDialog(currentStructure)
+        textInput.title = "Присвоить сооружение"
+        textInput.headerText = "Введите название сооружения (оставьте пустым для удаления)"
+        textInput.contentText = "Сооружение:"
+        textInput.dialogPane.graphic = null
+        textInput.showAndWait().ifPresent { structure ->
+            runOnFx {
+                try {
+                    for (working in selectedItems) {
+                        working.structure = if (structure.isBlank()) null else structure
+                        api.updateWorking("Bearer $token", working.id, working).await()
+                    }
+                    loadWorkings()
+                } catch (e: Exception) {
+                    showAlert("Ошибка", "Не удалось обновить сооружение: ${e.message}")
+                }
+            }
+        }
+    }
+
+    private fun onAssignPlannedContractor() {
+    val selectedItems = workingsTable.selectionModel.selectedItems
+    if (selectedItems.isEmpty()) return
+
+    val actualWorkings = selectedItems.filter { it.contractor != null && it.drillingRig != null && it.number.isNotBlank() }
+    if (actualWorkings.isNotEmpty()) {
+        val numbers = actualWorkings.joinToString(", ") { it.number }
+        showAlert("Внимание!", "Скважины $numbers невозможно поставить в план (уже отбурены)")
+        return
+    }
+
+        runOnFx {
+            try {
+                val contractors = api.getContractors().await()
+                // Создаём кастомный диалог
+                val dialog = Dialog<RefContractor>()
+                dialog.title = "Назначить подрядчика"
+                dialog.headerText = "Выберите подрядчика для плановых работ"
+                dialog.dialogPane.graphic = null
+
+                val comboBox = ComboBox<RefContractor>()
+                comboBox.items = FXCollections.observableArrayList(contractors)
+                comboBox.converter = object : StringConverter<RefContractor>() {
+                    override fun toString(obj: RefContractor?) = obj?.name ?: ""
+                    override fun fromString(string: String?) = contractors.find { it.name == string }
+                }
+                comboBox.selectionModel.selectFirst()
+
+                dialog.dialogPane.content = VBox(10.0, Label("Подрядчик:"), comboBox)
+                dialog.dialogPane.buttonTypes.addAll(ButtonType.OK, ButtonType.CANCEL)
+
+                dialog.resultConverter = javafx.util.Callback { buttonType ->
+                    if (buttonType == ButtonType.OK) comboBox.value else null
+                }
+
+                dialog.showAndWait().ifPresent { contractor ->
+                    val alreadyPlanned = selectedItems.filter { it.plannedContractor != null }
+                    if (alreadyPlanned.isNotEmpty()) {
+                        val confirm = Alert(Alert.AlertType.CONFIRMATION,
+                            "Выбранные скважины уже имеют планового подрядчика. Заменить на ${contractor.name}?",
+                            ButtonType.YES, ButtonType.NO)
+                        confirm.dialogPane.graphic = null
+                        if (confirm.showAndWait().get() != ButtonType.YES) return@ifPresent
+                    }
+                    runOnFx {
+                        try {
+                            for (working in selectedItems) {
+                                working.plannedContractor = contractor
+                                api.updateWorking("Bearer $token", working.id, working).await()
+                            }
+                            loadWorkings()
+                        } catch (e: Exception) {
+                            showAlert("Ошибка", "Не удалось назначить подрядчика: ${e.message}")
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                showAlert("Ошибка", "Не удалось загрузить список подрядчиков")
+            }
+        }
+    }
+
     private fun showWorkingForm(working: Working?) {
         val loader = FXMLLoader(javaClass.getResource("/workingForm.fxml"))
         val root = loader.load<VBox>()
@@ -481,6 +579,23 @@ class MainController {
                 } catch (e: Exception) {
                     //showAlert("Ошибка", "Не удалось сохранить значение: ${e.message}")
                 }
+            }
+        }
+    }
+
+    fun setupEditableDoubleColumn(column: TableColumn<Working, Double?>, setter: (Working, Double?) -> Unit) {
+        column.cellFactory = TextFieldTableCell.forTableColumn(object : javafx.util.StringConverter<Double?>() {
+            override fun toString(obj: Double?) = if (obj == null) "" else "%.1f".format(obj).replace(",", ".")
+            override fun fromString(string: String) = string.replace(",", ".").toDoubleOrNull()
+        })
+        column.setOnEditCommit { event ->
+            val working = event.rowValue
+            val newValue = event.newValue
+            setter(working, newValue)
+            runOnFx {
+                try {
+                    api.updateWorking("Bearer $token", working.id, working).await()
+                } catch (e: Exception) { /* show error */ }
             }
         }
     }

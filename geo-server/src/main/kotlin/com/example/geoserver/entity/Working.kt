@@ -23,6 +23,12 @@ data class Working(
     @ManyToOne @JoinColumn(name = "work_type_id")
     val workType: RefWorkType? = null,
 
+    @ManyToOne @JoinColumn(name = "planned_contractor_id")
+    val plannedContractor: RefContractor? = null,
+
+    @Column(name = "structure")
+    val structure: String? = null,
+
     @Column(nullable = true)
     val number: String,
 
@@ -70,18 +76,23 @@ data class Working(
     @Column(name = "act_number") val actNumber: String? = null,
     @Column(name = "thermal_tube") val thermalTube: Boolean = false,
 
-    // Новые поля: чекбоксы наличия материалов/журналов
+    // чекбоксы наличия материалов/журналов
     @Column (name = "has_video") val hasVideo: Boolean = false,
     @Column (name = "has_drilling") val hasDrilling: Boolean = false,
     @Column (name = "has_journal") val hasJournal: Boolean = false,
     @Column (name = "has_core") val hasCore: Boolean = false,
     @Column (name = "has_stake") val hasStake: Boolean = false,
 
-    // Новые поля: образцы
+    // образцы
     val samplesThawed: Int? = null,
     val samplesFrozen: Int? = null,
     val samplesRocky: Int? = null,
 
     // Флаг для определения проектной скважины
-    val isProject: Boolean = false
+    val isProject: Boolean = false,
+
+    // Категории по глубинам (для отчетов)
+    @Column(name = "cat1_4") val cat1_4: Double? = null,
+    @Column(name = "cat5_8") val cat5_8: Double? = null,
+    @Column(name = "cat9_12") val cat9_12: Double? = null,
 )

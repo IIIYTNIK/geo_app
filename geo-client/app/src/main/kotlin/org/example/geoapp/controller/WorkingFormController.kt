@@ -254,22 +254,23 @@ class WorkingFormController {
     @FXML fun onCancel() = close()
     private fun close() = (root.scene.window as Stage).close()
 
-    @FXML fun onSave() {
+   @FXML fun onSave() {
         if (!validateInputs()) return
 
-        val newWorking = Working(
-            id = working?.id ?: 0,
-            orderNum = working?.orderNum,
+        val existing = working // текущий объект (если редактирование)
+        val newWorking = (existing ?: Working(number = "")).copy(
+            id = existing?.id ?: 0,
+            orderNum = existing?.orderNum,
             area = areaCombo.value,
             workType = workTypeCombo.value,
             number = numberField.text.trim(),
             plannedX = plannedXField.toDoubleSafe(),
             plannedY = plannedYField.toDoubleSafe(),
-            actualDepth = actualDepthField.toDoubleSafe(),
+            plannedDepth = plannedDepthField.toDoubleSafe(),
             actualX = actualXField.toDoubleSafe(),
             actualY = actualYField.toDoubleSafe(),
             actualZ = actualZField.toDoubleSafe(),
-            plannedDepth = plannedDepthField.toDoubleSafe(),
+            actualDepth = actualDepthField.toDoubleSafe(),
             startDate = startDatePicker.value?.toString(),
             endDate = endDatePicker.value?.toString(),
             geologist = geologistCombo.value,
@@ -287,12 +288,18 @@ class WorkingFormController {
             act = actCheckBox.isSelected,
             actNumber = if (actCheckBox.isSelected) actNumberField.text.ifBlank { null } else null,
             thermalTube = thermalTubeCheckBox.isSelected,
-            hasVideo = working?.hasVideo ?: false,
-            hasDrilling = working?.hasDrilling ?: false,
-            hasJournal = working?.hasJournal ?: false,
-            hasCore = working?.hasCore ?: false,
-            hasStake = working?.hasStake ?: false,
-            isProject = working?.isProject ?: false
+            // Сохраняем все остальные поля из существующего объекта
+            hasVideo = existing?.hasVideo ?: false,
+            hasDrilling = existing?.hasDrilling ?: false,
+            hasJournal = existing?.hasJournal ?: false,
+            hasCore = existing?.hasCore ?: false,
+            hasStake = existing?.hasStake ?: false,
+            isProject = existing?.isProject ?: false,
+            structure = existing?.structure,
+            plannedContractor = existing?.plannedContractor,
+            cat1_4 = existing?.cat1_4,
+            cat5_8 = existing?.cat5_8,
+            cat9_12 = existing?.cat9_12
         )
 
         saveButton.isDisable = true

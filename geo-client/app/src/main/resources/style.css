@@ -1,24 +1,33 @@
 /* Цвета для разных типов строк */
 .table-row-cell.project-filled {
-    -fx-background-color: #c8e6c9; /* зелёный */
+    -fx-background-color: #c8e6c9 !important; /* зелёный */
 }
 .table-row-cell.project-empty {
-    -fx-background-color: #ffe0b2; /* оранжевый */
+    -fx-background-color: #ffe0b2 !important; /* оранжевый */
 }
 .table-row-cell.actual {
-    -fx-background-color: #c8e6c9; /* зелёный */
+    -fx-background-color: #c8e6c9 !important; /* зелёный */
 }
 
 /* Выделение строки – серым цветом (перекрывает базовый цвет) */
 .table-row-cell:selected {
-    -fx-background-color: #e0e0e0;
+    -fx-background-color: #e0e0e0 !important;
 }
 /* Для фокусированной таблицы тоже серый */
 .table-view:focused .table-row-cell:selected {
-    -fx-background-color: #e0e0e0;
+    -fx-background-color: #e0e0e0 !important;
 }
 
 /* Текст всегда чёрный, даже при выделении */
 .table-row-cell .text {
     -fx-fill: black !important;
+}
+
+/* Выделение текущей ячейки (фокуса) – синяя рамка */
+.table-cell:focused {
+    -fx-border-color: #1e88e5 !important;
+    -fx-border-width: 2px !important;
+    -fx-border-style: solid !important;
+    -fx-background-insets: 0 !important;
+    -fx-padding: 0 0 0 0 !important;
 }
