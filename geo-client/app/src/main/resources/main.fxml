@@ -60,8 +60,8 @@
             </TableColumn>
             <TableColumn text="Категория породы">
                 <columns>
-                    <TableColumn fx:id="colCat1_4" text="1-4, n.м." prefWidth="70"/>
-                    <TableColumn fx:id="colCat5_8" text="5-8, П.м." prefWidth="70"/>
+                    <TableColumn fx:id="colCat1_4" text="1-4, п.м." prefWidth="70"/>
+                    <TableColumn fx:id="colCat5_8" text="5-8, п.м." prefWidth="70"/>
                     <TableColumn fx:id="colCat9_12" text="9-12, п.м." prefWidth="70"/>
                 </columns>
             </TableColumn>

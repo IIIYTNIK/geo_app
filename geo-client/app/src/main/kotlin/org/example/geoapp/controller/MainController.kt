@@ -17,12 +17,14 @@ import javafx.scene.input.KeyCodeCombination
 import javafx.scene.input.KeyCombination
 import javafx.scene.layout.VBox
 import javafx.scene.control.cell.TextFieldTableCell
+import javafx.scene.control.TableColumn.SortType
 import javafx.util.converter.IntegerStringConverter
 import javafx.util.converter.DoubleStringConverter
 import javafx.util.StringConverter
 import javafx.stage.FileChooser
 import javafx.stage.Modality
 import javafx.stage.Stage
+import javafx.application.Platform
 import org.controlsfx.control.table.TableFilter
 import org.example.geoapp.MainApp
 import org.example.geoapp.util.FilterParser
@@ -90,7 +92,7 @@ class MainController {
     @FXML private lateinit var colCat5_8: TableColumn<Working, Double?>
     @FXML private lateinit var colCat9_12: TableColumn<Working, Double?>
 
-    private lateinit var token: String
+    lateinit var token: String
     private lateinit var userRole: String
     private val api: GeoApi = MainApp.api
     private val allWorkings: MutableList<Working> = mutableListOf()
@@ -105,11 +107,55 @@ class MainController {
         loadWorkings()
     }
 
+    // private fun setupTableNavigation() {
+    //     workingsTable.addEventFilter(KeyEvent.KEY_PRESSED) { event ->
+    //         if (event.code == KeyCode.ENTER) {
+    //             // Если мы сейчас находимся в режиме редактирования
+    //             val pos = workingsTable.editingCell
+    //             if (pos != null) {
+    //                 // Вычисляем следующую строку (вниз)
+    //                 val nextRow = pos.row + 1
+    //                 val column = pos.tableColumn
+                    
+    //                 // Чтобы переход сработал корректно, нужно дождаться завершения текущего цикла событий
+    //                 Platform.runLater {
+    //                     if (nextRow < workingsTable.items.size) {
+    //                         // Выделяем и переходим в режим редактирования следующей ячейки
+    //                         workingsTable.selectionModel.clearAndSelect(nextRow, column)
+    //                         workingsTable.edit(nextRow, column)
+    //                     }
+    //                 }
+    //             } else {
+    //                 // Если мы НЕ в режиме редактирования, просто начинаем его для выбранной ячейки
+    //                 val selectedPos = workingsTable.selectionModel.selectedCells.firstOrNull()
+    //                 if (selectedPos != null) {
+    //                     workingsTable.edit(selectedPos.row, selectedPos.tableColumn)
+    //                     event.consume() // Предотвращаем стандартный переход фокуса
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
+
     @FXML fun initialize() {
         workingsTable.isEditable = true
         workingsTable.selectionModel.selectionMode = SelectionMode.MULTIPLE
-        //выделение ячейки вместо строки
-        //(workingsTable.selectionModel as TableView.TableViewSelectionModel<Working>).isCellSelectionEnabled = true
+
+        val selectionModel = workingsTable.selectionModel
+        selectionModel.selectionMode = SelectionMode.MULTIPLE
+
+        // 
+        workingsTable.focusModel.focusedCellProperty().addListener { _, oldPos, newPos ->
+            // Снимаем класс подсветки с предыдущей колонки
+            oldPos?.tableColumn?.styleClass?.remove("crosshair-column")
+            
+            // Вешаем класс подсветки на новую колонку
+            newPos?.tableColumn?.let { col ->
+                if (!col.styleClass.contains("crosshair-column")) {
+                    col.styleClass.add("crosshair-column")
+                }
+            }
+        }
 
 
         // Сборка Наименования (Тип + Номер)
@@ -252,17 +298,15 @@ class MainController {
             object : TableRow<Working>() {
                 override fun updateItem(item: Working?, empty: Boolean) {
                     super.updateItem(item, empty)
-                    if (item == null || empty) {
-                        styleClass.removeAll("project-filled", "project-empty", "actual")
-                    } else {
-                        when {
-                            item.isProject && item.contractor != null && item.geologist != null && item.drillingRig != null -> 
-                                styleClass.add("project-filled")
-                            item.isProject -> 
-                                styleClass.add("project-empty")
-                            else -> 
-                                styleClass.add("actual")
-                        }
+                    styleClass.removeAll("project-filled", "project-empty", "actual")
+                    if (item == null || empty) return
+                    when {
+                        item.isProject && item.contractor != null && item.geologist != null && item.drillingRig != null -> 
+                            styleClass.add("project-filled")
+                        item.isProject -> 
+                            styleClass.add("project-empty")
+                        else -> 
+                            styleClass.add("actual")
                     }
                 }
             }
@@ -340,7 +384,7 @@ class MainController {
                 }
                 
                 autoResizeColumns()
-                
+
                 // Вызываем колбэк после завершения всех обновлений
                 onComplete?.invoke()
             } catch (e: Exception) {
@@ -537,17 +581,20 @@ class MainController {
     }
 
     private fun autoResizeColumns() {
-        workingsTable.columns.forEach { col ->
-            var maxWidth = javafx.scene.text.Text(col.text).layoutBounds.width + 25.0 // Ширина заголовка + отступ
+        fun resizeColumn(col: TableColumn<*, *>) {
+            // Ширина заголовка + отступ
+            var maxWidth = javafx.scene.text.Text(col.text).layoutBounds.width + 25.0
+            // Проверяем данные в ячейках (до 50 строк для производительности)
             for (i in 0 until minOf(workingsTable.items.size, 50)) {
                 val cellData = col.getCellData(i)?.toString() ?: ""
                 val width = javafx.scene.text.Text(cellData).layoutBounds.width + 15.0
-                if (width > maxWidth) {
-                    maxWidth = width
-                }
+                if (width > maxWidth) maxWidth = width
             }
             col.prefWidth = maxWidth
+            // Рекурсивно обрабатываем вложенные колонки
+            col.columns.forEach { resizeColumn(it) }
         }
+        workingsTable.columns.forEach { resizeColumn(it) }
     }
 
     private fun formatDouble(value: Double?): String {

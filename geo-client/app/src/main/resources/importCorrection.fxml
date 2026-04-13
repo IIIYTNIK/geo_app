@@ -23,8 +23,18 @@
 
     <Label fx:id="statusLabel" textFill="blue" wrapText="true"/>
 
-    <HBox spacing="10" alignment="CENTER_RIGHT">
-        <Button text="Пропустить все с ошибками (Отмена)" onAction="#onCancel"/>
-        <Button fx:id="retryButton" text="Повторить импорт исправленных" onAction="#onRetry" defaultButton="true" style="-fx-font-weight: bold; -fx-base: #81c784;"/>
+    <HBox spacing="15" alignment="CENTER_RIGHT" style="-fx-padding: 10 0 0 0;">
+        <Button text="Выйти обратно в Excel" 
+                onAction="#onExitBack" 
+                style="-fx-base: #e0e0e0;"/>
+                
+        <Button text="Пропустить текущие ошибки" 
+                onAction="#onSkipAndImport" 
+                style="-fx-base: #fff59d;"/>
+                
+        <Button text="Повторить импорт" 
+                onAction="#onRetryCheck" 
+                fx:id="retryButton"
+                style="-fx-base: #81c784; -fx-font-weight: bold;"/>
     </HBox>
 </VBox>

@@ -51,8 +51,8 @@ enum class DbField(val propKey: String, val title: String, val isReference: Bool
     SAMPLES_FROZEN("samplesFrozen", "Мерзлые (шт)"),
     SAMPLES_ROCKY("samplesRocky", "Скальные (шт)"),
 
-    CAT1_4("cat1_4", "1-4, n.м."),
-    CAT5_8("cat5_8", "5-8, П.м."),
+    CAT1_4("cat1_4", "1-4, п.м."),
+    CAT5_8("cat5_8", "5-8, п.м."),
     CAT9_12("cat9_12", "9-12, п.м."),
 }
 

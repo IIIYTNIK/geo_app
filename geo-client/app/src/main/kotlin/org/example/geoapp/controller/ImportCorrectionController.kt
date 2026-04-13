@@ -21,37 +21,50 @@ import org.example.geoapp.util.runOnFx
 
 class ImportCorrectionController {
 
-     private var currentNextOrderNum: Int = 1
-
     @FXML private lateinit var adminPanel: HBox
     @FXML private lateinit var correctionTable: TableView<CorrectionRow>
     @FXML private lateinit var statusLabel: Label
-    @FXML private lateinit var retryButton: Button
+    @FXML private lateinit var retryButton: Button  // если нужно, но в FXML нет, можно добавить
 
     private lateinit var token: String
     private lateinit var parentController: ExcelImportController
-    private var onAllCompletedCallback: () -> Unit = {}
-    private val api = MainApp.api
+    private var onCompleteCallback: () -> Unit = {}
+    private var onCancelCallback: () -> Unit = {}
+    private var mappedFields: List<DbField> = emptyList()
 
-    fun initData(token: String, role: String, parent: ExcelImportController, errors: List<CorrectionRow>, mappedFields: List<DbField>, startOrderNum: Int, onCompleted: () -> Unit) {
+    private var validWorkingsToSend: List<Working> = emptyList()
+    private var nextOrderNumStart: Int = 1
+
+    fun initData(
+        token: String,
+        role: String,
+        parent: ExcelImportController,
+        errors: List<CorrectionRow>,
+        mappedFields: List<DbField>,
+        validWorkings: List<Working>,   
+        nextOrderNum: Int, 
+        onComplete: () -> Unit,
+        onCancel: () -> Unit
+    ) {
         this.token = token
         this.parentController = parent
-        this.onAllCompletedCallback = onCompleted
-        this.currentNextOrderNum = startOrderNum
+        this.validWorkingsToSend = validWorkings.toList()
+        this.nextOrderNumStart = nextOrderNum
+        this.onCompleteCallback = onComplete
+        this.onCancelCallback = onCancel
+        this.mappedFields = mappedFields
 
-        // Панель админа
-        if (role == "ROLE_ADMIN") {
-            adminPanel.isVisible = true
-            adminPanel.isManaged = true
-        }
 
-        buildTable(mappedFields)
+        // Панель админа видна только для ROLE_ADMIN
+        adminPanel.isVisible = role == "ROLE_ADMIN"
+        adminPanel.isManaged = role == "ROLE_ADMIN"
+
+        buildTable()
         correctionTable.items = FXCollections.observableArrayList(errors)
         statusLabel.text = "Ошибок найдено: ${errors.size}"
     }
 
-    
-    private fun buildTable(mappedFields: List<DbField>) {
+    private fun buildTable() {
         correctionTable.columns.clear()
 
         val rowCol = TableColumn<CorrectionRow, String>("Строка")
@@ -68,15 +81,14 @@ class ImportCorrectionController {
         for (field in mappedFields) {
             val col = TableColumn<CorrectionRow, String>(field.title)
             col.setCellValueFactory { SimpleStringProperty(it.value.rawValues[field] ?: "") }
-            
-            // Если поле справочное, даем только выпадающий список существующих значений
+
             if (field.isReference) {
                 val options = getOptionsForField(field)
                 col.cellFactory = ComboBoxTableCell.forTableColumn(*options.toTypedArray())
             } else {
                 col.cellFactory = TextFieldTableCell.forTableColumn()
             }
-            
+
             col.setOnEditCommit { event ->
                 val row = event.tableView.items[event.tablePosition.row]
                 row.rawValues[field] = event.newValue
@@ -97,96 +109,112 @@ class ImportCorrectionController {
         }
     }
 
+        // КНОПКА: Обновить и перепроверить
     @FXML fun onRefreshAndRetry() {
         statusLabel.text = "Синхронизация справочников..."
-        retryButton.isDisable = true
-        // Обновляем справочники и заодно orderNum
         parentController.loadReferences {
-            // После обновления справочников перестраиваем таблицу и обновляем nextOrderNum
             parentController.updateNextOrderNum()
-            currentNextOrderNum = parentController.nextOrderNum
-            val mappedFields = parentController.columnMapping.values.map { it.value }.filter { it != DbField.IGNORE }.distinct()
-            buildTable(mappedFields)
-            onRetry()
+            // Перестраиваем таблицу (чтобы обновить выпадающие списки)
+            buildTable()
+            onRetryCheck()
         }
     }
 
-    @FXML fun onRetry() {
-        val stillInvalid = mutableListOf<CorrectionRow>()
-        val validWorkings = mutableListOf<Working>()
-        var orderNum = currentNextOrderNum  // начинаем с текущего номера
+    // КНОПКА 1: Выйти обратно в Excel
+    @FXML fun onExitBack() {
+        onCancelCallback.invoke()
+        close()
+    }
 
-        for (row in correctionTable.items) {
+    // КНОПКА 2: Пропустить ошибки (импорт только целых)
+    @FXML fun onSkipAndImport() {
+        val readyToImport = validWorkingsToSend.toMutableList()
+        for (item in correctionTable.items) {
             try {
-                val working = parentController.validateAndParse(row.rawValues)
-                if (working == null) throw Exception("Строка пуста и не может быть обработана")
-                validWorkings.add(working)
-                orderNum++  // увеличиваем для следующей строки
+                val w = parentController.validateAndParse(item.rawValues)
+                if (w != null) readyToImport.add(w)
             } catch (e: Exception) {
-                row.errorMsg = e.message ?: "Ошибка"
-                stillInvalid.add(row)
+                // Ошибка – пропускаем строку, не добавляем в импорт
+                // Ничего не выводим в консоль, просто игнорируем
             }
         }
-
-        if (validWorkings.isEmpty()) {
-            statusLabel.text = "Нет исправленных данных"
-            retryButton.isDisable = false
+        if (readyToImport.isEmpty()) {
+            statusLabel.text = "Нет данных для отправки."
             return
         }
+        sendData(readyToImport)
+    }
 
-        retryButton.isDisable = true
-        statusLabel.text = "Отправка..."
-
-        runOnFx {
+    // КНОПКА 3: Повторить импорт (перепроверка)
+    @FXML fun onRetryCheck() {
+        val stillInvalid = mutableListOf<CorrectionRow>()
+        val fixed = mutableListOf<Working>()
+        
+        // Валидные строки, которые уже были, остаются валидными
+        fixed.addAll(validWorkingsToSend)
+        
+        // Проверяем строки из таблицы коррекции
+        for (item in correctionTable.items) {
             try {
-                if (validWorkings.isNotEmpty()) {
-                    api.createWorkingsBatch("Bearer $token", validWorkings).await()
-                    // После успешного сохранения обновляем следующий номер в родителе
-                    parentController.updateNextOrderNum()
-                }
-
-                if (stillInvalid.isNotEmpty()) {
-                    // Оставшиеся ошибки – обновляем таблицу и currentNextOrderNum для следующей попытки
-                    correctionTable.items = FXCollections.observableArrayList(stillInvalid)
-                    correctionTable.refresh()
-                    currentNextOrderNum = orderNum  // запоминаем, на каком номере остановились
-                    statusLabel.text = "Осталось ошибок: ${stillInvalid.size}"
-                    retryButton.isDisable = false
+                val w = parentController.validateAndParse(item.rawValues)
+                if (w != null) {
+                    fixed.add(w)          // исправленная строка – добавляем к отправке
                 } else {
-                    // Все ошибки исправлены – закрываем окно и вызываем колбэк
-                    onAllCompletedCallback()
-                    close()
+                    stillInvalid.add(item) // строка пустая или не содержит данных
                 }
             } catch (e: Exception) {
-                statusLabel.text = "Ошибка сервера: ${e.message}"
-                retryButton.isDisable = false
+                // Ошибка – строка остаётся в таблице коррекции
+                stillInvalid.add(item)
             }
+        }
+        
+        if (stillInvalid.isEmpty()) {
+            // Все ошибки исправлены – отправляем всё
+            sendData(fixed)
+        } else {
+            // Обновляем таблицу, показывая только оставшиеся ошибки
+            correctionTable.items.setAll(stillInvalid)
+            statusLabel.text = "Осталось ошибок: ${stillInvalid.size}. Исправьте их или нажмите 'Пропустить'."
+            // Сохраняем все валидные строки (включая только что исправленные) для будущей отправки
+            validWorkingsToSend = fixed
         }
     }
 
-    // Вызовы стандартных справочников
-    @FXML fun openAreas() = openRefEditor(RefType.AREA)
-    @FXML fun openWorkTypes() = openRefEditor(RefType.WORK_TYPE)
-    @FXML fun openContractors() = openRefEditor(RefType.CONTRACTOR)
-    @FXML fun openGeologists() = openRefEditor(RefType.GEOLOGIST)
-    @FXML fun openDrillingRigs() = openRefEditor(RefType.DRILLING_RIG)
+    private fun sendData(workings: List<Working>) {
+        runOnFx {
+            try {
+                statusLabel.text = "Сохранение..."
+                MainApp.api.createBatch("Bearer $token", workings).await()
+                onCompleteCallback.invoke()
+                close()
+            } catch (e: Exception) {
+                statusLabel.text = "Ошибка сервера: ${e.message}"
+            }
+        }
+    }
 
     private fun openRefEditor(type: RefType) {
         val loader = FXMLLoader(javaClass.getResource("/referenceEditor.fxml"))
         val root = loader.load<VBox>()
         val controller = loader.getController<ReferenceEditorController>()
         controller.initData(token, type)
-
         val stage = Stage()
         stage.initModality(Modality.WINDOW_MODAL)
         stage.initOwner(correctionTable.scene.window)
         stage.scene = Scene(root)
         stage.title = "Справочник: ${type.title}"
         stage.showAndWait()
+        parentController.loadReferences() // обновить справочники после закрытия
     }
 
-    @FXML fun onCancel() { 
-        close() 
+    @FXML fun openAreas() = openRefEditor(RefType.AREA)
+    @FXML fun openWorkTypes() = openRefEditor(RefType.WORK_TYPE)
+    @FXML fun openContractors() = openRefEditor(RefType.CONTRACTOR)
+    @FXML fun openGeologists() = openRefEditor(RefType.GEOLOGIST)
+    @FXML fun openDrillingRigs() = openRefEditor(RefType.DRILLING_RIG)
+
+    private fun close() {
+        (correctionTable.scene.window as Stage).close()
     }
-    private fun close() { (correctionTable.scene.window as Stage).close() }
+
 }

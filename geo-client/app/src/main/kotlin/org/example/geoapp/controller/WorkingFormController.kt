@@ -84,9 +84,9 @@ class WorkingFormController {
         this.working = working
         this.onSaveCallback = onSave
 
-        // 1. Сначала загружаем общие справочники
+        // Сначала загружаем общие справочники
         loadReferences {
-            // 2. После того как списки загружены, заполняем поля (если это редактирование)
+            // После того как списки загружены, заполняем поля (если это редактирование)
             if (working != null) {
                 fillFields()
             }
@@ -135,7 +135,7 @@ class WorkingFormController {
     private fun fillFields() {
         val w = working ?: return
 
-        numberField.text = w.number ?: ""
+        numberField.text = w.number
         plannedXField.text = w.plannedX?.let { "%.3f".format(it).replace(",", ".") } ?: ""
         plannedYField.text = w.plannedY?.let { "%.3f".format(it).replace(",", ".") } ?: ""
         actualXField.text = w.actualX?.let { "%.3f".format(it).replace(",", ".") } ?: ""
@@ -167,7 +167,7 @@ class WorkingFormController {
         actNumberField.text = w.actNumber ?: ""
         thermalTubeCheckBox.isSelected = w.thermalTube == true
 
-        // Важно: выбираем объекты из загруженных списков по ID
+        //выбираем объекты из загруженных списков по ID
         areaCombo.items.find { it.id == w.area?.id }?.let { areaCombo.value = it }
         workTypeCombo.items.find { it.id == w.workType?.id }?.let { workTypeCombo.value = it }
         //contractorCombo.items.find { it.id == w.contractor?.id }?.let { contractorCombo.value = it }
@@ -288,7 +288,6 @@ class WorkingFormController {
             act = actCheckBox.isSelected,
             actNumber = if (actCheckBox.isSelected) actNumberField.text.ifBlank { null } else null,
             thermalTube = thermalTubeCheckBox.isSelected,
-            // Сохраняем все остальные поля из существующего объекта
             hasVideo = existing?.hasVideo ?: false,
             hasDrilling = existing?.hasDrilling ?: false,
             hasJournal = existing?.hasJournal ?: false,
@@ -319,7 +318,6 @@ class WorkingFormController {
     private fun validateInputs(): Boolean {
         var allValid = true
         errorLabel.text = ""
-        // Упрощенная валидация для краткости
         if (numberField.text.isNullOrBlank()) {
             numberField.style = "-fx-border-color: red"
             allValid = false

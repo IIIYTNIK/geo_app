@@ -1,4 +1,4 @@
-/* Цвета для разных типов строк */
+/* Базовые цвета строк (статусы скважин) */
 .table-row-cell.project-filled {
     -fx-background-color: #c8e6c9 !important; /* зелёный */
 }
@@ -9,25 +9,69 @@
     -fx-background-color: #c8e6c9 !important; /* зелёный */
 }
 
-/* Выделение строки – серым цветом (перекрывает базовый цвет) */
-.table-row-cell:selected {
-    -fx-background-color: #e0e0e0 !important;
-}
-/* Для фокусированной таблицы тоже серый */
+/* Вся выделенная строка становится серой (перекрывает статусы) */
+.table-row-cell:selected,
 .table-view:focused .table-row-cell:selected {
     -fx-background-color: #e0e0e0 !important;
 }
 
-/* Текст всегда чёрный, даже при выделении */
+/* Выделение столбца. Полупрозрачный синий. Пропускает зеленый/оранжевый цвета статусов */
+.crosshair-column {
+    -fx-background-color: rgba(30, 136, 229, 0.15) !important; 
+}
+
+
+/* Делаем активную ячейку чуть темнее/синее, чтобы она выделялась на фоне серой строки */
+.table-row-cell:selected .crosshair-column,
+.table-view:focused .table-row-cell:selected .crosshair-column {
+    -fx-background-color: #bbdefb !important; 
+}
+
+/* Синяя рамка вокруг ячейки, в которой сейчас находится фокус */
+.table-view:focused .table-cell:focused {
+    -fx-border-color: #1e88e5 !important; 
+    -fx-border-width: 2px !important;
+    -fx-border-style: solid !important;
+    -fx-background-insets: 0 !important;
+    -fx-padding: 0 0 0 0 !important;
+}
+
+/* Текст всегда чёрный, чтобы не сливался с фоном */
 .table-row-cell .text {
     -fx-fill: black !important;
 }
 
-/* Выделение текущей ячейки (фокуса) – синяя рамка */
+
+/* Цвета для разных типов строк
+.table-row-cell.project-filled {
+    -fx-background-color: #c8e6c9 !important; /* зелёный
+}
+.table-row-cell.project-empty {
+    -fx-background-color: #ffe0b2 !important; /* оранжевый 
+}
+.table-row-cell.actual {
+    -fx-background-color: #c8e6c9 !important; /* зелёный 
+}
+
+/* Выделение строки – серым цветом (перекрывает базовый цвет) 
+.table-row-cell:selected {
+    -fx-background-color: #e0e0e0 !important;
+}
+/* Для фокусированной таблицы тоже серый 
+.table-view:focused .table-row-cell:selected {
+    -fx-background-color: #e0e0e0 !important;
+}
+
+/* Текст всегда чёрный, даже при выделении 
+.table-row-cell .text {
+    -fx-fill: black !important;
+}
+
+/* Выделение текущей ячейки (фокуса) – синяя рамка 
 .table-cell:focused {
     -fx-border-color: #1e88e5 !important;
     -fx-border-width: 2px !important;
     -fx-border-style: solid !important;
     -fx-background-insets: 0 !important;
     -fx-padding: 0 0 0 0 !important;
-}
+} */

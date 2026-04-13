@@ -44,8 +44,8 @@ interface GeoApi {
     @PUT("api/workings/{id}") fun updateWorking(@Header("Authorization") token: String, @Path("id") id: Long, @Body working: Working): Call<Working>
     @DELETE("api/workings/{id}") fun deleteWorking(@Header("Authorization") token: String, @Path("id") id: Long): Call<Void>
 
-    // Метод для массовой загрузки выработок (например, из Excel)
-    @POST("api/workings/batch") fun createWorkingsBatch(@Header("Authorization") token: String, @Body workings: List<Working>): Call<List<Working>>
+    // Метод для массовой загрузки выработок
+    @POST("api/workings/batch") fun createBatch(@Header("Authorization") token: String, @Body workings: List<Working>): Call<List<Working>>
 }
 
 data class LoginRequest(val username: String, val password: String)

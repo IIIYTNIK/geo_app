@@ -26,6 +26,9 @@ class DynamicRow(val rowData: List<String>, val originalRowIndex: Int)
 
 class ExcelImportController {
 
+    private var pendingValidWorkings: List<Working> = emptyList()   // валидные строки, ждущие отправки
+    private var pendingOrderNumStart: Int = 1                       // начальный orderNum для валидных
+
     private var existingWorkings: List<Working> = emptyList()
     var nextOrderNum: Int = 1
 
@@ -68,6 +71,27 @@ class ExcelImportController {
         fileInfoLabel.text = "Файл: ${file.name}"
         
         loadReferences { openWorkbook(file) }
+    }
+
+    private fun performImport(workings: List<Working>) {
+        if (workings.isEmpty()) {
+            statusLabel.text = "Нет данных для импорта"
+            importButton.isDisable = false
+            return
+        }
+
+        runOnFx {
+            try {
+                statusLabel.text = "Отправка данных..."
+                api.createBatch("Bearer $token", workings).await()
+                updateNextOrderNum()
+                onCompleteCallback()
+                close()
+            } catch (e: Exception) {
+                statusLabel.text = "Ошибка сервера: ${e.message}"
+                importButton.isDisable = false
+            }
+        }
     }
 
     fun loadReferences(onLoaded: () -> Unit = {}) {
@@ -176,16 +200,6 @@ class ExcelImportController {
                 override fun toString(obj: DbField?) = obj?.title ?: ""
                 override fun fromString(string: String) = dbFields.find { it.title == string }
             }
-            
-            // combo.valueProperty().addListener { _, _, newValue ->
-            //     if (newValue != null && newValue != DbField.IGNORE) {
-            //         for ((otherIdx, otherCombo) in columnMapping) {
-            //             if (otherIdx != i && otherCombo.value == newValue) {
-            //                 otherCombo.value = DbField.IGNORE
-            //             }
-            //         }
-            //     }
-            // }
 
             columnMapping[i] = combo
             col.graphic = VBox(5.0, headerLabel, combo).apply { alignment = javafx.geometry.Pos.CENTER }
@@ -209,25 +223,26 @@ class ExcelImportController {
         }
     }
 
-     @FXML fun onImport() {
+    @FXML fun onImport() {
+        importButton.isDisable = true
         if (importAreaCombo.value == null) {
             statusLabel.text = "ОШИБКА: Сначала выберите Участок в верхней панели!"
+            importButton.isDisable = false
             return
         }
 
-        // Проверка уникальности выбранных полей
         val selectedFields = columnMapping.values.map { it.value }.filter { it != DbField.IGNORE }
         val duplicates = selectedFields.groupBy { it }.filter { it.value.size > 1 }.keys
         if (duplicates.isNotEmpty()) {
             val duplicateNames = duplicates.joinToString(", ") { it.title }
             statusLabel.text = "ОШИБКА: Поля '$duplicateNames' назначены нескольким колонкам. Устраните дублирование."
+            importButton.isDisable = false
             return
         }
-                
+
         startRowSpinner.increment(0)
         val startRow = startRowSpinner.value
-        
-        // 1. Парсим все строки Excel, получаем валидные и невалидные записи
+
         val validWorkings = mutableListOf<Working>()
         val invalidRows = mutableListOf<CorrectionRow>()
         var currentOrderNum = nextOrderNum
@@ -237,7 +252,6 @@ class ExcelImportController {
 
             val rawValues = mutableMapOf<DbField, String>()
             var hasAnyData = false
-
             for ((colIdx, combo) in columnMapping) {
                 if (combo.value != DbField.IGNORE) {
                     val cellValue = row.rowData.getOrNull(colIdx) ?: ""
@@ -245,7 +259,6 @@ class ExcelImportController {
                     if (cellValue.isNotBlank()) hasAnyData = true
                 }
             }
-
             if (!hasAnyData) continue
 
             try {
@@ -258,56 +271,26 @@ class ExcelImportController {
             }
         }
 
-        // 2. Обрабатываем конфликты (дубликаты)
+        // Обработка дубликатов (конфликтов)
         val conflicts = findConflicts(validWorkings)
-        var finalToCreate: List<Working> = emptyList()
-        var finalToUpdate: List<Working> = emptyList()
-
         if (conflicts.isNotEmpty()) {
             val action = showConflictResolutionDialog(conflicts.size)
             if (action == null) {
                 statusLabel.text = "Импорт отменён пользователем"
+                importButton.isDisable = false
                 return
             }
-            val (toCreate, toUpdate) = applyConflictResolution(validWorkings, conflicts, action)
-            finalToCreate = toCreate
-            finalToUpdate = toUpdate
+            val (toCreate, _) = applyConflictResolution(validWorkings, conflicts, action)
+            pendingValidWorkings = toCreate
         } else {
-            finalToCreate = validWorkings
-            finalToUpdate = emptyList()
+            pendingValidWorkings = validWorkings
         }
+        pendingOrderNumStart = currentOrderNum
 
-        // 3. Выполняем импорт в корутине
-        importButton.isDisable = true
-        statusLabel.text = "Обработка данных..."
-
-        runOnFx {
-            try {
-                // Создаём новые записи
-                if (finalToCreate.isNotEmpty()) {
-                    api.createWorkingsBatch("Bearer $token", finalToCreate).await()
-                }
-                // Обновляем существующие
-                for (w in finalToUpdate) {
-                    api.updateWorking("Bearer $token", w.id, w).await()
-                }
-
-                // Обновляем nextOrderNum после импорта
-                updateNextOrderNum()
-
-                // Если есть ошибки, показываем окно коррекции
-                if (invalidRows.isNotEmpty()) {
-                    showCorrectionWindow(invalidRows)
-                    statusLabel.text = "Готово. Обработайте ошибки."
-                    importButton.isDisable = false
-                } else {
-                    onCompleteCallback()
-                    close()
-                }
-            } catch (e: Exception) {
-                statusLabel.text = "Ошибка сервера: ${e.message}"
-                importButton.isDisable = false
-            }
+        if (invalidRows.isEmpty()) {
+            performImport(pendingValidWorkings)
+        } else {
+            showCorrectionWindow(invalidRows)
         }
     }
 
@@ -367,10 +350,6 @@ class ExcelImportController {
             throw Exception("Неверный формат даты: '$str'. Ожидается ДД.ММ.ГГГГ или числовой формат Excel")
         }
 
-        // println("=== validateAndParse ===")
-        // println("raw keys: ${raw.keys.map { it.name }}")
-        // println("NUMBER value: ${getSafeStr("NUMBER")}")
-        // println("NAME_COMBINED value: ${getSafeStr("NAME_COMBINED")}")
 
         val number = getSafeStr("NUMBER") ?: ""
         var parsedNumber = number
@@ -499,19 +478,32 @@ class ExcelImportController {
         val loader = FXMLLoader(javaClass.getResource("/importCorrection.fxml"))
         val root = loader.load<VBox>()
         val controller = loader.getController<ImportCorrectionController>()
-        
+
         val mappedFields = columnMapping.values.map { it.value }.filter { it != DbField.IGNORE }.distinct()
-        
-        controller.initData(token, userRole, this, invalidRows, mappedFields, nextOrderNum) {
-            onCompleteCallback()
-            close()
-        }
+
+        controller.initData(
+            token = token,
+            role = userRole,
+            parent = this,
+            errors = invalidRows,
+            validWorkings = pendingValidWorkings,
+            nextOrderNum = pendingOrderNumStart, 
+            mappedFields = mappedFields,
+            onComplete = {
+                onCompleteCallback()
+                close()
+            },
+            onCancel = {
+                importButton.isDisable = false
+                statusLabel.text = "Импорт отменён. Можно продолжить настройку."
+            }
+        )
 
         val stage = Stage()
         stage.initModality(Modality.WINDOW_MODAL)
         stage.initOwner(previewTable.scene.window)
         stage.scene = Scene(root)
-        stage.title = "Ошибки импорта"
+        stage.title = "Исправление ошибок импорта"
         stage.showAndWait()
     }
 
@@ -573,4 +565,5 @@ class ExcelImportController {
         }
     }
 
+    
 }
