@@ -460,10 +460,10 @@ class MainController {
     val selectedItems = workingsTable.selectionModel.selectedItems
     if (selectedItems.isEmpty()) return
 
-    val actualWorkings = selectedItems.filter { it.contractor != null && it.drillingRig != null && it.number.isNotBlank() }
+    val actualWorkings = selectedItems.filter { it.contractor != null }
     if (actualWorkings.isNotEmpty()) {
         val numbers = actualWorkings.joinToString(", ") { it.number }
-        showAlert("Внимание!", "Скважины $numbers невозможно поставить в план (уже отбурены)")
+        showAlert("Внимание!", "Скважины $numbers невозможно поставить в план (уже назначен фактический подрядчик)")
         return
     }
 
@@ -522,6 +522,7 @@ class MainController {
         val loader = FXMLLoader(javaClass.getResource("/workingForm.fxml"))
         val root = loader.load<VBox>()
         val controller = loader.getController<WorkingFormController>()
+        
         controller.initData(token, working, this::loadWorkings)
 
         val stage = Stage()

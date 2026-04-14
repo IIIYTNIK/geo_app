@@ -66,6 +66,8 @@ class WorkingFormController {
     private var onSaveCallback: () -> Unit = {}
     private val api = MainApp.api
 
+    private var vgspContractorId: Long? = null
+
     @FXML
     fun initialize() {
         actNumberField.disableProperty().bind(actCheckBox.selectedProperty().not())
@@ -124,6 +126,8 @@ class WorkingFormController {
                 workTypeCombo.items.setAll(types)
                 contractorCombo.items.setAll(contractors)
                 drillingRigCombo.items.setAll(rigs)
+
+                vgspContractorId = contractors.find { it.name == "ВГСП" }?.id
 
                 onReady()
             } catch (e: Exception) {
@@ -191,12 +195,46 @@ class WorkingFormController {
                 geologistCombo.items.setAll(geologists)
                 if (selectedGeologistId != null) {
                     val found = geologists.find { it.id == selectedGeologistId }
-                    println("Looking for geologist id $selectedGeologistId, found = $found")
+                    // println("Looking for geologist id $selectedGeologistId, found = $found")
                     if (found != null) {
                         geologistCombo.value = found
-                        println("geologistCombo.value set to $found")
+                        // println("geologistCombo.value set to $found")
                     } else {
-                        println("Geologist with id $selectedGeologistId not found in loaded list. Available ids: ${geologists.map { it.id }}")
+                        // println("Geologist with id $selectedGeologistId not found in loaded list. Available ids: ${geologists.map { it.id }}")
+                    }
+                }
+            } catch (e: Exception) {
+                println("Error loading geologists: ${e.message}")
+                geologistCombo.items.clear()
+            }
+        }
+
+        runOnFx {
+            try {
+                // Загружаем геологов для выбранного подрядчика
+                val mainGeologists = api.getGeologistsByContractor("Bearer $token", contractorId).await().toMutableList()
+
+                // Если выбран не ВГСП и ВГСП существует, добавляем геологов ВГСП (без дубликатов)
+                if (vgspContractorId != null && vgspContractorId != contractorId) {
+                    val vgspGeologists = api.getGeologistsByContractor("Bearer $token", vgspContractorId!!).await()
+                    // Добавляем только тех, кого ещё нет в списке (по id)
+                    for (geo in vgspGeologists) {
+                        if (mainGeologists.none { it.id == geo.id }) {
+                            mainGeologists.add(geo)
+                        }
+                    }
+                }
+
+                geologistCombo.items.setAll(mainGeologists)
+
+                if (selectedGeologistId != null) {
+                    val found = mainGeologists.find { it.id == selectedGeologistId }
+                    if (found != null) {
+                        geologistCombo.value = found
+                    } else {
+                        // Геолог не найден в списке (возможно, принадлежит другому подрядчику)
+                        // В этом случае можно оставить пустым или попробовать найти среди всех геологов
+                        // println("Geologist id $selectedGeologistId not found in combined list")
                     }
                 }
             } catch (e: Exception) {
@@ -257,8 +295,8 @@ class WorkingFormController {
    @FXML fun onSave() {
         if (!validateInputs()) return
 
-        val existing = working // текущий объект (если редактирование)
-        val newWorking = (existing ?: Working(number = "")).copy(
+        val existing = working
+        val newWorking = Working(
             id = existing?.id ?: 0,
             orderNum = existing?.orderNum,
             area = areaCombo.value,
@@ -293,7 +331,7 @@ class WorkingFormController {
             hasJournal = existing?.hasJournal ?: false,
             hasCore = existing?.hasCore ?: false,
             hasStake = existing?.hasStake ?: false,
-            isProject = existing?.isProject ?: false,
+            isProject = existing?.isProject ?: true,
             structure = existing?.structure,
             plannedContractor = existing?.plannedContractor,
             cat1_4 = existing?.cat1_4,
@@ -301,11 +339,18 @@ class WorkingFormController {
             cat9_12 = existing?.cat9_12
         )
 
+        // Если есть фактический подрядчик и буровая, очищаем планового
+        val finalWorking = if (newWorking.contractor != null) {
+            newWorking.copy(plannedContractor = null)
+        } else {
+            newWorking
+        }
+
         saveButton.isDisable = true
         runOnFx {
             try {
-                if (working == null) api.createWorking("Bearer $token", newWorking).await()
-                else api.updateWorking("Bearer $token", working!!.id, newWorking).await()
+                if (existing == null) api.createWorking("Bearer $token", finalWorking).await()
+                else api.updateWorking("Bearer $token", existing.id, finalWorking).await()
                 onSaveCallback()
                 close()
             } catch (e: Exception) {
