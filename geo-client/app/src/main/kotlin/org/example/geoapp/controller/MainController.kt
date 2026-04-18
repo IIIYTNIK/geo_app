@@ -648,4 +648,21 @@ class MainController {
         }
     }
 
+    @FXML
+    fun openReportDialog() {
+        val loader = FXMLLoader(javaClass.getResource("/report_dialog.fxml"))
+        val root = loader.load<VBox>()
+        val controller = loader.getController<ReportDialogController>()
+
+        val areas = allWorkings.mapNotNull { it.area }.distinctBy { it.id }
+        val contractors = allWorkings.mapNotNull { it.contractor }.distinctBy { it.id }
+        controller.initData(token, areas, contractors)
+
+        val stage = Stage()
+        stage.title = "Печать отчётов"
+        stage.initModality(Modality.APPLICATION_MODAL)
+        stage.scene = Scene(root)
+        stage.show()
+    }
+
 }

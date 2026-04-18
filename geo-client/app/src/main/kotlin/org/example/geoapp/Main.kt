@@ -24,9 +24,12 @@ class MainApp : Application() {
         fun main(args: Array<String>) {
             launch(MainApp::class.java, *args)
         }
+
+        lateinit var instance: MainApp
     }
 
     override fun start(primaryStage: Stage) {
+        instance = this
         showLoginWindow()
     }
 

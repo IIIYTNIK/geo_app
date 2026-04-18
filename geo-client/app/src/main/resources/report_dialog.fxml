@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<VBox spacing="15" xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml" 
+      fx:controller="org.example.geoapp.controller.ReportDialogController" prefWidth="400">
+    <padding><Insets top="20" right="20" bottom="20" left="20"/></padding>
+
+    <Label text="Выберите тип отчёта:" style="-fx-font-weight: bold;"/>
+    <ComboBox fx:id="comboReportType" maxWidth="Infinity"/>
+
+    <Separator/>
+
+    <Label text="Формат файла:" style="-fx-font-weight: bold;"/>
+    <ComboBox fx:id="comboFormat" prefWidth="100" maxWidth="Infinity"/>
+
+    <GridPane hgap="10" vgap="10">
+        <Label text="Участок:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+        <ComboBox fx:id="comboArea" GridPane.rowIndex="0" GridPane.columnIndex="1" maxWidth="Infinity"/>
+
+        <Label text="Подрядчик:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+        <ComboBox fx:id="comboContractor" GridPane.rowIndex="1" GridPane.columnIndex="1" maxWidth="Infinity"/>
+
+        <Label text="С:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+        <DatePicker fx:id="dateStart" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+
+        <Label text="По:" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+        <DatePicker fx:id="dateEnd" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+    </GridPane>
+
+    <HBox spacing="10" alignment="CENTER_RIGHT">
+        <Button text="Сформировать" onAction="#onGenerateClick" style="-fx-base: #4CAF50; -fx-text-fill: white;"/>
+    </HBox>
+</VBox>

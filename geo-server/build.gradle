@@ -32,6 +32,10 @@ kotlin {
 
 repositories {
 	mavenCentral()
+	flatDir {
+        dirs 'lib'
+    }
+
 }
 
 dependencies {
@@ -51,11 +55,25 @@ dependencies {
 	testImplementation 'org.springframework.security:spring-security-test'
 	testImplementation 'com.h2database:h2'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-    testImplementation 'io.rest-assured:rest-assured:5.5.0'
+
+    testImplementation 'io.rest-assured:rest-assured:5.5.0' 
     testImplementation 'org.jetbrains.kotlin:kotlin-test'
 	testImplementation 'org.testcontainers:postgresql:1.20.1'
     testImplementation 'org.testcontainers:junit-jupiter:1.20.1'
-	//implementation 'org.flywaydb:flyway-core:10.20.0'
+	
+
+	implementation files('lib/stimulsoft-reports-base-2026.1.7.jar')
+    implementation files('lib/stimulsoft-reports-blockly-2026.1.7.jar')
+    implementation files('lib/stimulsoft-reports-demo-2026.1.7.jar')
+    implementation files('lib/stimulsoft-reports-lib-2026.1.7.jar')
+    implementation files('lib/stimulsoft-reports-libs-2026.1.7.jar')
+    implementation files('lib/stimulsoft-reports-report-2026.1.7.jar')
+    implementation files('lib/stimulsoft-reports-samples-2026.1.7.jar')
+    implementation files('lib/stimulsoft-reports-viewer-2026.1.7.jar')
+    implementation files('lib/stimulsoft-reports-web-2026.1.7.jar')
+    implementation files('lib/stimulsoft-reports-webdesigner-2026.1.7.jar')
+    implementation files('lib/stimulsoft-reports-webviewer-2026.1.7.jar')
+
 }
 
 allOpen {
@@ -64,6 +82,6 @@ allOpen {
 	annotation 'jakarta.persistence.Embeddable'
 }
 
-tasks.named('test') {
+tasks.named('test') { 
 	useJUnitPlatform()
 }
