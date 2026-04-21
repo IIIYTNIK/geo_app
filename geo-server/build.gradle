@@ -32,10 +32,11 @@ kotlin {
 
 repositories {
 	mavenCentral()
-	flatDir {
-        dirs 'lib'
-    }
 
+	maven { url = uri("https://jaspersoft.jfrog.io/jaspersoft/third-party-ce-artifacts/") }
+	maven { url = uri("https://repo.spring.io/milestone") }
+	maven { url = uri("https://repository.jboss.org/nexus/content/repositories/thirdparty-releases/") }
+	maven { url = uri("https://jitpack.io") }
 }
 
 dependencies {
@@ -62,17 +63,18 @@ dependencies {
     testImplementation 'org.testcontainers:junit-jupiter:1.20.1'
 	
 
-	implementation files('lib/stimulsoft-reports-base-2026.1.7.jar')
-    implementation files('lib/stimulsoft-reports-blockly-2026.1.7.jar')
-    implementation files('lib/stimulsoft-reports-demo-2026.1.7.jar')
-    implementation files('lib/stimulsoft-reports-lib-2026.1.7.jar')
-    implementation files('lib/stimulsoft-reports-libs-2026.1.7.jar')
-    implementation files('lib/stimulsoft-reports-report-2026.1.7.jar')
-    implementation files('lib/stimulsoft-reports-samples-2026.1.7.jar')
-    implementation files('lib/stimulsoft-reports-viewer-2026.1.7.jar')
-    implementation files('lib/stimulsoft-reports-web-2026.1.7.jar')
-    implementation files('lib/stimulsoft-reports-webdesigner-2026.1.7.jar')
-    implementation files('lib/stimulsoft-reports-webviewer-2026.1.7.jar')
+
+	implementation("net.sourceforge.dynamicreports:dynamicreports-core:6.20.1")
+	implementation("net.sf.jasperreports:jasperreports-fonts:6.21.0")
+	
+	// Основная библиотека JasperReports для генерации отчетов
+    implementation 'net.sf.jasperreports:jasperreports:6.21.0'
+	
+    // Поддержка шрифтов (обязательно, чтобы работала кириллица в PDF)
+    implementation 'net.sf.jasperreports:jasperreports-fonts:6.21.0'
+    
+    // Groovy для компиляции JasperReports (требуется JasperReports)
+    implementation 'org.codehaus.groovy:groovy-all:2.4.21'
 
 }
 
@@ -85,3 +87,4 @@ allOpen {
 tasks.named('test') { 
 	useJUnitPlatform()
 }
+

@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="drilling_report" language="groovy" pageWidth="842" pageHeight="595" orientation="Landscape" columnWidth="802" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20" uuid="12345678-1234-1234-1234-123456789012">
+    <property name="ireport.zoom" value="1.0"/>
+    <property name="ireport.x" value="0"/>
+    <property name="ireport.y" value="0"/>
+
+    <parameter name="REPORT_START" class="java.time.LocalDate"/>
+    <parameter name="REPORT_END" class="java.time.LocalDate"/>
+    <parameter name="CONTRACTOR_ID" class="java.lang.Long"/>
+    <parameter name="AREA_ID" class="java.lang.Long"/>
+
+    <queryString>
+        <![CDATA[SELECT borehole_name, h_value, x_coord, y_coord, z_coord, start_date, end_date, geologist_name FROM workings WHERE ($P{REPORT_START} IS NULL OR start_date >= $P{REPORT_START}) AND ($P{REPORT_END} IS NULL OR end_date <= $P{REPORT_END})]]>
+    </queryString>
+
+    <field name="borehole_name" class="java.lang.String"/>
+    <field name="h_value" class="java.lang.Double"/>
+    <field name="x_coord" class="java.lang.Double"/>
+    <field name="y_coord" class="java.lang.Double"/>
+    <field name="z_coord" class="java.lang.Double"/>
+    <field name="start_date" class="java.sql.Date"/>
+    <field name="end_date" class="java.sql.Date"/>
+    <field name="geologist_name" class="java.lang.String"/>
+
+    <title>
+        <band height="80" splitType="Stretch">
+            <staticText>
+                <reportElement x="0" y="10" width="400" height="30" uuid="12345678-1234-1234-1234-123456789013"/>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font size="14" isBold="true"/>
+                </textElement>
+                <text><![CDATA[Отчёт о выполненном инженерно-геологическом бурении]]></text>
+            </staticText>
+            <textField>
+                <reportElement x="0" y="40" width="400" height="20" uuid="12345678-1234-1234-1234-123456789014"/>
+                <textElement textAlignment="Center"/>
+                <textFieldExpression><![CDATA["на участке " + $P{AREA_ID} + " подрядчиком " + $P{CONTRACTOR_ID} + " за период с " + ($P{REPORT_START} != null ? $P{REPORT_START}.format("dd.MM.yyyy") : "...") + " по " + ($P{REPORT_END} != null ? $P{REPORT_END}.format("dd.MM.yyyy") : "...")]]></textFieldExpression>
+            </textField>
+        </band>
+    </title>
+
+    <columnHeader>
+        <band height="25" splitType="Stretch">
+            <staticText>
+                <reportElement x="0" y="0" width="40" height="25" uuid="12345678-1234-1234-1234-123456789015"/>
+                <box>
+                    <pen lineWidth="1"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font isBold="true"/>
+                </textElement>
+                <text><![CDATA[№ п/п]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="40" y="0" width="120" height="25" uuid="12345678-1234-1234-1234-123456789016"/>
+                <box>
+                    <pen lineWidth="1"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font isBold="true"/>
+                </textElement>
+                <text><![CDATA[Наименование скважины]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="160" y="0" width="40" height="25" uuid="12345678-1234-1234-1234-123456789017"/>
+                <box>
+                    <pen lineWidth="1"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font isBold="true"/>
+                </textElement>
+                <text><![CDATA[H]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="200" y="0" width="50" height="25" uuid="12345678-1234-1234-1234-123456789018"/>
+                <box>
+                    <pen lineWidth="1"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font isBold="true"/>
+                </textElement>
+                <text><![CDATA[X]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="250" y="0" width="50" height="25" uuid="12345678-1234-1234-1234-123456789019"/>
+                <box>
+                    <pen lineWidth="1"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font isBold="true"/>
+                </textElement>
+                <text><![CDATA[Y]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="300" y="0" width="50" height="25" uuid="12345678-1234-1234-1234-123456789020"/>
+                <box>
+                    <pen lineWidth="1"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font isBold="true"/>
+                </textElement>
+                <text><![CDATA[Z]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="350" y="0" width="100" height="25" uuid="12345678-1234-1234-1234-123456789021"/>
+                <box>
+                    <pen lineWidth="1"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font isBold="true"/>
+                </textElement>
+                <text><![CDATA[Дата начала]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="450" y="0" width="100" height="25" uuid="12345678-1234-1234-1234-123456789022"/>
+                <box>
+                    <pen lineWidth="1"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font isBold="true"/>
+                </textElement>
+                <text><![CDATA[Дата окончания]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="550" y="0" width="100" height="25" uuid="12345678-1234-1234-1234-123456789023"/>
+                <box>
+                    <pen lineWidth="1"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font isBold="true"/>
+                </textElement>
+                <text><![CDATA[Геолог]]></text>
+            </staticText>
+        </band>
+    </columnHeader>
+
+    <detail>
+        <band height="20" splitType="Stretch">
+            <textField>
+                <reportElement x="0" y="0" width="40" height="20" uuid="12345678-1234-1234-1234-123456789024"/>
+                <box>
+                    <pen lineWidth="1"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle"/>
+                <textFieldExpression><![CDATA[$V{REPORT_COUNT}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="40" y="0" width="120" height="20" uuid="12345678-1234-1234-1234-123456789025"/>
+                <box>
+                    <pen lineWidth="1"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle"/>
+                <textFieldExpression><![CDATA[$F{borehole_name}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="160" y="0" width="40" height="20" uuid="12345678-1234-1234-1234-123456789026"/>
+                <box>
+                    <pen lineWidth="1"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle"/>
+                <textFieldExpression><![CDATA[$F{h_value}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="200" y="0" width="50" height="20" uuid="12345678-1234-1234-1234-123456789027"/>
+                <box>
+                    <pen lineWidth="1"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle"/>
+                <textFieldExpression><![CDATA[$F{x_coord}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="250" y="0" width="50" height="20" uuid="12345678-1234-1234-1234-123456789028"/>
+                <box>
+                    <pen lineWidth="1"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle"/>
+                <textFieldExpression><![CDATA[$F{y_coord}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="300" y="0" width="50" height="20" uuid="12345678-1234-1234-1234-123456789029"/>
+                <box>
+                    <pen lineWidth="1"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle"/>
+                <textFieldExpression><![CDATA[$F{z_coord}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="350" y="0" width="100" height="20" uuid="12345678-1234-1234-1234-123456789030"/>
+                <box>
+                    <pen lineWidth="1"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle"/>
+                <textFieldExpression><![CDATA[$F{start_date}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="450" y="0" width="100" height="20" uuid="12345678-1234-1234-1234-123456789031"/>
+                <box>
+                    <pen lineWidth="1"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle"/>
+                <textFieldExpression><![CDATA[$F{end_date}]]></textFieldExpression>
+            </textField>
+            <textField>
+                <reportElement x="550" y="0" width="100" height="20" uuid="12345678-1234-1234-1234-123456789032"/>
+                <box>
+                    <pen lineWidth="1"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle"/>
+                <textFieldExpression><![CDATA[$F{geologist_name}]]></textFieldExpression>
+            </textField>
+        </band>
+    </detail>
+
+    <summary>
+        <band height="120" splitType="Stretch">
+            <staticText>
+                <reportElement x="0" y="10" width="400" height="20" uuid="12345678-1234-1234-1234-123456789033"/>
+                <text><![CDATA[Итого: скважин, общая проходка метров (см. итог в таблице выше)]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="0" y="35" width="200" height="15" uuid="12345678-1234-1234-1234-123456789034"/>
+                <text><![CDATA[Категория буримости 1-4: ____________________]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="0" y="50" width="200" height="15" uuid="12345678-1234-1234-1234-123456789035"/>
+                <text><![CDATA[Категория буримости 5-8: ____________________]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="0" y="65" width="200" height="15" uuid="12345678-1234-1234-1234-123456789036"/>
+                <text><![CDATA[Категория буримости 9-12: ___________________]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="0" y="85" width="300" height="15" uuid="12345678-1234-1234-1234-123456789037"/>
+                <text><![CDATA[Начальник отдела ИГИ ________________ М.А. Безносов]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="0" y="105" width="350" height="15" uuid="12345678-1234-1234-1234-123456789038"/>
+                <text><![CDATA[Руководитель Управления инженерных изысканий ________________ С.А. Русин]]></text>
+            </staticText>
+        </band>
+    </summary>
+</jasperReport>

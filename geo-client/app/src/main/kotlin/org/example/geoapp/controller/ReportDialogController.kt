@@ -11,7 +11,7 @@ import org.example.geoapp.MainApp
 import org.example.geoapp.util.runOnFx
 import org.example.geoapp.util.await
 import java.time.LocalDate
-import okhttp3.ResponseBody // Важный импорт
+import okhttp3.ResponseBody
 
 class ReportDialogController {
     private lateinit var token: String
@@ -71,7 +71,6 @@ class ReportDialogController {
                     MainApp.api.generateReportExcel("Bearer $token", startStr, endStr, contractorId, areaId).await()
                 }
 
-                // Извлекаем байты из тела ответа. Это решает проблему с JSON.
                 val bytes = response.bytes()
 
                 val extension = if (format == "PDF") "pdf" else "xlsx"

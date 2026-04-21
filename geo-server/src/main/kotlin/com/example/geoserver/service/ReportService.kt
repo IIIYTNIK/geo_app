@@ -1,27 +1,23 @@
 package com.example.geoserver.service
 
-import com.stimulsoft.report.StiReport
-import com.stimulsoft.report.StiSerializeManager
-import com.stimulsoft.report.StiExportManager
-import org.springframework.core.io.ClassPathResource
+import net.sf.dynamicreports.report.builder.DynamicReports
+import net.sf.dynamicreports.report.builder.column.TextColumnBuilder
+import net.sf.dynamicreports.report.constant.HorizontalTextAlignment
+import net.sf.dynamicreports.report.exception.DRException
+import net.sf.jasperreports.engine.data.JRBeanCollectionDataSource
 import org.springframework.stereotype.Service
 import java.io.ByteArrayOutputStream
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter 
-import com.stimulsoft.report.export.settings.StiPdfExportSettings
+import java.time.format.DateTimeFormatter
 
 @Service
 class ReportService {
 
-    init {
-        // Настройка Stimulsoft для работы с отсутствующими шрифтами
-        System.setProperty("stimulsoft.reports.fonts.check", "false")
-        System.setProperty("stimulsoft.reports.pdf.embeddedFonts", "false")
-        System.setProperty("stimulsoft.reports.fonts.default", "Times New Roman")
-    }
-
-    // Создаем форматтер для отображения (ДД.ММ.ГГГГ)
-    private val dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy")
+    data class ReportRow(
+        val rowNumber: Int,
+        val wellName: String,
+        val depth: Double
+    )
 
     fun generateDrillingCompletedReportPdf(
         reportStart: LocalDate?,
@@ -29,50 +25,74 @@ class ReportService {
         contractorId: Long = 0L,
         areaId: Long = 0L
     ): ByteArray {
-        val report = loadReport()
-        
-        // Передаем даты уже как отформатированные строки
-        report.dictionary.variables["ReportStart"].value = reportStart?.format(dateFormatter) ?: ""
-        report.dictionary.variables["ReportEnd"].value = reportEnd?.format(dateFormatter) ?: ""
-        report.dictionary.variables["contractorId"].value = contractorId.toString()
-        report.dictionary.variables["areaId"].value = areaId.toString()
-        
-        report.render()
-        println("Render complete, exporting to PDF...")
-        val outputStream = ByteArrayOutputStream()
+        val dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy")
+        val startStr = reportStart?.format(dateFormatter) ?: "не указано"
+        val endStr = reportEnd?.format(dateFormatter) ?: "не указано"
 
-        // Создаем настройки экспорта
-        val settings = StiPdfExportSettings()
-        settings.setEmbeddedFonts(false) // Отключаем принудительное внедрение шрифтов
+        val title = buildString {
+            append("Отчёт о выполненном бурении")
+            if (contractorId != 0L) append(" (Подрядчик ID: $contractorId)")
+            if (areaId != 0L) append(" (Участок ID: $areaId)")
+            append("\nПериод: $startStr – $endStr")
+        }
 
-        // Передаем настройки в метод экспорта
-        StiExportManager.exportPdf(report, settings, outputStream)
+        // Тестовые данные (замените на реальные из БД позже)
+        val testData = listOf(
+            ReportRow(1, "Скважина 1", 120.5),
+            ReportRow(2, "Скважина 2", 85.0),
+            ReportRow(3, "Скважина 3", 150.0)
+        )
+        val dataSource = JRBeanCollectionDataSource(testData)
 
-        println("Export complete, size=${outputStream.size()}")
-        return outputStream.toByteArray()
-    }
+        // Стиль заголовков колонок с поддержкой кириллицы (шрифт Arial)
+        val columnTitleStyle = DynamicReports.stl.style()
+            .setFontName("Arial")
+            .setBold(true)
+            .setFontSize(12)
+            .setHorizontalTextAlignment(HorizontalTextAlignment.CENTER)
 
-    fun generateDrillingCompletedReport(
-        reportStart: LocalDate?,
-        reportEnd: LocalDate?,
-        contractorId: Long = 0L,
-        areaId: Long = 0L
-    ): ByteArray {
-        val report = loadReport()
+        // Стиль для обычных ячеек таблицы
+        val cellStyle = DynamicReports.stl.style()
+            .setFontName("Arial")
+            .setFontSize(10)
 
-        report.dictionary.variables["ReportStart"].value = reportStart?.format(dateFormatter) ?: ""
-        report.dictionary.variables["ReportEnd"].value = reportEnd?.format(dateFormatter) ?: ""
-        report.dictionary.variables["contractorId"].value = contractorId.toString()
-        report.dictionary.variables["areaId"].value = areaId.toString()
+        // Стиль для заголовка отчёта
+        val titleStyle = DynamicReports.stl.style()
+            .setFontName("Arial")
+            .setBold(true)
+            .setFontSize(14)
 
-        report.render()
-        val outputStream = ByteArrayOutputStream()
-        StiExportManager.exportExcel(report, outputStream)
-        return outputStream.toByteArray()
-    }
+        // Колонки (явное указание типов дженериков помогает компилятору)
+        val rowNumCol: TextColumnBuilder<Int> = DynamicReports.col.column(
+            "№ п/п", "rowNumber", DynamicReports.type.integerType()
+        ).setStyle(cellStyle)
 
-    private fun loadReport(): StiReport {
-        val resource = ClassPathResource("reports/drilling_report_times.mrt")
-        return StiSerializeManager.deserializeReport(resource.inputStream)
+        val wellNameCol: TextColumnBuilder<String> = DynamicReports.col.column(
+            "Наименование скважины", "wellName", DynamicReports.type.stringType()
+        ).setStyle(cellStyle)
+
+        val depthCol: TextColumnBuilder<Double> = DynamicReports.col.column(
+            "Глубина, м", "depth", DynamicReports.type.doubleType()
+        ).setStyle(cellStyle)
+
+        try {
+            val report = DynamicReports.report()
+                .setColumnTitleStyle(columnTitleStyle)
+                .columns(rowNumCol, wellNameCol, depthCol)
+                .title(
+                    DynamicReports.cmp.text(title).setStyle(titleStyle)
+                )
+                .pageFooter(
+                    DynamicReports.cmp.pageNumber()
+                        .setStyle(DynamicReports.stl.style().setFontName("Arial"))
+                )
+                .setDataSource(dataSource)
+
+            val outputStream = ByteArrayOutputStream()
+            report.toPdf(outputStream)
+            return outputStream.toByteArray()
+        } catch (e: DRException) {
+            throw RuntimeException("Ошибка генерации PDF отчёта", e)
+        }
     }
 }
