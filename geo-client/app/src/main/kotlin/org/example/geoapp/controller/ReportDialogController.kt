@@ -65,10 +65,10 @@ class ReportDialogController {
             try {
                 val request = ReportRequest(
                     reportType = "drilling_completed",
-                    reportStart = start.toString(),
-                    reportEnd = end.toString(),
-                    contractorId = contractorId,
-                    areaId = areaId
+                    reportStart = start,
+                    reportEnd = end,
+                    contractorId = if (contractorId == 0L) null else contractorId,
+                    areaId = if (areaId == 0L) null else areaId
                 )
 
                 val response = MainApp.api

@@ -3,7 +3,7 @@ package com.example.geoserver.dto
 import java.time.LocalDate
 
 data class ReportDataDto(
-    val rows: List<Map<String, Any?>>,
+    val rows: List<ReportRowDto>,
     val metadata: ReportMetadata = ReportMetadata()
 )
 

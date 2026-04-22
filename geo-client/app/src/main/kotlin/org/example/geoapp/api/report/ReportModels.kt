@@ -4,10 +4,10 @@ import java.time.LocalDate
 
 data class ReportRequest(
     val reportType: String,
-    val reportStart: String?,
-    val reportEnd: String?,
-    val contractorId: Long,
-    val areaId: Long
+    val reportStart: LocalDate?,
+    val reportEnd: LocalDate?,
+    val contractorId: Long?,
+    val areaId: Long?
 )
 
 data class ReportRowDto(

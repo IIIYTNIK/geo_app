@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service
 import java.util.Date
 
 @Service
-@Suppress("DEPRECATION")
 class JwtService {
 
     @Value("\${jwt.secret}")
@@ -21,6 +20,7 @@ class JwtService {
 
     fun generateToken(userDetails: UserDetails): String {
         val key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secretKey))
+        @Suppress("DEPRECATION")
         return Jwts.builder()
             .setSubject(userDetails.username)
             .setIssuedAt(Date())
@@ -53,10 +53,9 @@ class JwtService {
 
     private fun extractAllClaims(token: String): Claims {
         val key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secretKey))
-        return io.jsonwebtoken.Jwts.parser()
-            .setSigningKey(key)
+        val parser = Jwts.parser()
+            .verifyWith(key)
             .build()
-            .parseClaimsJws(token)
-            .body
+        return parser.parseSignedClaims(token).payload
     }
 }
