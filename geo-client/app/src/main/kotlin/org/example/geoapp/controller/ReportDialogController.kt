@@ -1,5 +1,6 @@
 package org.example.geoapp.controller
 
+import com.example.geoapp.api.report.*
 import com.example.geoapp.api.RefArea
 import com.example.geoapp.api.RefContractor
 import javafx.collections.FXCollections
@@ -12,6 +13,7 @@ import org.example.geoapp.util.runOnFx
 import org.example.geoapp.util.await
 import java.time.LocalDate
 import okhttp3.ResponseBody
+import kotlinx.coroutines.*
 
 class ReportDialogController {
     private lateinit var token: String
@@ -55,53 +57,38 @@ class ReportDialogController {
         val contractorId = comboContractor.value?.id ?: 0
         val start = dateStart.value ?: LocalDate.of(2000, 1, 1)
         val end = dateEnd.value ?: LocalDate.of(2100, 1, 1)
-        val format = comboFormat.value
 
-        val startStr = start.toString()
-        val endStr = end.toString()
-        
         println("=== Generate Report Clicked ===")
-        
-        runOnFx {
+
+        println("TOKEN = Bearer $token")
+        CoroutineScope(Dispatchers.IO).launch {
             try {
-                // Вызываем API и получаем ResponseBody
-                val response: ResponseBody = if (format == "PDF") {
-                    MainApp.api.generateReportPdf("Bearer $token", startStr, endStr, contractorId, areaId).await()
-                } else {
-                    MainApp.api.generateReportExcel("Bearer $token", startStr, endStr, contractorId, areaId).await()
-                }
+                val request = ReportRequest(
+                    reportType = "drilling_completed",
+                    reportStart = start.toString(),
+                    reportEnd = end.toString(),
+                    contractorId = contractorId,
+                    areaId = areaId
+                )
 
-                val bytes = response.bytes()
+                val response = MainApp.api
+                    .getReportData("Bearer $token", request)
+                    .await()
 
-                val extension = if (format == "PDF") "pdf" else "xlsx"
-                val fileChooser = FileChooser().apply {
-                    title = "Сохранить отчёт"
-                    extensionFilters.add(FileChooser.ExtensionFilter(
-                        if (format == "PDF") "PDF файлы" else "Excel файлы",
-                        "*.$extension"
-                    ))
-                    initialFileName = "Отчёт_${LocalDate.now()}.$extension"
-                }
                 
-                val file = fileChooser.showSaveDialog(comboFormat.scene.window)
-                if (file != null) {
-                    file.writeBytes(bytes)
-                    Alert(Alert.AlertType.INFORMATION).apply {
-                        title = "Успех"
-                        headerText = null
-                        contentText = "Отчёт сохранён: ${file.absolutePath}"
-                        showAndWait()
+
+                withContext(Dispatchers.Main) {
+                    response.rows.forEach {
+                        println("${it.boreholeName} | ${it.hValue}")
                     }
-                } else {
-                    println("Сохранение отменено пользователем")
                 }
+
             } catch (e: Exception) {
-                e.printStackTrace() // Печатаем стек ошибки в консоль для отладки
-                Alert(Alert.AlertType.ERROR).apply {
-                    title = "Ошибка"
-                    headerText = "Ошибка генерации"
-                    contentText = e.message
-                    showAndWait()
+                e.printStackTrace()
+                withContext(Dispatchers.Main) {
+                    Alert(Alert.AlertType.ERROR, "Ошибка: ${e.message}").showAndWait()
+                    print("Error fetching report data: ")
+                    print(e.message)
                 }
             }
         }

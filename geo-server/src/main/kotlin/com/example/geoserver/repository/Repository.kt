@@ -4,7 +4,9 @@ import com.example.geoserver.entity.*
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
+import org.springframework.data.repository.query.Param
 import java.util.Optional
+import java.time.LocalDate
 
 
 interface UserRepository : JpaRepository<User, Long> {
@@ -47,4 +49,18 @@ interface WorkingRepository : JpaRepository<Working, Long> {
     fun shiftOrderNums(deletedOrderNum: Int)
 
     fun findByNumberAndAreaId(number: String, areaId: Long?): Working?
+
+    @Query("""
+    SELECT w FROM Working w
+    WHERE (:start IS NULL OR w.startDate >= :start)
+    AND (:end IS NULL OR w.endDate <= :end)
+    AND (:contractorId IS NULL OR w.contractor.id = :contractorId)
+    AND (:areaId IS NULL OR w.area.id = :areaId)
+    """)
+    fun findByFilters(
+        @Param("start") start: LocalDate?,
+        @Param("end") end: LocalDate?,
+        @Param("contractorId") contractorId: Long?,
+        @Param("areaId") areaId: Long?
+    ): List<Working>
 }

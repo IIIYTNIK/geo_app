@@ -1,5 +1,6 @@
 package com.example.geoapp.api
 
+import com.example.geoapp.api.report.*
 import okhttp3.ResponseBody
 import retrofit2.Call
 import retrofit2.http.POST
@@ -49,23 +50,29 @@ interface GeoApi {
     // Метод для массовой загрузки выработок
     @POST("api/workings/batch") fun createBatch(@Header("Authorization") token: String, @Body workings: List<Working>): Call<List<Working>>
 
-    @POST("api/reports/drilling-completed")
-    fun generateReportExcel(
-        @Header("Authorization") token: String,
-        @Query("reportStart") start: String?,
-        @Query("reportEnd") end: String?,
-        @Query("contractorId") contractorId: Long,
-        @Query("areaId") areaId: Long
-    ): Call<ResponseBody>
+    // @POST("api/reports/drilling-completed")
+    // fun generateReportExcel(
+    //     @Header("Authorization") token: String,
+    //     @Query("reportStart") start: String?,
+    //     @Query("reportEnd") end: String?,
+    //     @Query("contractorId") contractorId: Long,
+    //     @Query("areaId") areaId: Long
+    // ): Call<ResponseBody>
 
-    @POST("api/reports/drilling-completed/pdf")
-    fun generateReportPdf(
+    // @POST("api/reports/drilling-completed/pdf")
+    // fun generateReportPdf(
+    //     @Header("Authorization") token: String,
+    //     @Query("reportStart") start: String?,
+    //     @Query("reportEnd") end: String?,
+    //     @Query("contractorId") contractorId: Long,
+    //     @Query("areaId") areaId: Long
+    // ): Call<ResponseBody>
+
+    @POST("api/reports/data")
+    fun getReportData(
         @Header("Authorization") token: String,
-        @Query("reportStart") start: String?,
-        @Query("reportEnd") end: String?,
-        @Query("contractorId") contractorId: Long,
-        @Query("areaId") areaId: Long
-    ): Call<ResponseBody>
+        @Body request: ReportRequest
+    ): Call<ReportDataDto>
 
 }
 

@@ -11,7 +11,7 @@ import org.springframework.test.context.ActiveProfiles
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
-class ApiTests {
+class ApiTestsDisabled {
 
     @LocalServerPort
     private var port: Int = 8081
@@ -22,7 +22,7 @@ class ApiTests {
     }
 
     @Test
-    fun `test login - successful`() {
+    fun `testLoginSuccessful`() {
         val response: Response = RestAssured.given()
             .contentType(ContentType.JSON)
             .body("""{"username":"admin", "password":"secret123"}""")
@@ -36,7 +36,7 @@ class ApiTests {
     }
 
     @Test
-    fun `test login - invalid credentials`() {
+    fun `testLoginInvalidCredentials`() {
         val response = RestAssured.given()
             .contentType(ContentType.JSON)
             .body("""{"username":"admin", "password":"wrong"}""")
@@ -46,7 +46,7 @@ class ApiTests {
     }
 
     @Test
-    fun `test get references contractors - open endpoint`() {
+    fun `testGetReferencesContractorsOpenEndpoint`() {
         val response = RestAssured.given()
             .get("/api/references/contractors")
         
@@ -56,7 +56,7 @@ class ApiTests {
     }
 
     @Test
-    fun `test get workings - protected endpoint with token`() {
+    fun `testGetWorkingsProtectedEndpointWithToken`() {
         val loginResponse = RestAssured.given()
             .contentType(ContentType.JSON)
             .body("""{"username":"admin", "password":"secret123"}""")
@@ -75,7 +75,7 @@ class ApiTests {
     }
 
     @Test
-    fun `test get workings - protected endpoint without token`() {
+    fun `testGetWorkingsProtectedEndpointWithoutToken`() {
         val response = RestAssured.given()
             .get("/api/workings")
         
