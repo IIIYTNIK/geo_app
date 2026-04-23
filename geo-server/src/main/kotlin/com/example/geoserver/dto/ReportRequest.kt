@@ -7,8 +7,8 @@ import java.time.LocalDate
  */
 data class ReportRequest(
     val reportType: String,                    // Например: "drilling_completed", "productivity", "planned" и т.д.
-    val reportStart: LocalDate? = null,
-    val reportEnd: LocalDate? = null,
+    val reportStart: String? = null,           // yyyy-MM-dd
+    val reportEnd: String? = null,             // yyyy-MM-dd
     val contractorId: Long? = null,
     val areaId: Long? = null,
     // val geologistId: Long? = null,

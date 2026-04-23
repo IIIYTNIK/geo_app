@@ -2,6 +2,7 @@ package com.example.geoserver.repository
 
 import com.example.geoserver.entity.*
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
@@ -35,8 +36,16 @@ interface RefWorkTypeRepository : JpaRepository<RefWorkType, Long>{
     fun findByName(name: String): RefWorkType?
 }
 
-// Основная таблица выработок
-interface WorkingRepository : JpaRepository<Working, Long> {
+/**
+ * Репозиторий для Working (скважины, шурфы, расчистки).
+ *
+ * Расширяет JpaSpecificationExecutor для поддержки динамической фильтрации
+ * через Specification API вместо использования громоздких SQL запросов.
+ * Это решает проблему SQLState: 42P18 в PostgreSQL при параметризации.
+ *
+ * Использование: workingRepository.findAll(spec) из метода сервиса
+ */
+interface WorkingRepository : JpaRepository<Working, Long>, JpaSpecificationExecutor<Working> {
     fun findByNumber(number: String): Working?
 
     // Находим текущий максимальный номер
@@ -49,18 +58,4 @@ interface WorkingRepository : JpaRepository<Working, Long> {
     fun shiftOrderNums(deletedOrderNum: Int)
 
     fun findByNumberAndAreaId(number: String, areaId: Long?): Working?
-
-    @Query("""
-    SELECT w FROM Working w
-    WHERE (:start IS NULL OR w.startDate >= :start)
-    AND (:end IS NULL OR w.endDate <= :end)
-    AND (:contractorId IS NULL OR w.contractor.id = :contractorId)
-    AND (:areaId IS NULL OR w.area.id = :areaId)
-    """)
-    fun findByFilters(
-        @Param("start") start: LocalDate?,
-        @Param("end") end: LocalDate?,
-        @Param("contractorId") contractorId: Long?,
-        @Param("areaId") areaId: Long?
-    ): List<Working>
 }

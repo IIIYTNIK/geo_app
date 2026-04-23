@@ -5,6 +5,7 @@ import com.example.geoserver.dto.ReportMetadata
 import com.example.geoserver.dto.ReportRequest
 import com.example.geoserver.dto.ReportRowDto
 import com.example.geoserver.repository.WorkingRepository
+import com.example.geoserver.repository.WorkingSpecifications
 import org.springframework.stereotype.Service
 import java.time.LocalDate
 
@@ -14,12 +15,19 @@ class ReportDataService(
 ) {
 
     fun getReportData(request: ReportRequest): ReportDataDto {
-        val workings = workingRepository.findByFilters(
-            start = request.reportStart,
-            end = request.reportEnd,
+        /**
+         * Использует Specification API для динамической фильтрации.
+         * Это решает проблему SQLState: 42P18 в PostgreSQL при использовании ":param IS NULL".
+         */
+        val specification = WorkingSpecifications.filterByParameters(
+            startDate = request.reportStart?.let { LocalDate.parse(it) },
+            endDate = request.reportEnd?.let { LocalDate.parse(it) },
             contractorId = request.contractorId,
             areaId = request.areaId
         )
+        
+
+        val workings = workingRepository.findAll(specification)
 
         val rows = workings.map { working ->
             ReportRowDto(

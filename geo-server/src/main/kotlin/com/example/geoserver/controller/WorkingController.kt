@@ -8,6 +8,8 @@ import com.example.geoserver.repository.*
 import com.example.geoserver.service.WorkingService
 import kotlin.math.sqrt
 import kotlin.math.round
+import java.time.LocalDate
+import org.slf4j.LoggerFactory
 
 
 @RestController
@@ -17,11 +19,46 @@ class WorkingController(
     private val workingService: WorkingService
 ) {
 
+    private val logger = LoggerFactory.getLogger(WorkingController::class.java)
+
     @GetMapping
     fun getAll(): List<Working> = repo.findAll()
 
     @GetMapping("/{id}")
     fun getById(@PathVariable id: Long): Working? = repo.findById(id).orElse(null)
+
+    /**
+     * Фильтрует выработки по условиям: дата, подрядчик, участок.
+     *
+     * Пример запроса:
+     * GET /api/workings/filter?startDate=2024-01-01&endDate=2024-12-31&contractorId=1&areaId=2
+     *
+     * Параметры (все опциональны):
+     * - startDate: ISO-8601 дата (начало периода, включительно)
+     * - endDate: ISO-8601 дата (конец периода, включительно)
+     * - contractorId: ID подрядчика
+     * - areaId: ID участка
+     *
+     * АРХИТЕКТУРА ФИЛЬТРАЦИИ:
+     * Использует Specification API вместо попытки использовать ":param IS NULL" в JPQL.
+     * Это избегает ошибки SQLState: 42P18 в PostgreSQL.
+     *
+     * Процесс:
+     * 1. Каждый non-null параметр добавляет predicate в WHERE
+     * 2. Если все параметры null, возвращаются все записи
+     * 3. Все predicates объединяются с AND
+     * 4. PostgreSQL видит явно типизированные параметры (DATE, BIGINT)
+     */
+    @GetMapping("/filter")
+    fun filterWorkings(
+        @RequestParam(required = false) startDate: LocalDate?,
+        @RequestParam(required = false) endDate: LocalDate?,
+        @RequestParam(required = false) contractorId: Long?,
+        @RequestParam(required = false) areaId: Long?
+    ): List<Working> {
+        logger.info("Filter endpoint called with startDate=$startDate, endDate=$endDate, contractorId=$contractorId, areaId=$areaId")
+        return workingService.filterWorkings(startDate, endDate, contractorId, areaId)
+    }
 
     @PostMapping
     fun create(@RequestBody working: Working) = workingService.saveWorking(working)

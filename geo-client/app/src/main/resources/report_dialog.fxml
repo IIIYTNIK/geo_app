@@ -29,7 +29,12 @@
         <DatePicker fx:id="dateEnd" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
     </GridPane>
 
+
     <HBox spacing="10" alignment="CENTER_RIGHT">
         <Button text="Сформировать" onAction="#onGenerateClick" style="-fx-base: #4CAF50; -fx-text-fill: white;"/>
+        <Button fx:id="btnExportPdf" text="Сохранить PDF" onAction="#onExportPdfClick" style="-fx-base: #1976D2; -fx-text-fill: white;"/>
     </HBox>
+
+    <Separator/>
+    <VBox fx:id="vboxReportTables" spacing="10"/>
 </VBox>
