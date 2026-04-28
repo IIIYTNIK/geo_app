@@ -1,35 +1,49 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<?import javafx.geometry.Insets?>
 
-<VBox spacing="15" xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml" 
-      fx:controller="org.example.geoapp.controller.ReportDialogController" prefWidth="400">
-    <padding><Insets top="20" right="20" bottom="20" left="20"/></padding>
+<VBox spacing="12"
+      xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="org.example.geoapp.controller.ReportDialogController"
+      prefWidth="560">
 
-    <Label text="Выберите тип отчёта:" style="-fx-font-weight: bold;"/>
-    <ComboBox fx:id="comboReportType" maxWidth="Infinity"/>
+    <padding>
+        <Insets top="16" right="16" bottom="16" left="16"/>
+    </padding>
+
+    <Label text="Шаблон отчёта" style="-fx-font-weight: bold;"/>
+
+    <HBox spacing="10" alignment="CENTER_RIGHT">
+        <VBox spacing="4" HBox.hgrow="ALWAYS">
+            <ComboBox fx:id="comboTemplate" maxWidth="Infinity"/>
+        </VBox>
+        <Button text="Скачать шаблон" onAction="#onDownloadTemplate"/>
+        <Button text="Удалить шаблон" onAction="#onDeleteTemplate"/>
+    </HBox>
+
+    <Label text="Описание шаблона" style="-fx-font-weight: bold;"/>
+    <Label fx:id="labelDescription" wrapText="true" minHeight="40" 
+        style="-fx-font-style: italic; -fx-text-fill: #555;" text="Нет описания"/>
+        
+    <Label text="Формат" style="-fx-font-weight: bold;"/>
+    <ComboBox fx:id="comboFormat" prefWidth="180"/>
 
     <Separator/>
 
-    <Label text="Формат файла:" style="-fx-font-weight: bold;"/>
-    <ComboBox fx:id="comboFormat" prefWidth="100" maxWidth="Infinity"/>
+    <Label text="Параметры шаблона" style="-fx-font-weight: bold;"/>
+    <ScrollPane fitToWidth="true" prefHeight="320" VBox.vgrow="ALWAYS">
+        <content>
+            <VBox fx:id="paramsBox" spacing="10" fillWidth="true"/>
+        </content>
+    </ScrollPane>
 
-    <GridPane hgap="10" vgap="10">
-        <Label text="Участок:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
-        <ComboBox fx:id="comboArea" GridPane.rowIndex="0" GridPane.columnIndex="1" maxWidth="Infinity"/>
-
-        <Label text="Подрядчик:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
-        <ComboBox fx:id="comboContractor" GridPane.rowIndex="1" GridPane.columnIndex="1" maxWidth="Infinity"/>
-
-        <Label text="С:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
-        <DatePicker fx:id="dateStart" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
-
-        <Label text="По:" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
-        <DatePicker fx:id="dateEnd" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
-    </GridPane>
+    <Label fx:id="statusLabel" text="" wrapText="true"/>
 
     <HBox spacing="10" alignment="CENTER_RIGHT">
-        <Button text="Сформировать" onAction="#onGenerateClick" style="-fx-base: #4CAF50; -fx-text-fill: white;"/>
+        <Button text="Загрузить шаблон" onAction="#onUploadTemplate"/>
+        <Button text="Обновить список" onAction="#onRefreshTemplatesClick"/>
+        <Button text="Сформировать" onAction="#onGenerateClick" style="-fx-base: #1976D2; -fx-text-fill: white;"/>
     </HBox>
 </VBox>

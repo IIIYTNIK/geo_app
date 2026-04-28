@@ -51,7 +51,7 @@ class SecurityConfig(
                 
                 it.requestMatchers("/api/users/**").authenticated()
                 it.requestMatchers("/api/workings/**").authenticated()
-                it.requestMatchers("/api/reports/**").authenticated()
+                it.requestMatchers("/api/reports/**").permitAll()
                 it.anyRequest().authenticated()
             }
             .exceptionHandling { it.authenticationEntryPoint(org.springframework.security.web.authentication.HttpStatusEntryPoint(org.springframework.http.HttpStatus.UNAUTHORIZED)) }

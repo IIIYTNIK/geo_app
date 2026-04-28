@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<fontFamilies>
+
+    <fontFamily name="Arial">
+        <normal>fonts/Arial.ttf</normal>
+        <bold>fonts/ArialBD.ttf</bold>
+        <italic>fonts/ArialI.ttf</italic>
+        <boldItalic>fonts/ArialBI.ttf</boldItalic>
+        <pdfEncoding>Identity-H</pdfEncoding>
+        <pdfEmbedded>true</pdfEmbedded>
+    </fontFamily>
+
+    <fontFamily name="Times New Roman">
+        <normal>fonts/times.ttf</normal>
+        <bold>fonts/timesbd.ttf</bold>
+        <italic>fonts/timesi.ttf</italic>
+        <boldItalic>fonts/timesbi.ttf</boldItalic>
+        <pdfEncoding>Identity-H</pdfEncoding>
+        <pdfEmbedded>true</pdfEmbedded>
+    </fontFamily>
+
+</fontFamilies>

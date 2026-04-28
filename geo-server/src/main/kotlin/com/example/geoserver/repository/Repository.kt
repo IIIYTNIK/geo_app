@@ -4,10 +4,12 @@ import com.example.geoserver.entity.*
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
-import org.springframework.data.repository.query.Param
 import java.util.Optional
 import java.time.LocalDate
 
+interface ReportTemplateRepository : JpaRepository<ReportTemplate, Long> {
+    fun findByName(name: String): Optional<ReportTemplate>
+}
 
 interface UserRepository : JpaRepository<User, Long> {
     fun findByUsername(username: String): Optional<User>
@@ -18,7 +20,7 @@ interface RefContractorRepository : JpaRepository<RefContractor, Long> {
     fun findByName(name: String): RefContractor?
 }
 
-interface RefAreaRepository : JpaRepository<RefArea, Long>{
+interface RefAreaRepository : JpaRepository<RefArea, Long> {
     fun findByName(name: String): RefArea?
 }
 
@@ -27,11 +29,11 @@ interface RefGeologistRepository : JpaRepository<RefGeologist, Long> {
     fun findByContractorId(contractorId: Long): List<RefGeologist>
 }
 
-interface RefDrillingRigRepository : JpaRepository<RefDrillingRig, Long>{
+interface RefDrillingRigRepository : JpaRepository<RefDrillingRig, Long> {
     fun findByName(name: String): RefDrillingRig?
 }
 
-interface RefWorkTypeRepository : JpaRepository<RefWorkType, Long>{
+interface RefWorkTypeRepository : JpaRepository<RefWorkType, Long> {
     fun findByName(name: String): RefWorkType?
 }
 
@@ -39,11 +41,9 @@ interface RefWorkTypeRepository : JpaRepository<RefWorkType, Long>{
 interface WorkingRepository : JpaRepository<Working, Long> {
     fun findByNumber(number: String): Working?
 
-    // Находим текущий максимальный номер
     @Query("SELECT MAX(w.orderNum) FROM Working w")
     fun findMaxOrderNum(): Int?
 
-    // Сдвигаем все номера, которые больше удаленного, на 1 вниз
     @Modifying
     @Query("UPDATE Working w SET w.orderNum = w.orderNum - 1 WHERE w.orderNum > :deletedOrderNum")
     fun shiftOrderNums(deletedOrderNum: Int)
@@ -51,16 +51,16 @@ interface WorkingRepository : JpaRepository<Working, Long> {
     fun findByNumberAndAreaId(number: String, areaId: Long?): Working?
 
     @Query("""
-    SELECT w FROM Working w
-    WHERE (:start IS NULL OR w.startDate >= :start)
-    AND (:end IS NULL OR w.endDate <= :end)
-    AND (:contractorId IS NULL OR w.contractor.id = :contractorId)
-    AND (:areaId IS NULL OR w.area.id = :areaId)
+        SELECT w FROM Working w
+        WHERE (:start IS NULL OR w.startDate >= :start)
+          AND (:end IS NULL OR w.endDate <= :end)
+          AND (:contractorId IS NULL OR w.contractor.id = :contractorId)
+          AND (:areaId IS NULL OR w.area.id = :areaId)
     """)
     fun findByFilters(
-        @Param("start") start: LocalDate?,
-        @Param("end") end: LocalDate?,
-        @Param("contractorId") contractorId: Long?,
-        @Param("areaId") areaId: Long?
+        start: LocalDate?,
+        end: LocalDate?,
+        contractorId: Long?,
+        areaId: Long?
     ): List<Working>
 }

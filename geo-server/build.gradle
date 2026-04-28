@@ -33,9 +33,6 @@ repositories {
 	mavenCentral()
 
 	maven { url = uri("https://jaspersoft.jfrog.io/jaspersoft/third-party-ce-artifacts/") }
-	maven { url = uri("https://repo.spring.io/milestone") }
-	maven { url = uri("https://repository.jboss.org/nexus/content/repositories/thirdparty-releases/") }
-	maven { url = uri("https://jitpack.io") }
 }
 
 dependencies {
@@ -64,6 +61,14 @@ dependencies {
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
 
+	// Ядро JasperReports
+    implementation 'net.sf.jasperreports:jasperreports:7.0.6'
+	implementation("net.sf.jasperreports:jasperreports-pdf:7.0.6")
+    implementation 'net.sf.jasperreports:jasperreports-fonts:7.0.6'
+    
+    // Библиотеки Apache POI (необходимы для экспорта в Excel и Word)
+    implementation 'org.apache.poi:poi:5.2.3'
+    implementation 'org.apache.poi:poi-ooxml:5.2.3'
 }
 
 allOpen {
@@ -71,6 +76,10 @@ allOpen {
 	annotation 'jakarta.persistence.MappedSuperclass'
 	annotation 'jakarta.persistence.Embeddable'
 }
+
+// configurations.all {
+//     exclude(group = "commons-logging", module = "commons-logging")
+// }
 
 tasks.named('test', Test) {
     useJUnitPlatform()

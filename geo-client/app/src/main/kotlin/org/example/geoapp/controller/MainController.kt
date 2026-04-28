@@ -654,9 +654,7 @@ class MainController {
         val root = loader.load<VBox>()
         val controller = loader.getController<ReportDialogController>()
 
-        val areas = allWorkings.mapNotNull { it.area }.distinctBy { it.id }
-        val contractors = allWorkings.mapNotNull { it.contractor }.distinctBy { it.id }
-        controller.initData(token, areas, contractors)
+        controller.initData(token)
 
         val stage = Stage()
         stage.title = "Печать отчётов"

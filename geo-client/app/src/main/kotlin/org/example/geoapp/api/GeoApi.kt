@@ -2,6 +2,8 @@ package com.example.geoapp.api
 
 import com.example.geoapp.api.report.*
 import okhttp3.ResponseBody
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
 import retrofit2.Call
 import retrofit2.http.POST
 import retrofit2.http.*
@@ -50,29 +52,36 @@ interface GeoApi {
     // Метод для массовой загрузки выработок
     @POST("api/workings/batch") fun createBatch(@Header("Authorization") token: String, @Body workings: List<Working>): Call<List<Working>>
 
-    // @POST("api/reports/drilling-completed")
-    // fun generateReportExcel(
-    //     @Header("Authorization") token: String,
-    //     @Query("reportStart") start: String?,
-    //     @Query("reportEnd") end: String?,
-    //     @Query("contractorId") contractorId: Long,
-    //     @Query("areaId") areaId: Long
-    // ): Call<ResponseBody>
+    @GET("api/report-templates")
+    fun getReportTemplates(@Header("Authorization") token: String): Call<List<ReportTemplateSummaryDto>>
 
-    // @POST("api/reports/drilling-completed/pdf")
-    // fun generateReportPdf(
-    //     @Header("Authorization") token: String,
-    //     @Query("reportStart") start: String?,
-    //     @Query("reportEnd") end: String?,
-    //     @Query("contractorId") contractorId: Long,
-    //     @Query("areaId") areaId: Long
-    // ): Call<ResponseBody>
+    @GET("api/report-templates/{id}")
+    fun getTemplate(@Header("Authorization") token: String, @Path("id") id: Long): Call<ReportTemplateDto>
 
-    @POST("api/reports/data")
-    fun getReportData(
+    @DELETE("api/report-templates/{id}")
+    fun deleteTemplate(@Header("Authorization") token: String, @Path("id") id: Long): Call<Void>
+
+    @GET("api/report-templates/{id}/metadata")
+    fun getReportTemplateMetadata(
         @Header("Authorization") token: String,
-        @Body request: ReportRequest
-    ): Call<ReportDataDto>
+        @Path("id") id: Long
+    ): Call<ReportTemplateMetadataDto>
+
+    @POST("api/reports/generate")
+    fun generateReport(
+        @Header("Authorization") token: String,
+        @Body request: ReportGenerateRequest
+    ): Call<ResponseBody>
+
+    @Multipart
+    @POST("api/report-templates/upload")
+    fun uploadTemplate(
+        @Header("Authorization") token: String,
+        @Part("name") name: RequestBody,
+        @Part("description") description: RequestBody?, 
+        @Part file: MultipartBody.Part,
+        @Part("overwrite") overwrite: RequestBody?
+    ): Call<ReportTemplateSummaryDto>
 
 }
 
