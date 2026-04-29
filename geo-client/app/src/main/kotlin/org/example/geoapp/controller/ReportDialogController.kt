@@ -255,6 +255,42 @@ class ReportDialogController {
     }
 
     private fun createControl(parameter: ReportParameterDto): Node {
+        val name = parameter.name.lowercase()
+
+        val isReference = name.contains("areaid")
+                || name.contains("contractorid")
+                || name.contains("geologistid")
+                || name.contains("drillingrigid")
+                || name.contains("worktypeid")
+
+        if (isReference) {
+            return ComboBox<ReportOptionDto>().apply {
+                prefWidth = 260.0
+
+                scope.launch {
+                    try {
+                        val options = loadOptionsFor(parameter)
+
+                        Platform.runLater {
+                            items = FXCollections.observableArrayList(options)
+                            if (options.isNotEmpty()) {
+                                selectionModel.selectFirst()
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Platform.runLater {
+                            showError("Ошибка загрузки списка: ${parameter.label}")
+                        }
+                    }
+                }
+
+                converter = object : StringConverter<ReportOptionDto>() {
+                    override fun toString(obj: ReportOptionDto?): String = obj?.label ?: ""
+                    override fun fromString(string: String?): ReportOptionDto? = null
+                }
+            }
+        }
+        
         return when (parameter.type) {
             ReportParameterType.DATE -> DatePicker().apply {
                 promptText = "dd.MM.yyyy"
@@ -310,11 +346,16 @@ class ReportDialogController {
                 ?: throw IllegalStateException("Не найдено поле для параметра ${parameter.name}")
 
             val value: Any? = when (control) {
-                is DatePicker -> control.value?.toString() // Сериализуем дату в строку, например "2024-12-31"
+                is DatePicker -> control.value?.toString() 
                 is TextField -> parseTextValue(control.text, parameter)
                 is ComboBox<*> -> {
                     val option = control.value as? ReportOptionDto
-                    option?.let { convertTypedValue(it.value, parameter.valueType) }
+                    if (option != null) {
+                        val nameParamKey = parameter.name.replace("Id", "Name") 
+                        result[nameParamKey] = option.label
+                        
+                        convertTypedValue(option.value, parameter.valueType)
+                    } else null
                 }
                 is CheckBox -> control.isSelected
                 else -> null
@@ -502,25 +543,26 @@ class ReportDialogController {
     }
 
     private fun loadOptionsFor(parameter: ReportParameterDto): List<ReportOptionDto> {
-        val name = parameter.name
+        val name = parameter.name.lowercase()
 
-        return when (name) {
-            "areaId" -> MainApp.api.getAreas().execute().body()
+        return when {
+            name.startsWith("areaid") -> MainApp.api.getAreas().execute().body()
                 ?.map { ReportOptionDto(it.id.toString(), it.name) }
                 ?: emptyList()
 
-            "contractorId" -> MainApp.api.getContractors().execute().body()
+            name.startsWith("contractorid") -> MainApp.api.getContractors().execute().body()
                 ?.map { ReportOptionDto(it.id.toString(), it.name) }
                 ?: emptyList()
 
-            "geologistId" -> MainApp.api.getGeologists().execute().body()
+            name.startsWith("geologistid") -> MainApp.api.getGeologists().execute().body()
                 ?.map { ReportOptionDto(it.id.toString(), it.name) }
                 ?: emptyList()
 
-            "drillringRigId" -> MainApp.api.getDrillingRigs().execute().body()
+            name.startsWith("drillingrigid") -> MainApp.api.getDrillingRigs().execute().body()
                 ?.map { ReportOptionDto(it.id.toString(), it.name) }
                 ?: emptyList()
-            "workTypeId" -> MainApp.api.getWorkTypes().execute().body()
+
+            name.startsWith("worktypeid") -> MainApp.api.getWorkTypes().execute().body()
                 ?.map { ReportOptionDto(it.id.toString(), it.name) }
                 ?: emptyList()
 
