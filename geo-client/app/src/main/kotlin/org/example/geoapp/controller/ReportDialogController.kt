@@ -23,6 +23,7 @@ import javafx.scene.control.ButtonType
 import javafx.scene.control.TextInputDialog
 import javafx.scene.layout.GridPane
 import javafx.scene.layout.VBox
+import javafx.scene.layout.HBox
 import javafx.stage.FileChooser.ExtensionFilter
 import javafx.stage.FileChooser
 import javafx.util.StringConverter
@@ -60,24 +61,21 @@ class ReportDialogController {
 
         comboTemplate.converter = object : StringConverter<ReportTemplateSummaryDto>() {
             override fun toString(obj: ReportTemplateSummaryDto?): String {
-                if (obj == null) return ""
-                val cleanName = baseTemplateName(obj.name)
-                val desc = obj.description?.takeIf { it.isNotBlank() }
-                return if (desc != null) "${cleanName} — $desc" else cleanName
+                return obj?.let { baseTemplateName(it.name) } ?: ""
             }
 
             override fun fromString(string: String?): ReportTemplateSummaryDto? {
                 val value = string ?: return null
-                return comboTemplate.items.firstOrNull { candidate ->
-                    toString(candidate) == value
-                }
+                return comboTemplate.items.firstOrNull { baseTemplateName(it.name) == value }
             }
         }
 
         comboTemplate.valueProperty().addListener { _, _, newValue ->
             if (newValue != null) {
+                labelDescription.text = newValue.description ?: "Описание отсутствует"
                 loadTemplateMetadata(newValue.id)
             } else {
+                labelDescription.text = ""
                 clearParameters()
             }
         }
@@ -254,43 +252,158 @@ class ReportDialogController {
         paramsBox.children.add(grid)
     }
 
+    private data class MultiSelectState(
+        val parameter: ReportParameterDto,
+        val container: VBox,
+        val rows: MutableList<HBox> = mutableListOf()
+    )
+
+    private val multiSelectStates = mutableMapOf<String, MultiSelectState>()
+
+    private fun isMultiReferenceParameter(name: String): Boolean {
+        val n = name.lowercase()
+        return n.endsWith("ids")
+    }
+
+    private fun isSingleReferenceParameter(name: String): Boolean {
+        val n = name.lowercase()
+        return n.endsWith("id") && !n.endsWith("ids")
+    }
+
+    private fun referenceKey(name: String): String {
+        val n = name.lowercase()
+        return when {
+            n.contains("area") -> "area"
+            n.contains("contractor") -> "contractor"
+            n.contains("geologist") -> "geologist"
+            n.contains("drillingrig") -> "drillingrig"
+            n.contains("worktype") -> "worktype"
+            else -> ""
+        }
+    }
+
+    private fun createSingleSelectControl(parameter: ReportParameterDto): ComboBox<ReportOptionDto> {
+        return ComboBox<ReportOptionDto>().apply {
+            prefWidth = 260.0
+
+            scope.launch {
+                try {
+                    val options = loadOptionsFor(parameter)
+                    Platform.runLater {
+                        items = FXCollections.observableArrayList(options)
+                        if (options.isNotEmpty()) selectionModel.selectFirst()
+                    }
+                } catch (e: Exception) {
+                    Platform.runLater { showError("Ошибка загрузки списка: ${parameter.label}") }
+                }
+            }
+
+            converter = object : StringConverter<ReportOptionDto>() {
+                override fun toString(obj: ReportOptionDto?): String = obj?.label ?: ""
+                override fun fromString(string: String?): ReportOptionDto? = null
+            }
+        }
+    }
+
+    private fun createMultiSelectControl(parameter: ReportParameterDto): VBox {
+        val container = VBox(8.0)
+        val state = MultiSelectState(parameter, container)
+        multiSelectStates[parameter.name] = state
+
+        val addButton = javafx.scene.control.Button("+").apply {
+            setOnAction {
+                addMultiSelectRow(state)
+            }
+        }
+
+        container.children.add(addButton)
+
+        scope.launch {
+            try {
+                val options = loadOptionsFor(parameter)
+                Platform.runLater {
+                    if (options.isNotEmpty()) {
+                        addMultiSelectRow(state, options)
+                    } else {
+                        container.children.clear()
+                        container.children.add(Label("Нет доступных значений"))
+                    }
+                }
+            } catch (e: Exception) {
+                Platform.runLater { showError("Ошибка загрузки списка: ${parameter.label}") }
+            }
+        }
+
+        return container
+    }
+
+    private fun addMultiSelectRow(
+        state: MultiSelectState,
+        sourceOptions: List<ReportOptionDto> = loadOptionsFor(state.parameter)
+    ) {
+        val combo = ComboBox<ReportOptionDto>().apply {
+            prefWidth = 260.0
+            converter = object : StringConverter<ReportOptionDto>() {
+                override fun toString(obj: ReportOptionDto?): String = obj?.label ?: ""
+                override fun fromString(string: String?): ReportOptionDto? = null
+            }
+
+            valueProperty().addListener { _, _, _ ->
+                refreshMultiSelectOptions(state)
+            }
+        }
+
+        val removeButton = javafx.scene.control.Button("−").apply {
+            setOnAction {
+                state.container.children.removeIf { it === this@apply.parent }
+                state.rows.removeIf { it.children.contains(combo) }
+                refreshMultiSelectOptions(state)
+            }
+        }
+
+        val row = HBox(8.0, combo, removeButton)
+        state.rows.add(row)
+        state.container.children.add(state.container.children.size - 1, row)
+
+        refreshMultiSelectOptions(state, sourceOptions)
+    }
+
+    private fun refreshMultiSelectOptions(
+        state: MultiSelectState,
+        sourceOptions: List<ReportOptionDto> = loadOptionsFor(state.parameter)
+    ) {
+        val selected = state.rows.mapNotNull { row ->
+            val combo = row.children.filterIsInstance<ComboBox<*>>().firstOrNull() as? ComboBox<ReportOptionDto>
+            combo?.value?.value
+        }.toSet()
+
+        state.rows.forEach { row ->
+            val combo = row.children.filterIsInstance<ComboBox<*>>().firstOrNull() as? ComboBox<ReportOptionDto>
+                ?: return@forEach
+
+            val current = combo.value?.value
+            val filtered = sourceOptions.filter { option ->
+                option.value == current || option.value !in selected
+            }
+
+            combo.items = FXCollections.observableArrayList(filtered)
+            if (current != null && combo.items.none { it.value == current }) {
+                combo.value = null
+            }
+        }
+    }
+
     private fun createControl(parameter: ReportParameterDto): Node {
         val name = parameter.name.lowercase()
 
-        val isReference = name.contains("areaid")
-                || name.contains("contractorid")
-                || name.contains("geologistid")
-                || name.contains("drillingrigid")
-                || name.contains("worktypeid")
-
-        if (isReference) {
-            return ComboBox<ReportOptionDto>().apply {
-                prefWidth = 260.0
-
-                scope.launch {
-                    try {
-                        val options = loadOptionsFor(parameter)
-
-                        Platform.runLater {
-                            items = FXCollections.observableArrayList(options)
-                            if (options.isNotEmpty()) {
-                                selectionModel.selectFirst()
-                            }
-                        }
-                    } catch (e: Exception) {
-                        Platform.runLater {
-                            showError("Ошибка загрузки списка: ${parameter.label}")
-                        }
-                    }
-                }
-
-                converter = object : StringConverter<ReportOptionDto>() {
-                    override fun toString(obj: ReportOptionDto?): String = obj?.label ?: ""
-                    override fun fromString(string: String?): ReportOptionDto? = null
-                }
-            }
+        if (isMultiReferenceParameter(name)) {
+            return createMultiSelectControl(parameter)
         }
-        
+
+        if (isSingleReferenceParameter(name)) {
+            return createSingleSelectControl(parameter)
+        }
+
         return when (parameter.type) {
             ReportParameterType.DATE -> DatePicker().apply {
                 promptText = "dd.MM.yyyy"
@@ -307,32 +420,7 @@ class ReportDialogController {
                 prefWidth = 260.0
             }
 
-            ReportParameterType.SELECT -> ComboBox<ReportOptionDto>().apply {
-                prefWidth = 260.0
-
-                scope.launch {
-                    try {
-                        val options = loadOptionsFor(parameter)
-
-                        Platform.runLater {
-                            items = FXCollections.observableArrayList(options)
-
-                            if (options.isNotEmpty()) {
-                                selectionModel.selectFirst()
-                            }
-                        }
-                    } catch (e: Exception) {
-                        Platform.runLater {
-                            showError("Ошибка загрузки списка: ${parameter.label}")
-                        }
-                    }
-                }
-
-                converter = object : StringConverter<ReportOptionDto>() {
-                    override fun toString(obj: ReportOptionDto?): String = obj?.label ?: ""
-                    override fun fromString(string: String?): ReportOptionDto? = null
-                }
-            }
+            ReportParameterType.SELECT -> createSingleSelectControl(parameter)
 
             ReportParameterType.BOOLEAN -> CheckBox()
         }
@@ -345,27 +433,58 @@ class ReportDialogController {
             val control = parameterControls[parameter.name]
                 ?: throw IllegalStateException("Не найдено поле для параметра ${parameter.name}")
 
-            val value: Any? = when (control) {
-                is DatePicker -> control.value?.toString() 
-                is TextField -> parseTextValue(control.text, parameter)
-                is ComboBox<*> -> {
-                    val option = control.value as? ReportOptionDto
-                    if (option != null) {
-                        val nameParamKey = parameter.name.replace("Id", "Name") 
-                        result[nameParamKey] = option.label
-                        
-                        convertTypedValue(option.value, parameter.valueType)
-                    } else null
+            when {
+                control is VBox && isMultiReferenceParameter(parameter.name) -> {
+                    val state = multiSelectStates[parameter.name]
+                        ?: throw IllegalStateException("Не найдено состояние для ${parameter.name}")
+
+                    val selected = state.rows.mapNotNull { row ->
+                        val combo = row.children.filterIsInstance<ComboBox<*>>().firstOrNull() as? ComboBox<ReportOptionDto>
+                        combo?.value
+                    }
+
+                    if (parameter.required && selected.isEmpty()) {
+                        throw IllegalArgumentException("Поле '${parameter.label}' обязательно")
+                    }
+
+                    result[parameter.name] = selected.map {
+                        it.value.toLongOrNull()
+                            ?: throw IllegalArgumentException("Некорректный ID в '${parameter.label}'")
+                    }
+                    result[parameter.name.removeSuffix("Ids") + "Names"] =
+                        selected.joinToString(", ") { it.label }
                 }
-                is CheckBox -> control.isSelected
-                else -> null
-            }
 
-            if (parameter.required && (value == null || value.toString().isBlank())) {
-                throw IllegalArgumentException("Поле '${parameter.label}' обязательно")
-            }
+                control is ComboBox<*> -> {
+                    val option = control.value as? ReportOptionDto
+                    if (parameter.required && option == null) {
+                        throw IllegalArgumentException("Поле '${parameter.label}' обязательно")
+                    }
 
-            result[parameter.name] = value
+                    if (option != null) {
+                        result[parameter.name] = convertTypedValue(option.value, parameter.valueType)
+                        result[parameter.name.removeSuffix("Id") + "Name"] = option.label
+                    } else {
+                        result[parameter.name] = null
+                    }
+                }
+
+                control is DatePicker -> {
+                    result[parameter.name] = control.value?.toString()
+                }
+
+                control is TextField -> {
+                    result[parameter.name] = parseTextValue(control.text, parameter)
+                }
+
+                control is CheckBox -> {
+                    result[parameter.name] = control.isSelected
+                }
+
+                else -> {
+                    result[parameter.name] = null
+                }
+            }
         }
 
         return result
@@ -546,25 +665,20 @@ class ReportDialogController {
         val name = parameter.name.lowercase()
 
         return when {
-            name.startsWith("areaid") -> MainApp.api.getAreas().execute().body()
-                ?.map { ReportOptionDto(it.id.toString(), it.name) }
-                ?: emptyList()
+            name.contains("area") -> MainApp.api.getAreas().execute().body()
+                ?.map { ReportOptionDto(it.id.toString(), it.name) } ?: emptyList()
 
-            name.startsWith("contractorid") -> MainApp.api.getContractors().execute().body()
-                ?.map { ReportOptionDto(it.id.toString(), it.name) }
-                ?: emptyList()
+            name.contains("contractor") -> MainApp.api.getContractors().execute().body()
+                ?.map { ReportOptionDto(it.id.toString(), it.name) } ?: emptyList()
 
-            name.startsWith("geologistid") -> MainApp.api.getGeologists().execute().body()
-                ?.map { ReportOptionDto(it.id.toString(), it.name) }
-                ?: emptyList()
+            name.contains("geologist") -> MainApp.api.getGeologists().execute().body()
+                ?.map { ReportOptionDto(it.id.toString(), it.name) } ?: emptyList()
 
-            name.startsWith("drillingrigid") -> MainApp.api.getDrillingRigs().execute().body()
-                ?.map { ReportOptionDto(it.id.toString(), it.name) }
-                ?: emptyList()
+            name.contains("drillingrig") -> MainApp.api.getDrillingRigs().execute().body()
+                ?.map { ReportOptionDto(it.id.toString(), it.name) } ?: emptyList()
 
-            name.startsWith("worktypeid") -> MainApp.api.getWorkTypes().execute().body()
-                ?.map { ReportOptionDto(it.id.toString(), it.name) }
-                ?: emptyList()
+            name.contains("worktype") -> MainApp.api.getWorkTypes().execute().body()
+                ?.map { ReportOptionDto(it.id.toString(), it.name) } ?: emptyList()
 
             else -> emptyList()
         }
