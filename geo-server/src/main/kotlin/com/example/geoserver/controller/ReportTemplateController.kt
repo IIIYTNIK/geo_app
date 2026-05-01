@@ -114,7 +114,9 @@ class ReportTemplateController(
                 type = type,
                 valueType = valueType
             )
-        }.toList()
+        }
+        .distinctBy { it.name } 
+        .toList()
 
         return ReportTemplateMetadataDto(parameters = parameters)
     }
