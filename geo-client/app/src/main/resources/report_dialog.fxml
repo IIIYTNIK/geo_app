@@ -16,11 +16,11 @@
     <Label text="Шаблон отчёта" style="-fx-font-weight: bold;"/>
 
     <HBox spacing="10" alignment="CENTER_RIGHT">
-        <VBox spacing="4" HBox.hgrow="ALWAYS">
+            <VBox spacing="4" HBox.hgrow="ALWAYS">
             <ComboBox fx:id="comboTemplate" maxWidth="Infinity"/>
         </VBox>
-        <Button text="Скачать шаблон" onAction="#onDownloadTemplate"/>
-        <Button text="Удалить шаблон" onAction="#onDeleteTemplate"/>
+        <Button fx:id="btnDownload" text="Скачать шаблон" onAction="#onDownloadTemplate"/>
+        <Button fx:id="btnDelete" text="Удалить шаблон" onAction="#onDeleteTemplate"/>
     </HBox>
 
     <Label text="Описание шаблона" style="-fx-font-weight: bold;"/>
@@ -42,8 +42,9 @@
     <Label fx:id="statusLabel" text="" wrapText="true"/>
 
     <HBox spacing="10" alignment="CENTER_RIGHT">
-        <Button text="Загрузить шаблон" onAction="#onUploadTemplate"/>
+        <Button fx:id="btnUpload" text="Загрузить шаблон" onAction="#onUploadTemplate"/>
         <Button text="Обновить список" onAction="#onRefreshTemplatesClick"/>
-        <Button text="Сформировать" onAction="#onGenerateClick" style="-fx-base: #1976D2; -fx-text-fill: white;"/>
+        <Button fx:id="btnGenerate" text="Сформировать" onAction="#onGenerateClick"
+                style="-fx-base: #1976D2; -fx-text-fill: white;"/>
     </HBox>
 </VBox>

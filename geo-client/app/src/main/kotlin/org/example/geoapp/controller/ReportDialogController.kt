@@ -1,26 +1,12 @@
 package org.example.geoapp.controller
 
-import com.example.geoapp.api.report.ReportGenerateRequest
-import com.example.geoapp.api.report.ReportOptionDto
-import com.example.geoapp.api.report.ReportParameterDto
-import com.example.geoapp.api.report.ReportParameterType
-import com.example.geoapp.api.report.ReportTemplateDto
-import com.example.geoapp.api.report.ReportTemplateMetadataDto
-import com.example.geoapp.api.report.ReportTemplateSummaryDto
-import com.example.geoapp.api.report.ReportValueType
+import com.example.geoapp.api.report.*
 import javafx.application.Platform
 import javafx.collections.FXCollections
 import javafx.fxml.FXML
 import javafx.geometry.Insets
 import javafx.scene.Node
-import javafx.scene.control.Alert
-import javafx.scene.control.CheckBox
-import javafx.scene.control.ComboBox
-import javafx.scene.control.DatePicker
-import javafx.scene.control.Label
-import javafx.scene.control.TextField
-import javafx.scene.control.ButtonType
-import javafx.scene.control.TextInputDialog
+import javafx.scene.control.*
 import javafx.scene.layout.GridPane
 import javafx.scene.layout.VBox
 import javafx.scene.layout.HBox
@@ -43,6 +29,7 @@ class ReportDialogController {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
+    private var isAdmin: Boolean = false
     private var token: String = ""
     private var currentTemplate: ReportTemplateSummaryDto? = null
     private var currentParameters: List<ReportParameterDto> = emptyList()
@@ -53,6 +40,10 @@ class ReportDialogController {
     @FXML private lateinit var paramsBox: VBox
     @FXML private lateinit var statusLabel: Label
     @FXML private lateinit var labelDescription: Label
+
+    @FXML private lateinit var btnUpload: Button
+    @FXML private lateinit var btnDelete: Button
+    @FXML private lateinit var btnDownload: Button
 
     @FXML
     fun initialize() {
@@ -97,10 +88,26 @@ class ReportDialogController {
         }
     }
 
-    fun initData(token: String) {
+    fun initData(token: String, role: String) {
         this.token = token
+        this.isAdmin = role == "ROLE_ADMIN"
+        applyRolePermissions()
         loadTemplates()
     }
+
+    private fun applyRolePermissions() {
+        if (!isAdmin) {
+            btnUpload.isVisible = false
+            btnDelete.isVisible = false
+            btnDownload.isVisible = false
+
+            // (опционально) чтобы не занимали место в интерфейсе
+            btnUpload.isManaged = false
+            btnDelete.isManaged = false
+            btnDownload.isManaged = false
+        }
+    }
+
 
     @FXML
     private fun onRefreshTemplatesClick() {
@@ -255,7 +262,9 @@ class ReportDialogController {
     private data class MultiSelectState(
         val parameter: ReportParameterDto,
         val container: VBox,
-        val rows: MutableList<HBox> = mutableListOf()
+        val rows: MutableList<HBox> = mutableListOf(),
+        val allOptions: MutableList<ReportOptionDto> = mutableListOf(),
+        @Transient var isRefreshing: Boolean = false
     )
 
     private val multiSelectStates = mutableMapOf<String, MultiSelectState>()
@@ -310,10 +319,10 @@ class ReportDialogController {
         val state = MultiSelectState(parameter, container)
         multiSelectStates[parameter.name] = state
 
-        val addButton = javafx.scene.control.Button("+").apply {
-            setOnAction {
-                addMultiSelectRow(state)
-            }
+        val addButton = javafx.scene.control.Button("Добавить значение (+)").apply {
+            prefWidth = 260.0
+            isDisable = true // Кнопка заблокирована, пока грузятся данные
+            setOnAction { addMultiSelectRow(state) }
         }
 
         container.children.add(addButton)
@@ -322,25 +331,24 @@ class ReportDialogController {
             try {
                 val options = loadOptionsFor(parameter)
                 Platform.runLater {
+                    state.allOptions.addAll(options)
+                    addButton.isDisable = false // Разблокируем после загрузки
+                    
                     if (options.isNotEmpty()) {
-                        addMultiSelectRow(state, options)
+                        addMultiSelectRow(state)
                     } else {
-                        container.children.clear()
-                        container.children.add(Label("Нет доступных значений"))
+                        container.children.add(0, Label("Справочник пуст"))
                     }
                 }
             } catch (e: Exception) {
-                Platform.runLater { showError("Ошибка загрузки списка: ${parameter.label}") }
+                Platform.runLater { showError("Ошибка загрузки справочника: ${parameter.label}") }
             }
         }
 
         return container
     }
 
-    private fun addMultiSelectRow(
-        state: MultiSelectState,
-        sourceOptions: List<ReportOptionDto> = loadOptionsFor(state.parameter)
-    ) {
+    private fun addMultiSelectRow(state: MultiSelectState) {
         val combo = ComboBox<ReportOptionDto>().apply {
             prefWidth = 260.0
             converter = object : StringConverter<ReportOptionDto>() {
@@ -348,15 +356,18 @@ class ReportDialogController {
                 override fun fromString(string: String?): ReportOptionDto? = null
             }
 
-            valueProperty().addListener { _, _, _ ->
+            // Слушатель изменения значения
+            valueProperty().addListener { _, old, new ->
+                if (state.isRefreshing) return@addListener
+                // Пользователь изменил значение – запускаем обновление
                 refreshMultiSelectOptions(state)
             }
         }
 
         val removeButton = javafx.scene.control.Button("−").apply {
             setOnAction {
-                state.container.children.removeIf { it === this@apply.parent }
-                state.rows.removeIf { it.children.contains(combo) }
+                state.rows.removeIf { it === this@apply.parent }
+                state.container.children.remove(this@apply.parent)
                 refreshMultiSelectOptions(state)
             }
         }
@@ -365,33 +376,53 @@ class ReportDialogController {
         state.rows.add(row)
         state.container.children.add(state.container.children.size - 1, row)
 
-        refreshMultiSelectOptions(state, sourceOptions)
+        refreshMultiSelectOptions(state)
     }
 
-    private fun refreshMultiSelectOptions(
-        state: MultiSelectState,
-        sourceOptions: List<ReportOptionDto> = loadOptionsFor(state.parameter)
-    ) {
-        val selected = state.rows.mapNotNull { row ->
-            val combo = row.children.filterIsInstance<ComboBox<*>>().firstOrNull() as? ComboBox<ReportOptionDto>
-            combo?.value?.value
-        }.toSet()
+    private fun refreshMultiSelectOptions(state: MultiSelectState) {
+        if (state.isRefreshing) return
+        state.isRefreshing = true
+        try {
+            // 1. Зафиксируем все выбранные значения до начала изменений
+            val selectedValues = state.rows.mapNotNull { row ->
+                val cb = row.children
+                    .firstOrNull { it is ComboBox<*> } as? ComboBox<ReportOptionDto>
+                cb?.value?.value
+            }.toSet()
 
-        state.rows.forEach { row ->
-            val combo = row.children.filterIsInstance<ComboBox<*>>().firstOrNull() as? ComboBox<ReportOptionDto>
-                ?: return@forEach
+            // 2. Обновляем каждый комбобокс
+            state.rows.forEach { row ->
+                val cb = row.children
+                    .firstOrNull { it is ComboBox<*> } as? ComboBox<ReportOptionDto>
+                    ?: return@forEach
 
-            val current = combo.value?.value
-            val filtered = sourceOptions.filter { option ->
-                option.value == current || option.value !in selected
+                val currentVal = cb.value?.value
+
+                // Значения, занятые другими комбобоксами (кроме самого себя)
+                val selectedInOthers = selectedValues - currentVal
+
+                // Доступные опции: все, кроме занятых в других
+                val available = state.allOptions.filter { it.value !in selectedInOthers }
+
+                // Обновляем список элементов, только если он реально изменился
+                val currentItemValues = cb.items.map { it.value }.toSet()
+                val newItemValues = available.map { it.value }.toSet()
+                if (currentItemValues != newItemValues) {
+                    cb.items.setAll(available)
+                }
+
+                // Восстанавливаем значение, если оно ещё доступно; иначе сбрасываем на null
+                cb.value = if (currentVal != null && available.any { it.value == currentVal }) {
+                    available.first { it.value == currentVal }
+                } else {
+                    null
+                }
             }
-
-            combo.items = FXCollections.observableArrayList(filtered)
-            if (current != null && combo.items.none { it.value == current }) {
-                combo.value = null
-            }
+        } finally {
+            state.isRefreshing = false
         }
     }
+
 
     private fun createControl(parameter: ReportParameterDto): Node {
         val name = parameter.name.lowercase()
@@ -543,6 +574,10 @@ class ReportDialogController {
 
     @FXML
     private fun onUploadTemplate() {
+        if (!isAdmin) {
+            //showError("Недостаточно прав")
+            return
+        }
         val fileChooser = FileChooser()
         fileChooser.extensionFilters.add(ExtensionFilter("Jasper Reports", "*.jrxml"))
         val file = fileChooser.showOpenDialog(paramsBox.scene.window) ?: return
@@ -613,6 +648,10 @@ class ReportDialogController {
     // Метод для удаления выбранного шаблона
     @FXML
     private fun onDeleteTemplate() {
+        if (!isAdmin) {
+            //showError("Недостаточно прав")
+            return
+        }
         val selected = comboTemplate.value ?: return
         
         val confirm = Alert(Alert.AlertType.CONFIRMATION, "Удалить шаблон '${selected.name}'?").showAndWait()
@@ -638,6 +677,10 @@ class ReportDialogController {
     // Метод для скачивания (извлечения) шаблона с сервера
     @FXML
     private fun onDownloadTemplate() {
+        if (!isAdmin) {
+            //showError("Недостаточно прав")
+            return
+        }
         val selected = comboTemplate.value ?: return
         
         val fileChooser = FileChooser()

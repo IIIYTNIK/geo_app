@@ -654,7 +654,7 @@ class MainController {
         val root = loader.load<VBox>()
         val controller = loader.getController<ReportDialogController>()
 
-        controller.initData(token)
+        controller.initData(token, userRole)
 
         val stage = Stage()
         stage.title = "Печать отчётов"

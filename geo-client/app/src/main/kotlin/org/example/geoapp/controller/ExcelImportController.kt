@@ -419,7 +419,6 @@ class ExcelImportController {
 
         return Working(
             number = parsedNumber, 
-            //orderNum = orderNum,
             area = area, 
             isProject = isProjectImport,
             workType = workType, 
@@ -457,7 +456,17 @@ class ExcelImportController {
             act = getSafeBool("ACT"),
             actNumber = getSafeStr("ACT_NUMBER"), 
             thermalTube = getSafeBool("THERMAL_TUBE"),
-            additionalInfo = getSafeStr("ADDITIONAL_INFO") ?: getSafeStr("COMMENT")
+            additionalInfo = getSafeStr("ADDITIONAL_INFO") ?: getSafeStr("COMMENT"), 
+
+            
+            samplesThawed = DbField.SAMPLES_THAWED.let { getNum(it)?.toInt() },
+            samplesFrozen = DbField.SAMPLES_FROZEN.let { getNum(it)?.toInt() },
+            samplesRocky = DbField.SAMPLES_ROCKY.let { getNum(it)?.toInt() },
+
+            cat1_4 = getNum(DbField.CAT1_4), 
+            cat5_8 = getNum(DbField.CAT5_8), 
+            cat9_12 = getNum(DbField.CAT9_12)
+
         )
     }
 

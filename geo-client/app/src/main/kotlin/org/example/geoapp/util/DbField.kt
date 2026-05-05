@@ -14,7 +14,7 @@ enum class DbField(val propKey: String, val title: String, val isReference: Bool
     GEOLOGIST("geologist", "Геолог", true),
     DRILLING_RIG("drillingRig", "Буровая", true),
     STRUCTURE("structure", "Сооружение"),
-    PLANNED_CONTRACTOR("plannedContractor", "Запланированный подрядчик", true),
+    //PLANNED_CONTRACTOR("plannedContractor", "Запланированный подрядчик", true),
 
     // Числа и текст
     PLANNED_X("plannedX", "План X"),

@@ -23,8 +23,25 @@ import java.nio.charset.StandardCharsets
 @RequestMapping("/api/report-templates")
 class ReportTemplateController(
     private val repository: ReportTemplateRepository,
+
     private val objectMapper: ObjectMapper
-) {
+    ) {
+        private val LABELS = mapOf(
+        "areaId" to "Участок",
+        "areaIds" to "Участки",
+        "contractorId" to "Подрядчик",
+        "contractorIds" to "Подрядчики",
+        "geologistId" to "Геолог",
+        "geologistIds" to "Геологи",
+        "drillingRigId" to "Буровая",
+        "drillingRigIds" to "Буровые",
+        "workTypeId" to "Вид работ",
+        "workTypeIds" to "Виды работ",
+        "StartDate" to "Дата начала",
+        "EndDate" to "Дата окончания",
+        "dateFrom" to "Дата начала",
+        "dateTo" to "Дата окончания"
+    )
 
     @PostMapping("/upload", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
     fun uploadTemplate(
@@ -110,7 +127,7 @@ class ReportTemplateController(
 
             ReportParameterDto(
                 name = name,
-                label = humanize(name),
+                label = displayLabel(name),
                 type = type,
                 valueType = valueType
             )
@@ -119,12 +136,6 @@ class ReportTemplateController(
         .toList()
 
         return ReportTemplateMetadataDto(parameters = parameters)
-    }
-
-    private fun humanize(name: String): String {
-        return name
-            .removeSuffix("Id")
-            .replaceFirstChar { it.uppercase() }
     }
 
     private fun normalizeMetadataJson(metadataJson: String?): String? {
@@ -156,6 +167,12 @@ class ReportTemplateController(
             name = this.name,
             description = this.description
         )
+
+    private fun displayLabel(name: String): String {
+        return LABELS[name] ?: name
+            .replace(Regex("([a-z])([A-Z])"), "$1 $2")
+            .replaceFirstChar { it.uppercase() }
+    }
 
     private fun ReportTemplate.toDto(): ReportTemplateDto =
         ReportTemplateDto(
