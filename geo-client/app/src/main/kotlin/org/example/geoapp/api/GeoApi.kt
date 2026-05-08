@@ -13,6 +13,12 @@ interface GeoApi {
     @POST("api/auth/login")
     fun login(@Body request: LoginRequest): Call<LoginResponse>
 
+    // --- Пользователи ---
+    @GET("api/users") fun getUsers(@Header("Authorization") token: String): Call<List<UserDto>>
+    @POST("api/users") fun createUser(@Header("Authorization") token: String, @Body user: UserCreateDto): Call<UserDto>
+    @PUT("api/users/{id}") fun updateUser(@Header("Authorization") token: String, @Path("id") id: Long, @Body user: UserUpdateDto): Call<UserDto>
+    @DELETE("api/users/{id}") fun deleteUser(@Header("Authorization") token: String, @Path("id") id: Long): Call<Void>
+
     // --- Чтение (GET) ---
     @GET("api/references/contractors") fun getContractors(): Call<List<RefContractor>>
     @GET("api/references/areas") fun getAreas(): Call<List<RefArea>>
@@ -52,30 +58,13 @@ interface GeoApi {
     // Метод для массовой загрузки выработок
     @POST("api/workings/batch") fun createBatch(@Header("Authorization") token: String, @Body workings: List<Working>): Call<List<Working>>
 
-    @GET("api/report-templates")
-    fun getReportTemplates(@Header("Authorization") token: String): Call<List<ReportTemplateSummaryDto>>
-
-    @GET("api/report-templates/{id}")
-    fun getTemplate(@Header("Authorization") token: String, @Path("id") id: Long): Call<ReportTemplateDto>
-
-    @DELETE("api/report-templates/{id}")
-    fun deleteTemplate(@Header("Authorization") token: String, @Path("id") id: Long): Call<Void>
-
-    @GET("api/report-templates/{id}/metadata")
-    fun getReportTemplateMetadata(
-        @Header("Authorization") token: String,
-        @Path("id") id: Long
-    ): Call<ReportTemplateMetadataDto>
-
-    @POST("api/reports/generate")
-    fun generateReport(
-        @Header("Authorization") token: String,
-        @Body request: ReportGenerateRequest
-    ): Call<ResponseBody>
-
-    @Multipart
-    @POST("api/report-templates/upload")
-    fun uploadTemplate(
+    // --- Шаблны отчётов ---
+    @GET("api/report-templates") fun getReportTemplates(@Header("Authorization") token: String): Call<List<ReportTemplateSummaryDto>>
+    @GET("api/report-templates/{id}") fun getTemplate(@Header("Authorization") token: String, @Path("id") id: Long): Call<ReportTemplateDto>
+    @DELETE("api/report-templates/{id}") fun deleteTemplate(@Header("Authorization") token: String, @Path("id") id: Long): Call<Void>
+    @GET("api/report-templates/{id}/metadata") fun getReportTemplateMetadata(@Header("Authorization") token: String, @Path("id") id: Long): Call<ReportTemplateMetadataDto>
+    @POST("api/reports/generate") fun generateReport(@Header("Authorization") token: String, @Body request: ReportGenerateRequest): Call<ResponseBody>
+    @Multipart @POST("api/report-templates/upload") fun uploadTemplate(
         @Header("Authorization") token: String,
         @Part("name") name: RequestBody,
         @Part("description") description: RequestBody?, 
@@ -86,7 +75,7 @@ interface GeoApi {
 }
 
 data class LoginRequest(val username: String, val password: String)
-data class LoginResponse(val token: String, val role: String)
+data class LoginResponse(val token: String, val role: String, val user: UserDto)
 
 // Модели справочников
 data class RefArea(val id: Long = 0, val name: String, val comment: String? = null)
@@ -94,6 +83,11 @@ data class RefContractor(val id: Long = 0, val name: String, val comment: String
 data class RefDrillingRig(val id: Long = 0, val name: String, val alias: String? = null, val comment: String? = null)
 data class RefWorkType(val id: Long = 0, val name: String, val comment: String? = null)
 data class RefGeologist(val id: Long = 0, val name: String, val alias: String? = null, var contractor: RefContractor? = null, val comment: String? = null)
+
+// Модели для работы с пользователями
+data class UserDto(val id: Long, val username: String, val role: String, val position: String?)
+data class UserCreateDto(val username: String, val password: String, val role: String, val position: String? = null)
+data class UserUpdateDto(val username: String, val role: String, val password: String?, val position: String? = null)
 
 // Модель выработки (Working) - основная сущность, с которой будем работать в приложении
 data class Working(
@@ -158,3 +152,4 @@ data class Working(
     var cat5_8: Double? = null,
     var cat9_12: Double? = null,
 )
+

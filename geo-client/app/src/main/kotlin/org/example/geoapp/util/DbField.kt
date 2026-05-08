@@ -39,7 +39,7 @@ enum class DbField(val propKey: String, val title: String, val isReference: Bool
     THERMAL_TUBE("thermalTube", "Т-трубка"),
     ADDITIONAL_INFO("additionalInfo", "Комментарий"),
 
-        // Материалы (чекбоксы)
+    // Материалы (чекбоксы)
     HAS_VIDEO("HasVideo", "Видео"),
     HAS_DRILLING("HasDrilling", "Буровая"),
     HAS_JOURNAL("HasJournal", "Журнал"),

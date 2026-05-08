@@ -21,12 +21,13 @@ class UserService(
     }
 
     // Метод для создания пользователя
-    fun createUser(username: String, rawPassword: String, role: String): User {
+    fun createUser(username: String, rawPassword: String, role: String, position: String?): User {
         val encodedPassword = passwordEncoder.encode(rawPassword)
         val user = User(
             username = username,
             password = encodedPassword,
-            role = "ROLE_$role"  // Spring Security требует префикс ROLE_
+            role = "ROLE_$role",  // Spring Security требует префикс ROLE_
+            position = position?.ifEmpty { null }
         )
         return userRepository.save(user)
     }

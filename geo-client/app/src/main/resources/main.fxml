@@ -16,6 +16,8 @@
             <SeparatorMenuItem/>
             <MenuItem text="Подрядчики" onAction="#openContractorsEditor"/>
             <MenuItem text="Геологи" onAction="#openGeologistsEditor"/>
+            <SeparatorMenuItem/>
+            <MenuItem text="Пользователи" onAction="#openUsersEditor"/>
         </Menu>
     </MenuBar>
 

@@ -13,23 +13,37 @@ class User(
     val id: Long = 0,
 
     @Column(unique = true, nullable = false)
-    private val username: String = "",
+    private var username: String = "",
 
     @Column(nullable = false)
-    private val password: String = "",
+    private var password: String = "",
 
     @Column(nullable = false)
-    val role: String = ""
+    var role: String = "",
+    
+    @Column(nullable = true)
+    var position: String? = null
+
 ) : UserDetails {
+
+    fun updateUsername(newUsername: String) {
+        username = newUsername
+    }
+
+    fun updatePassword(newPassword: String) {
+        password = newPassword
+    }
+
+    fun updatePosition(newPosition: String) {
+        position = newPosition
+    }
 
     override fun getAuthorities(): Collection<GrantedAuthority> {
         return listOf(SimpleGrantedAuthority(role))
     }
 
     override fun getPassword(): String = password
-    
     override fun getUsername(): String = username
-    
     override fun isAccountNonExpired(): Boolean = true
     override fun isAccountNonLocked(): Boolean = true
     override fun isCredentialsNonExpired(): Boolean = true

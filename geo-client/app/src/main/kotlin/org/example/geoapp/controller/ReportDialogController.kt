@@ -1,5 +1,6 @@
 package org.example.geoapp.controller
 
+import com.example.geoapp.api.UserDto
 import com.example.geoapp.api.report.*
 import javafx.application.Platform
 import javafx.collections.FXCollections
@@ -23,6 +24,8 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.MultipartBody
 import java.io.File
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 
 class ReportDialogController {
@@ -35,6 +38,9 @@ class ReportDialogController {
     private var currentParameters: List<ReportParameterDto> = emptyList()
     private val parameterControls: MutableMap<String, Node> = linkedMapOf()
     
+    // Переменная для хранения текущего пользователя
+    private var currentUser: UserDto? = null
+    
     @FXML private lateinit var comboTemplate: ComboBox<ReportTemplateSummaryDto>
     @FXML private lateinit var comboFormat: ComboBox<String>
     @FXML private lateinit var paramsBox: VBox
@@ -44,6 +50,14 @@ class ReportDialogController {
     @FXML private lateinit var btnUpload: Button
     @FXML private lateinit var btnDelete: Button
     @FXML private lateinit var btnDownload: Button
+
+
+    // Список зарезервированных системных параметров
+    private val SYSTEM_PARAMS = setOf(
+        "И.О._Фамилия_текущего_оператора",
+        "Должность_текущего_оператора",
+        "TodayDate"
+    )
 
     @FXML
     fun initialize() {
@@ -88,10 +102,11 @@ class ReportDialogController {
         }
     }
 
-    fun initData(token: String, role: String) {
+    fun initData(token: String, role: String, user: UserDto) {
         this.token = token
         this.isAdmin = role == "ROLE_ADMIN"
         applyRolePermissions()
+        this.currentUser = user
         loadTemplates()
     }
 
@@ -236,7 +251,9 @@ class ReportDialogController {
         paramsBox.children.clear()
         parameterControls.clear()
 
-        if (parameters.isEmpty()) {
+        val visibleParameters = parameters.filterNot { SYSTEM_PARAMS.contains(it.name) }
+
+        if (visibleParameters.isEmpty()) {
             paramsBox.children.add(Label("У этого шаблона нет параметров"))
             return
         }
@@ -247,13 +264,15 @@ class ReportDialogController {
             padding = Insets(10.0)
         }
 
-        parameters.forEachIndexed { row, parameter ->
+        var row = 0
+        for (parameter in visibleParameters) {
             val label = Label(buildParameterLabel(parameter))
             val control = createControl(parameter)
             parameterControls[parameter.name] = control
 
             grid.add(label, 0, row)
             grid.add(control, 1, row)
+            row++
         }
 
         paramsBox.children.add(grid)
@@ -457,10 +476,20 @@ class ReportDialogController {
         }
     }
 
+
     private fun collectParameters(): Map<String, Any?> {
         val result = linkedMapOf<String, Any?>()
 
+        // Системные параметры, которые не показываются в UI
+        currentUser?.let { user ->
+            result["Должность_текущего_оператора"] = user.position?.takeIf { it.isNotBlank() }
+            result["И.О._Фамилия_текущего_оператора"] = formatOperatorName(user)
+        }
+        result["TodayDate"] = LocalDate.now().format(DateTimeFormatter.ISO_DATE)
+
         currentParameters.forEach { parameter ->
+            if (SYSTEM_PARAMS.contains(parameter.name)) return@forEach
+
             val control = parameterControls[parameter.name]
                 ?: throw IllegalStateException("Не найдено поле для параметра ${parameter.name}")
 
@@ -501,7 +530,7 @@ class ReportDialogController {
                 }
 
                 control is DatePicker -> {
-                    result[parameter.name] = control.value?.toString()
+                    result[parameter.name] = control.value?.format(DateTimeFormatter.ISO_DATE)
                 }
 
                 control is TextField -> {
@@ -520,6 +549,11 @@ class ReportDialogController {
 
         return result
     }
+
+    private fun formatOperatorName(user: UserDto): String {
+        return user.username.trim().ifBlank { "Неизвестно" }
+    }
+
 
     private fun parseTextValue(text: String?, parameter: ReportParameterDto): Any? {
         val value = text?.trim().orEmpty()

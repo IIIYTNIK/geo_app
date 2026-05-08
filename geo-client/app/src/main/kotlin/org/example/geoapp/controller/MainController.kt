@@ -1,5 +1,6 @@
 package org.example.geoapp.controller
 
+import com.example.geoapp.api.UserDto
 import com.example.geoapp.api.GeoApi
 import com.example.geoapp.api.Working
 import com.example.geoapp.api.RefContractor
@@ -31,6 +32,7 @@ import org.example.geoapp.util.FilterParser
 import org.example.geoapp.util.await
 import org.example.geoapp.util.awaitUnit
 import org.example.geoapp.util.runOnFx
+import org.example.geoapp.controller.UserListController
 
 
 class MainController {
@@ -92,6 +94,7 @@ class MainController {
     @FXML private lateinit var colCat5_8: TableColumn<Working, Double?>
     @FXML private lateinit var colCat9_12: TableColumn<Working, Double?>
 
+    private lateinit var currentUser: UserDto
     lateinit var token: String
     private lateinit var userRole: String
     private val api: GeoApi = MainApp.api
@@ -100,9 +103,10 @@ class MainController {
 
     private lateinit var tableFilter: TableFilter<Working>
 
-    fun initData(token: String, role: String) {
+    fun initData(token: String, role: String, user: UserDto) {
         this.token = token
         this.userRole = role
+        this.currentUser = user
         adminMenu.isVisible = (role == "ROLE_ADMIN")
         loadWorkings()
     }
@@ -654,7 +658,7 @@ class MainController {
         val root = loader.load<VBox>()
         val controller = loader.getController<ReportDialogController>()
 
-        controller.initData(token, userRole)
+        controller.initData(token, userRole, currentUser)
 
         val stage = Stage()
         stage.title = "Печать отчётов"
@@ -663,4 +667,17 @@ class MainController {
         stage.show()
     }
 
+    @FXML fun openUsersEditor() {
+        val loader = FXMLLoader(javaClass.getResource("/user_list.fxml"))
+        val root = loader.load<VBox>()
+        val controller = loader.getController<UserListController>()
+        controller.initData(token)
+        val stage = Stage()
+        stage.initModality(Modality.WINDOW_MODAL)
+        stage.initOwner(workingsTable.scene.window)
+        stage.scene = Scene(root)
+        stage.title = "Управление пользователями"
+        stage.showAndWait()
+    }
+    
 }

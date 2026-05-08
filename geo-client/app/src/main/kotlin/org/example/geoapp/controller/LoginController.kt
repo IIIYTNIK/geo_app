@@ -1,5 +1,6 @@
 package org.example.geoapp.controller
 
+import com.example.geoapp.api.UserDto
 import com.example.geoapp.api.GeoApi
 import com.example.geoapp.api.LoginRequest
 import javafx.fxml.FXML
@@ -16,22 +17,16 @@ class LoginController {
 
     @FXML
     private lateinit var usernameField: TextField
-
     @FXML
     private lateinit var passwordField: PasswordField
-
     @FXML
     private lateinit var loginButton: Button
-
     @FXML
     private lateinit var errorLabel: Label
-
     @FXML
     private lateinit var progressIndicator: ProgressIndicator
-
     @FXML
     private lateinit var root: VBox
-
     private val api: GeoApi = MainApp.api
 
     @FXML
@@ -58,7 +53,7 @@ class LoginController {
             try {
                 val response = api.login(LoginRequest(username, password)).await()
                 // Успешный вход
-                openMainWindow(response.token, response.role)
+                openMainWindow(response.token, response.role, response.user)
             } catch (e: Exception) {
                 errorLabel.text = when {
                     e.message?.contains("HTTP 401") == true -> "Неверный логин или пароль"
@@ -70,12 +65,12 @@ class LoginController {
         }
     }
 
-    private fun openMainWindow(token: String, role: String) {
+    private fun openMainWindow(token: String, role: String, currentUser: UserDto) {
         val loader = FXMLLoader(javaClass.getResource("/main.fxml"))
         val root = loader.load<javafx.scene.Parent>()
         val controller = loader.getController<MainController>()
         // Вызываем новый метод инициализации
-        controller.initData(token, role)
+        controller.initData(token, role, currentUser)
 
         val stage = (this.root.scene.window as Stage)
         stage.scene = Scene(root)
