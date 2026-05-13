@@ -67,6 +67,8 @@ class MainController {
     @FXML private lateinit var colHasCore: TableColumn<Working, Boolean>
     @FXML private lateinit var colHasStake: TableColumn<Working, Boolean>
 
+    @FXML private lateinit var colEmergency: TableColumn<Working, Boolean>
+
     // Образцы
     @FXML private lateinit var colSamplesThawed: TableColumn<Working, Int?>
     @FXML private lateinit var colSamplesFrozen: TableColumn<Working, Int?>
@@ -224,7 +226,8 @@ class MainController {
         createInteractiveCheckbox(colHasJournal, { it.hasJournal }, { w, v -> w.hasJournal = v })
         createInteractiveCheckbox(colHasCore, { it.hasCore }, { w, v -> w.hasCore = v })
         createInteractiveCheckbox(colHasStake, { it.hasStake }, { w, v -> w.hasStake = v })
-
+        createInteractiveCheckbox(colEmergency, { it.emergency }, { w, v -> w.emergency = v })
+        
         colSamplesThawed.setCellValueFactory { SimpleObjectProperty(it.value.samplesThawed) }
         colSamplesFrozen.setCellValueFactory { SimpleObjectProperty(it.value.samplesFrozen) }
         colSamplesRocky.setCellValueFactory { SimpleObjectProperty(it.value.samplesRocky) }

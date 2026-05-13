@@ -57,6 +57,7 @@
             <Label fx:id="gwStableAbsLabel" text="УУГВ абс: не определено" style="-fx-text-fill: #555;"/>
 
             <HBox spacing="20" alignment="CENTER_LEFT" style="-fx-padding: 10 0 0 0;">
+                
                 <CheckBox fx:id="actCheckBox" text="Акт"/>
                 <VBox><Label text="Номер акта:"/><TextField fx:id="actNumberField" prefWidth="150"/></VBox>
             </HBox>

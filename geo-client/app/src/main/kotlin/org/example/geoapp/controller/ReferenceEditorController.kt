@@ -28,7 +28,7 @@ class ReferenceEditorController {
     @FXML private lateinit var colComment: TableColumn<RefUiModel, String>
 
     @FXML private lateinit var nameField: TextField
-    @FXML private lateinit var contractorLabel: Label 
+    @FXML private lateinit var contractorLabel: Label
     @FXML private lateinit var aliasField: TextField
     @FXML private lateinit var contractorCombo: ComboBox<RefContractor>
     @FXML private lateinit var errorLabel: Label
@@ -41,24 +41,15 @@ class ReferenceEditorController {
 
     @FXML
     fun initialize() {
-        // Разрешаем редактирование в самой таблице
         referenceTable.isEditable = true
-
-        // Настраиваем колонку комментария, чтобы она была текстовым полем
         colComment.cellFactory = TextFieldTableCell.forTableColumn()
-
-        // Обрабатываем сохранение при правке комментария прямо в таблице
         colComment.setOnEditCommit { event ->
             val uiModel = event.rowValue
             val newComment = event.newValue
-            
-            uiModel.comment = newComment // Обновляем в локальной модели
-            
-            // Отправляем на сервер (асинхронно)
+            uiModel.comment = newComment
             runOnFx {
                 try {
                     val tokenStr = "Bearer $token"
-                    // Обновляем объект, подставляя новый комментарий
                     when (currentType) {
                         RefType.AREA -> api.updateArea(tokenStr, uiModel.id, (uiModel.originalObj as RefArea).copy(comment = newComment)).await()
                         RefType.WORK_TYPE -> api.updateWorkType(tokenStr, uiModel.id, (uiModel.originalObj as RefWorkType).copy(comment = newComment)).await()
@@ -96,54 +87,50 @@ class ReferenceEditorController {
         colAlias.isVisible = showAlias
         aliasField.isVisible = showAlias
 
-        // Слушатель выделения строки
+        // ====== Блокировка кнопки при пустом названии (как в UserListController) ======
+        nameField.textProperty().addListener { _, _, _ -> updateButtons() }
+
+        // ====== Биндинг для кнопки удаления ======
+        deleteButton.disableProperty().bind(referenceTable.selectionModel.selectedItemProperty().isNull)
+
+        // ====== Слушатель выделения (динамическая кнопка) ======
         referenceTable.selectionModel.selectedItemProperty().addListener { _, _, selected ->
             if (selected != null) {
-                // Если выбрали строку - переходим в режим РЕДАКТИРОВАНИЯ
+                // Режим редактирования
                 nameField.text = selected.name
-
                 if (type == RefType.GEOLOGIST) {
                     contractorCombo.value = selected.parent
                 }
-                
                 aliasField.text = when (selected.originalObj) {
                     is RefGeologist -> selected.originalObj.alias ?: ""
                     is RefDrillingRig -> selected.originalObj.alias ?: ""
                     else -> ""
                 }
-
-                deleteButton.isDisable = false
-                saveButton.text = "Сохранить изменения" 
+                deleteButton.isDisable = false       // уже не нужно из-за биндинга, но оставим для совместимости
+                saveButton.text = "Сохранить изменения"
             } else {
-                // Если ничего не выбрано - переходим в режим СОЗДАНИЯ
-                nameField.clear()
-                aliasField.clear()
-                contractorCombo.value = null
-                saveButton.text = "Добавить новую запись"
-                deleteButton.isDisable = true
+                // Режим создания
+                clearForm()
             }
+            updateButtons()   // пересчитать доступность кнопки
         }
 
         loadData()
+        clearForm()  // начальное состояние
     }
 
     private fun loadData() {
         runOnFx {
             try {
-                val items = mutableListOf<RefUiModel>()
-                when (currentType) {
-                    RefType.AREA -> api.getAreas().await().forEach { items.add(RefUiModel(it.id, it.name, null, null, it.comment, it)) }
-                    RefType.WORK_TYPE -> api.getWorkTypes().await().forEach { items.add(RefUiModel(it.id, it.name, null, null, it.comment, it)) }
-                    RefType.DRILLING_RIG -> api.getDrillingRigs().await().forEach { items.add(RefUiModel(it.id, it.name, it.alias, null, it.comment, it)) }
-                    RefType.CONTRACTOR -> api.getContractors().await().forEach { items.add(RefUiModel(it.id, it.name, null, null, it.comment, it)) }
-                    RefType.GEOLOGIST -> api.getGeologists().await().forEach { items.add(RefUiModel(it.id, it.name, it.alias, it.contractor, it.comment, it)) }
-                }
+                val items = when (currentType) {
+                    RefType.AREA -> api.getAreas().await().map { RefUiModel(it.id, it.name, null, null, it.comment, it) }
+                    RefType.WORK_TYPE -> api.getWorkTypes().await().map { RefUiModel(it.id, it.name, null, null, it.comment, it) }
+                    RefType.DRILLING_RIG -> api.getDrillingRigs().await().map { RefUiModel(it.id, it.name, it.alias, null, it.comment, it) }
+                    RefType.CONTRACTOR -> api.getContractors().await().map { RefUiModel(it.id, it.name, null, null, it.comment, it) }
+                    RefType.GEOLOGIST -> api.getGeologists().await().map { RefUiModel(it.id, it.name, it.alias, it.contractor, it.comment, it) }
+                }.sortedBy { it.id }
                 referenceTable.items = FXCollections.observableArrayList(items)
-                val sortedList = items.sortedBy { it.id }
-                runOnFx {
-                    referenceTable.items = FXCollections.observableArrayList(sortedList)
-                    autoSizeColumnsAndWindow()
-                }
+                autoSizeColumnsAndWindow()
             } catch (e: Exception) {
                 errorLabel.text = "Ошибка загрузки: ${e.message}"
             }
@@ -161,17 +148,39 @@ class ReferenceEditorController {
         }
     }
 
+    // ====== Универсальная очистка формы ======
+    private fun clearForm() {
+        nameField.clear()
+        aliasField.clear()
+        contractorCombo.value = null
+        errorLabel.text = ""
+        // Текст кнопки зависит от типа справочника (как в UserListController)
+        saveButton.text = when (currentType) {
+            RefType.AREA -> "Добавить участок"
+            RefType.WORK_TYPE -> "Добавить тип"
+            RefType.DRILLING_RIG -> "Добавить буровую"
+            RefType.CONTRACTOR -> "Добавить подрядчика"
+            RefType.GEOLOGIST -> "Добавить геолога"
+        }
+        updateButtons()
+    }
+
+    // ====== Проверка доступности кнопки сохранения ======
+    private fun updateButtons() {
+        saveButton.isDisable = nameField.text.trim().isBlank()
+    }
+
     @FXML fun onSave() {
         val name = nameField.text.trim()
         if (name.isEmpty()) {
             errorLabel.text = "Введите название!"
             return
         }
-        
+
         val selected = referenceTable.selectionModel.selectedItem
         val id = selected?.id ?: 0L
         val tokenStr = "Bearer $token"
-        
+
         runOnFx {
             try {
                 val aliasStr = if (aliasField.isVisible) aliasField.text.trim().ifEmpty { null } else null
@@ -181,16 +190,16 @@ class ReferenceEditorController {
                     RefType.DRILLING_RIG -> {
                         if (id == 0L) api.createDrillingRig(tokenStr, RefDrillingRig(name = name, alias = aliasStr)).await()
                         else api.updateDrillingRig(tokenStr, id, RefDrillingRig(name = name, alias = aliasStr)).await()
-                    }                    
+                    }
                     RefType.CONTRACTOR -> if (id == 0L) api.createContractor(tokenStr, RefContractor(name = name)).await() else api.updateContractor(tokenStr, id, RefContractor(name = name)).await()
                     RefType.GEOLOGIST -> {
                         val c = contractorCombo.value
                         if (c == null) { errorLabel.text = "Выберите подрядчика!"; return@runOnFx }
-                        if (id == 0L) api.createGeologist(tokenStr, RefGeologist(name = name, contractor = c, alias = aliasStr)).await() 
+                        if (id == 0L) api.createGeologist(tokenStr, RefGeologist(name = name, contractor = c, alias = aliasStr)).await()
                         else api.updateGeologist(tokenStr, id, RefGeologist(name = name, contractor = c, alias = aliasStr)).await()
                     }
                 }
-                onClearSelection() // Сбрасываем форму после успешного сохранения
+                onClearSelection()
                 loadData()
             } catch (e: Exception) { errorLabel.text = "Ошибка сохранения: ${e.message}" }
         }
@@ -216,21 +225,12 @@ class ReferenceEditorController {
 
     @FXML fun onClearSelection() {
         referenceTable.selectionModel.clearSelection()
-        nameField.clear()
-        aliasField.clear()
-        contractorCombo.value = null
-        errorLabel.text = ""
-        // Кнопки изменятся автоматически благодаря слушателю selectedItemProperty
+        clearForm()
     }
 
-
     private fun autoSizeColumnsAndWindow() {
-        // 1. Считаем ширину по содержимому
         referenceTable.columns.forEach { col ->
-            // Базовая ширина по заголовку
             var maxWidth = javafx.scene.text.Text(col.text).layoutBounds.width + 30.0
-            
-            // Перебираем первые 50 строк для скорости
             for (i in 0 until minOf(referenceTable.items.size, 50)) {
                 val cellData = col.getCellData(i)?.toString() ?: ""
                 val width = javafx.scene.text.Text(cellData).layoutBounds.width + 20.0
@@ -239,13 +239,10 @@ class ReferenceEditorController {
             col.prefWidth = maxWidth
         }
 
-        // 2. Подгоняем размер самого окна под сумму ширин колонок
         val totalWidth = referenceTable.columns.filter { it.isVisible }.sumOf { it.prefWidth } + 40.0
         val stage = referenceTable.scene?.window as? javafx.stage.Stage
         if (stage != null) {
-            // Устанавливаем минимальную ширину окна, чтобы оно не было меньше таблицы
             stage.minWidth = totalWidth
-            // Если текущая ширина меньше расчетной — расширяем
             if (stage.width < totalWidth) {
                 stage.width = totalWidth
             }

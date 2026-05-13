@@ -50,7 +50,6 @@ class WorkingFormController {
     @FXML private lateinit var gwAppearLogField: TextField
     @FXML private lateinit var gwStableLogField: TextField
     @FXML private lateinit var gwStableAbsLabel: Label
-
     @FXML private lateinit var actCheckBox: CheckBox
     @FXML private lateinit var actNumberField: TextField
     @FXML private lateinit var thermalTubeCheckBox: CheckBox
@@ -317,6 +316,9 @@ class WorkingFormController {
             additionalInfo = additionalInfoArea.text.ifBlank { null },
             coreRecovery = coreRecoveryField.toDoubleSafe(),
             casing = casingField.toDoubleSafe(),
+            samplesThawed = existing?.samplesThawed,
+            samplesFrozen = existing?.samplesFrozen,
+            samplesRocky = existing?.samplesRocky,
             mmg1Top = mmg1TopField.toDoubleSafe(),
             mmg1Bottom = mmg1BottomField.toDoubleSafe(),
             mmg2Top = mmg2TopField.toDoubleSafe(),
@@ -331,6 +333,7 @@ class WorkingFormController {
             hasJournal = existing?.hasJournal ?: false,
             hasCore = existing?.hasCore ?: false,
             hasStake = existing?.hasStake ?: false,
+            emergency = existing?.emergency ?: false,
             isProject = existing?.isProject ?: true,
             structure = existing?.structure,
             plannedContractor = existing?.plannedContractor,

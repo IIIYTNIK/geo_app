@@ -141,6 +141,8 @@ data class Working(
     var hasJournal: Boolean = false,
     var hasCore: Boolean = false,
     var hasStake: Boolean = false,
+    
+    var emergency: Boolean = false, // Аварийная скважина
 
     var samplesThawed: Int? = null,
     var samplesFrozen: Int? = null,

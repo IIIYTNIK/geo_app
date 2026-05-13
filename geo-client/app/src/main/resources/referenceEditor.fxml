@@ -32,6 +32,7 @@
     <HBox spacing="10" alignment="CENTER_RIGHT">
         <Button text="Сбросить (для новой записи)" onAction="#onClearSelection"/>
         <Button fx:id="deleteButton" text="Удалить" onAction="#onDelete" disable="true"/>
-        <Button fx:id="saveButton" text="Добавить новую запись" onAction="#onSave" defaultButton="true" style="-fx-font-weight: bold;"/>
+        <Button fx:id="saveButton" text="Добавить новую запись" onAction="#onSave" defaultButton="true" 
+        style="-fx-font-weight: bold; -fx-base: #1976D2; -fx-text-fill: white;"/>
     </HBox>
 </VBox>

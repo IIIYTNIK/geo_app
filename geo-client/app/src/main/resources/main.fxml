@@ -61,6 +61,7 @@
                     <TableColumn fx:id="colHasStake" text="Штага" prefWidth="60"/>
                 </columns>
             </TableColumn>
+            <TableColumn fx:id="colEmergency" text="Аварийная" prefWidth="80"/>
             <TableColumn text="Категория породы">
                 <columns>
                     <TableColumn fx:id="colCat1_4" text="1-4, п.м." prefWidth="70"/>

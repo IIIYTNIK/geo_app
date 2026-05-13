@@ -45,6 +45,8 @@ enum class DbField(val propKey: String, val title: String, val isReference: Bool
     HAS_JOURNAL("HasJournal", "Журнал"),
     HAS_CORE("HasCore", "Керн"),
     HAS_STAKE("HasStake", "Штага"),
+
+    EMERGENCY("emergency", "Аварийная"),
     
     // Образцы
     SAMPLES_THAWED("samplesThawed", "Талые (шт)"),

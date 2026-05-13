@@ -77,11 +77,14 @@ data class Working(
     @Column(name = "thermal_tube") val thermalTube: Boolean = false,
 
     // чекбоксы наличия материалов/журналов
-    @Column (name = "has_video") val hasVideo: Boolean = false,
-    @Column (name = "has_drilling") val hasDrilling: Boolean = false,
-    @Column (name = "has_journal") val hasJournal: Boolean = false,
-    @Column (name = "has_core") val hasCore: Boolean = false,
-    @Column (name = "has_stake") val hasStake: Boolean = false,
+    @Column(name = "has_video") val hasVideo: Boolean = false,
+    @Column(name = "has_drilling") val hasDrilling: Boolean = false,
+    @Column(name = "has_journal") val hasJournal: Boolean = false,
+    @Column(name = "has_core") val hasCore: Boolean = false,
+    @Column(name = "has_stake") val hasStake: Boolean = false,
+
+    @Column(name = "emergency") val emergency: Boolean = false, // Аварийная скважина
+
 
     // образцы
     val samplesThawed: Int? = null,

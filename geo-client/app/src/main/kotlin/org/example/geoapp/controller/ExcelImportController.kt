@@ -465,7 +465,7 @@ class ExcelImportController {
 
             cat1_4 = getNum(DbField.CAT1_4), 
             cat5_8 = getNum(DbField.CAT5_8), 
-            cat9_12 = getNum(DbField.CAT9_12)
+            cat9_12 = getNum(DbField.CAT9_12),
 
         )
     }
