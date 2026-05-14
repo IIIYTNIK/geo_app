@@ -17,10 +17,11 @@ module org.example.geoapp {
     requires org.apache.poi.poi;
     requires org.apache.poi.ooxml;
     requires java.desktop;
+    requires java.prefs;
 
     opens org.example.geoapp to javafx.fxml, javafx.graphics, javafx.controls;
     opens org.example.geoapp.controller to javafx.fxml;
 
-    opens com.example.geoapp.api to com.google.gson;
-    opens com.example.geoapp.api.report to com.google.gson;
+    opens org.example.geoapp.api to com.google.gson;
+    opens org.example.geoapp.api.report to com.google.gson;
 }

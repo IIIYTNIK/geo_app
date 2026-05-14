@@ -4,6 +4,7 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.Text?>
+<?import javafx.scene.text.Font?>
 
 <VBox fx:id="root" xmlns="http://javafx.com/javafx"
       xmlns:fx="http://javafx.com/fxml"
@@ -13,6 +14,16 @@
     <padding>
         <Insets top="40" right="40" bottom="40" left="40"/>
     </padding>
+
+    <!-- Верхняя панель с кнопкой настроек -->
+    <HBox alignment="TOP_RIGHT" spacing="10">
+        <Button fx:id="settingsButton" text="⚙" onAction="#openSettings"
+                style="-fx-font-size: 18px; -fx-background-color: transparent; -fx-cursor: hand;">
+            <tooltip>
+                <Tooltip text="Настройки подключения"/>
+            </tooltip>
+        </Button>
+    </HBox>
 
     <Text text="Вход в систему" style="-fx-font-size: 24px; -fx-font-weight: bold;"/>
 

@@ -1,9 +1,9 @@
 package org.example.geoapp.controller
 
-import com.example.geoapp.api.GeoApi
-import com.example.geoapp.api.UserCreateDto
-import com.example.geoapp.api.UserDto
-import com.example.geoapp.api.UserUpdateDto
+import org.example.geoapp.api.GeoApi
+import org.example.geoapp.api.UserCreateDto
+import org.example.geoapp.api.UserDto
+import org.example.geoapp.api.UserUpdateDto
 import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.property.SimpleStringProperty
 import javafx.collections.FXCollections

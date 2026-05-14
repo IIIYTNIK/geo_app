@@ -40,12 +40,10 @@ javafx {
 }
 
 application {
-    // mainModule = "geo.app"
-    mainClass = "org.example.geoapp.MainApp"
+    mainClass.set("org.example.geoapp.MainApp")
 }
 
 jlink {
-
     imageZip.set(project.file("${layout.buildDirectory.get()}/distributions/app.zip"))
 
     options.set(listOf(
@@ -59,6 +57,8 @@ jlink {
 
     launcher {
         name = "GeoApp"
+        moduleName = "org.example.geoapp"
+        mainClass = "org.example.geoapp.MainApp"
     }
 
     jpackage {

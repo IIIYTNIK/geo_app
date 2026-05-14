@@ -1,7 +1,7 @@
 package org.example.geoapp.controller
 
-import com.example.geoapp.api.UserDto
-import com.example.geoapp.api.report.*
+import org.example.geoapp.api.UserDto
+import org.example.geoapp.api.report.*
 import javafx.application.Platform
 import javafx.collections.FXCollections
 import javafx.fxml.FXML

@@ -1,9 +1,9 @@
 package org.example.geoapp.controller
 
-import com.example.geoapp.api.UserDto
-import com.example.geoapp.api.GeoApi
-import com.example.geoapp.api.Working
-import com.example.geoapp.api.RefContractor
+import org.example.geoapp.api.UserDto
+import org.example.geoapp.api.GeoApi
+import org.example.geoapp.api.Working
+import org.example.geoapp.api.RefContractor
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleStringProperty
 import javafx.beans.property.SimpleObjectProperty

@@ -1,4 +1,4 @@
-package com.example.geoapp.api.report
+package org.example.geoapp.api.report
 
 data class ReportGenerateRequest(
     val templateId: Long,

@@ -1,7 +1,7 @@
 package org.example.geoapp.util
 
-import com.example.geoapp.api.Working
-import com.example.geoapp.api.RefWorkType
+import org.example.geoapp.api.Working
+import org.example.geoapp.api.RefWorkType
 
 object WorkingParser {
     // Передаем список доступных типов выработок, чтобы парсер мог найти совпадение

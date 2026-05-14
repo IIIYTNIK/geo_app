@@ -1,6 +1,6 @@
-package com.example.geoapp.api
+package org.example.geoapp.api
 
-import com.example.geoapp.api.report.*
+import org.example.geoapp.api.report.*
 import okhttp3.ResponseBody
 import okhttp3.MultipartBody
 import okhttp3.RequestBody

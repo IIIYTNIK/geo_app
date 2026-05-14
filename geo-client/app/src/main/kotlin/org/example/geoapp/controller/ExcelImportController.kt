@@ -1,6 +1,6 @@
 package org.example.geoapp.controller
 
-import com.example.geoapp.api.*
+import org.example.geoapp.api.*
 import javafx.beans.property.SimpleStringProperty
 import javafx.collections.FXCollections
 import javafx.fxml.FXML
