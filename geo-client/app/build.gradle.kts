@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.kotlin.jvm)
-    id("org.openjfx.javafxplugin") version "0.0.14"
+    id("org.openjfx.javafxplugin") version "0.1.0"
+    id("org.beryx.jlink") version "4.0.0"
     application
 }
 
@@ -11,7 +12,7 @@ repositories {
 dependencies {
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-    
+
     implementation("org.openjfx:javafx-controls:21")
     implementation("org.openjfx:javafx-fxml:21")
     implementation("org.controlsfx:controlsfx:11.2.2")
@@ -22,8 +23,8 @@ dependencies {
     implementation(kotlin("stdlib"))
     implementation(libs.guava)
 
-    implementation("org.apache.poi:poi:5.2.5")
-    implementation("org.apache.poi:poi-ooxml:5.2.5")
+    implementation("org.apache.poi:poi:5.4.0")
+    implementation("org.apache.poi:poi-ooxml:5.4.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 }
 
@@ -32,18 +33,46 @@ java {
         languageVersion = JavaLanguageVersion.of(21)
     }
 }
- 
+
 javafx {
     version = "21"
     modules = listOf("javafx.controls", "javafx.fxml")
 }
 
 application {
-    // Define the main class for the application.
+    // mainModule = "geo.app"
     mainClass = "org.example.geoapp.MainApp"
 }
 
+jlink {
+
+    imageZip.set(project.file("${layout.buildDirectory.get()}/distributions/app.zip"))
+
+    options.set(listOf(
+        "--strip-debug",
+        "--compress", "2",
+        "--no-header-files",
+        "--no-man-pages"
+    ))
+
+    addExtraDependencies("kotlinx-coroutines-core", "kotlinx-coroutines-javafx")
+
+    launcher {
+        name = "GeoApp"
+    }
+
+    jpackage {
+        installerType = "exe"
+
+        installerOptions.addAll(listOf(
+            "--win-menu",
+            "--win-shortcut",
+            "--win-dir-chooser"
+        ))
+    }
+}
+
+
 tasks.named<Test>("test") {
-    // Use JUnit Platform for unit tests.
     useJUnitPlatform()
 }
