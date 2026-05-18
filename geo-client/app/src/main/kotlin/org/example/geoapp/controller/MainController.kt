@@ -19,6 +19,9 @@ import javafx.scene.input.KeyCombination
 import javafx.scene.layout.VBox
 import javafx.scene.control.cell.TextFieldTableCell
 import javafx.scene.control.TableColumn.SortType
+import javafx.animation.KeyFrame
+import javafx.animation.Timeline
+import javafx.util.Duration
 import javafx.util.converter.IntegerStringConverter
 import javafx.util.converter.DoubleStringConverter
 import javafx.util.StringConverter
@@ -96,6 +99,7 @@ class MainController {
     @FXML private lateinit var colCat5_8: TableColumn<Working, Double?>
     @FXML private lateinit var colCat9_12: TableColumn<Working, Double?>
 
+    private var autoRefreshTimeline: Timeline? = null
     private lateinit var currentUser: UserDto
     lateinit var token: String
     private lateinit var userRole: String
@@ -111,6 +115,7 @@ class MainController {
         this.currentUser = user
         adminMenu.isVisible = (role == "ROLE_ADMIN")
         loadWorkings()
+        startAutoRefresh()
     }
 
     // private fun setupTableNavigation() {
@@ -221,12 +226,12 @@ class MainController {
         setupDoubleColumn(colCat9_12) { it.cat9_12 }
 
         // Интерактивные чекбоксы в таблице
-        createInteractiveCheckbox(colHasVideo, { it.hasVideo }, { w, v -> w.hasVideo = v })
-        createInteractiveCheckbox(colHasDrilling, { it.hasDrilling }, { w, v -> w.hasDrilling = v })
-        createInteractiveCheckbox(colHasJournal, { it.hasJournal }, { w, v -> w.hasJournal = v })
-        createInteractiveCheckbox(colHasCore, { it.hasCore }, { w, v -> w.hasCore = v })
-        createInteractiveCheckbox(colHasStake, { it.hasStake }, { w, v -> w.hasStake = v })
-        createInteractiveCheckbox(colEmergency, { it.emergency }, { w, v -> w.emergency = v })
+        createInteractiveCheckbox(colHasVideo, { it.hasVideo }, { w, v -> w.hasVideo = v }, false)
+        createInteractiveCheckbox(colHasDrilling, { it.hasDrilling }, { w, v -> w.hasDrilling = v }, false)
+        createInteractiveCheckbox(colHasJournal, { it.hasJournal }, { w, v -> w.hasJournal = v }, false)
+        createInteractiveCheckbox(colHasCore, { it.hasCore }, { w, v -> w.hasCore = v }, false)
+        createInteractiveCheckbox(colHasStake, { it.hasStake }, { w, v -> w.hasStake = v }, false)
+        createInteractiveCheckbox(colEmergency, { it.emergency }, { w, v -> w.emergency = v }, true)
         
         colSamplesThawed.setCellValueFactory { SimpleObjectProperty(it.value.samplesThawed) }
         colSamplesFrozen.setCellValueFactory { SimpleObjectProperty(it.value.samplesFrozen) }
@@ -305,7 +310,7 @@ class MainController {
             object : TableRow<Working>() {
                 override fun updateItem(item: Working?, empty: Boolean) {
                     super.updateItem(item, empty)
-                    styleClass.removeAll("project-filled", "project-empty", "actual")
+                    styleClass.removeAll(listOf("project-filled", "project-empty", "actual"))
                     if (item == null || empty) return
                     when {
                         item.isProject && item.contractor != null && item.geologist != null && item.drillingRig != null -> 
@@ -332,7 +337,7 @@ class MainController {
         }
     }
 
-    private fun createInteractiveCheckbox(col: TableColumn<Working, Boolean>, getter: (Working) -> Boolean, setter: (Working, Boolean) -> Unit) {
+    private fun createInteractiveCheckbox(col: TableColumn<Working, Boolean>, getter: (Working) -> Boolean, setter: (Working, Boolean) -> Unit, Colors: Boolean = false) {
         col.setCellValueFactory { SimpleBooleanProperty(getter(it.value)) }
         col.setCellFactory {
             object : TableCell<Working, Boolean>() {
@@ -352,6 +357,7 @@ class MainController {
                     }
                     alignment = javafx.geometry.Pos.CENTER
                 }
+
                 override fun updateItem(item: Boolean?, empty: Boolean) {
                     super.updateItem(item, empty)
                     if (empty || item == null) {
@@ -363,8 +369,9 @@ class MainController {
                         updateStyle(item)
                     }
                 }
+
                 private fun updateStyle(isChecked: Boolean) {
-                    style = if (isChecked) "-fx-background-color: #a5d6a7;" else "-fx-background-color: #ef9a9a;"
+                    style = if (isChecked != Colors) "-fx-background-color: #a5d6a7;" else "-fx-background-color: #ef9a9a;"
                 }
             }
         }
@@ -683,4 +690,24 @@ class MainController {
         stage.showAndWait()
     }
     
+    private fun startAutoRefresh() {
+        autoRefreshTimeline?.stop()
+
+        autoRefreshTimeline = Timeline(
+            KeyFrame(
+                Duration.seconds(30.0),
+                javafx.event.EventHandler {
+                    loadWorkings()
+                }
+            )
+        ).apply {
+            cycleCount = Timeline.INDEFINITE
+            play()
+        }
+    }
+
+    private fun stopAutoRefresh() {
+        autoRefreshTimeline?.stop()
+    }
+
 }

@@ -20,7 +20,7 @@ class AuthController(
     private val userService: UserService
 ) {
 
-    data class LoginRequest(val username: String, val password: String)
+    data class LoginRequest(val login: String, val password: String)
     data class LoginResponse(val token: String, val role: String, val user: UserDto)
 
     @PostMapping("/login")
@@ -28,12 +28,12 @@ class AuthController(
         try {
             authenticationManager.authenticate(
                 UsernamePasswordAuthenticationToken(
-                    request.username,
+                    request.login,
                     request.password
                 )
             )
 
-            val userDetails = userService.loadUserByUsername(request.username)
+            val userDetails = userService.loadUserByUsername(request.login)
 
             val token = jwtService.generateToken(userDetails)
 
@@ -41,13 +41,14 @@ class AuthController(
                 .firstOrNull()
                 ?.authority ?: "ROLE_USER"
 
-            val dbUser = userService.loadUserByUsername(request.username)
+            val dbUser = userService.loadUserByUsername(request.login) as com.example.geoserver.entity.User
 
             val userDto = UserDto(
-                id = (dbUser as com.example.geoserver.entity.User).id,
-                username = dbUser.username,
+                id = dbUser.id,
+                login = dbUser.login,
+                fullName = dbUser.fullName,
                 role = role,
-                position = (dbUser as com.example.geoserver.entity.User).position
+                position = dbUser.position
             )
 
             return ResponseEntity.ok(

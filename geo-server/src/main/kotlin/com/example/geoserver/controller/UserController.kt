@@ -17,37 +17,38 @@ class UserController(
 
     @GetMapping
     fun getAllUsers(): List<UserDto> {
-        return userRepository.findAll().map { UserDto(it.id, it.username, it.role, it.position) }
+        return userRepository.findAll().map { UserDto(it.id, it.login, it.fullName, it.role, it.position) }
     }
 
     @PostMapping
     fun createUser(@RequestBody req: UserCreateDto): ResponseEntity<Any> {
-        if (userRepository.findByUsername(req.username).isPresent) {
+        if (userRepository.findByLogin(req.login).isPresent) {
             return ResponseEntity.badRequest().body(mapOf("error" to "Пользователь уже существует"))
         }
         val user = userService.createUser(
-            username = req.username,
+            login = req.login,
+            fullName = req.fullName,
             rawPassword = req.password,
             role = req.role.removePrefix("ROLE_"), // UserService сам добавляет ROLE_
-            position = req.position ?: null
+            position = req.position?.ifBlank { null }
         )
-        return ResponseEntity.ok(UserDto(user.id, user.username, user.role, user.position))
+        return ResponseEntity.ok(UserDto(user.id, user.login, user.fullName, user.role, user.position))
     }
 
     @PutMapping("/{id}")
     fun updateUser(@PathVariable id: Long, @RequestBody req: UserUpdateDto): ResponseEntity<Any> {
-        var user = userRepository.findById(id).orElseThrow { RuntimeException("User not found") }
-        
-        // ВАЖНО: Для этого поля в классе User должны быть var!
-        user.updateUsername(req.username)
+        val user = userRepository.findById(id).orElseThrow { RuntimeException("User not found") }
+
+        user.updateLogin(req.login)
+        user.updateFullName(req.fullName)
         user.role = if (req.role.startsWith("ROLE_")) req.role else "ROLE_${req.role}"
-        user.position = req.position ?: null
+        user.position = req.position?.ifBlank { null }
         if (!req.password.isNullOrBlank()) {
             user.updatePassword(passwordEncoder.encode(req.password))
         }
         userRepository.save(user)
-        
-        return ResponseEntity.ok(UserDto(user.id, user.username, user.role, user.position))
+
+        return ResponseEntity.ok(UserDto(user.id, user.login, user.fullName, user.role, user.position))
     }
 
     @DeleteMapping("/{id}")
@@ -58,6 +59,6 @@ class UserController(
 }
 
 // DTO классы для контроллера
-data class UserDto(val id: Long, val username: String, val role: String, val position: String?)
-data class UserCreateDto(val username: String, val password: String, val role: String, val position: String?)
-data class UserUpdateDto(val username: String, val role: String, val password: String?, val position: String?)
+data class UserDto(val id: Long, val login: String, val fullName: String, val role: String, val position: String?)
+data class UserCreateDto(val login: String, val fullName: String, val password: String, val role: String, val position: String?)
+data class UserUpdateDto(val login: String, val fullName: String, val role: String, val password: String?, val position: String?)

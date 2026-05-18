@@ -15,16 +15,17 @@ class UserService(
     @Lazy private val passwordEncoder: BCryptPasswordEncoder
 ) : UserDetailsService {
 
-    override fun loadUserByUsername(username: String): UserDetails {
-        return userRepository.findByUsername(username)
-            .orElseThrow { UsernameNotFoundException("User not found: $username") }
+    override fun loadUserByUsername(login: String): UserDetails {
+        return userRepository.findByLogin(login)
+            .orElseThrow { UsernameNotFoundException("User not found: $login") }
     }
 
     // Метод для создания пользователя
-    fun createUser(username: String, rawPassword: String, role: String, position: String?): User {
+    fun createUser(login: String, fullName: String, rawPassword: String, role: String, position: String?): User {
         val encodedPassword = passwordEncoder.encode(rawPassword)
         val user = User(
-            username = username,
+            login = login,
+            fullName = fullName.trim(),
             password = encodedPassword,
             role = "ROLE_$role",  // Spring Security требует префикс ROLE_
             position = position?.ifEmpty { null }

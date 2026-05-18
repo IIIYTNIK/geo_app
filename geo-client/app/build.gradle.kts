@@ -65,6 +65,7 @@ jlink {
         installerType = "exe"
 
         installerOptions.addAll(listOf(
+            "--app-version", "1.0.0",
             "--win-menu",
             "--win-shortcut",
             "--win-dir-chooser"

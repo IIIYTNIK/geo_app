@@ -5,13 +5,14 @@ import com.example.geoserver.repository.*
 import org.springframework.boot.CommandLineRunner
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
-import java.time.LocalDate
 
 @Configuration
 class DataInitializer(
     private val userRepository: UserRepository,
     private val passwordEncoder: BCryptPasswordEncoder,
+    private val jdbcTemplate: JdbcTemplate,
 
     private val contractorRepo: RefContractorRepository,
     private val areaRepo: RefAreaRepository,
@@ -23,18 +24,33 @@ class DataInitializer(
 
     @Bean
     fun initData(): CommandLineRunner = CommandLineRunner {
-        if (userRepository.findByUsername("admin").isEmpty) {
+        try {
+            jdbcTemplate.execute(
+                """
+                    UPDATE users
+                    SET login = COALESCE(NULLIF(login, ''), username),
+                        full_name = COALESCE(NULLIF(full_name, ''), username)
+                    WHERE username IS NOT NULL
+                """.trimIndent()
+            )
+        } catch (ignored: Exception) {
+            // Если старой колонки username нет, пропускаем миграцию.
+        }
+
+        if (userRepository.findByLogin("admin").isEmpty) {
             val admin = User(
-                username = "admin",
+                login = "admin",
+                fullName = "Администратор",
                 password = passwordEncoder.encode("secret123"),
                 role = "ROLE_ADMIN"
             )
             userRepository.save(admin)
             // println("Создан тестовый пользователь: admin / secret123")
         }
-        if (userRepository.findByUsername("user").isEmpty) {
+        if (userRepository.findByLogin("user").isEmpty) {
             val user = User(
-                username = "user",
+                login = "user",
+                fullName = "Пользователь",
                 password = passwordEncoder.encode("password"),
                 role = "ROLE_USER"
             )

@@ -12,8 +12,11 @@ class User(
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     val id: Long = 0,
 
-    @Column(unique = true, nullable = false)
-    private var username: String = "",
+    @Column(name = "login", unique = true, nullable = false)
+    private var login: String = "",
+
+    @Column(name = "full_name", nullable = false)
+    var fullName: String = "",
 
     @Column(nullable = false)
     private var password: String = "",
@@ -26,8 +29,12 @@ class User(
 
 ) : UserDetails {
 
-    fun updateUsername(newUsername: String) {
-        username = newUsername
+    fun updateLogin(newLogin: String) {
+        login = newLogin.trim()
+    }
+
+    fun updateFullName(newFullName: String) {
+        fullName = newFullName.trim()
     }
 
     fun updatePassword(newPassword: String) {
@@ -43,7 +50,7 @@ class User(
     }
 
     override fun getPassword(): String = password
-    override fun getUsername(): String = username
+    override fun getUsername(): String = login
     override fun isAccountNonExpired(): Boolean = true
     override fun isAccountNonLocked(): Boolean = true
     override fun isCredentialsNonExpired(): Boolean = true
@@ -52,14 +59,14 @@ class User(
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is User) return false
-        return id == other.id && username == other.username && password == other.password && role == other.role
+        return id == other.id && login == other.login
     }
 
     override fun hashCode(): Int {
-        return id.hashCode() + username.hashCode() + password.hashCode() + role.hashCode()
+        return 31 * id.hashCode() + login.hashCode()
     }
 
     override fun toString(): String {
-        return "User(id=$id, username='$username', role='$role')"
+        return "User(id=$id, login='$login', fullName='$fullName', role='$role')"
     }
 }

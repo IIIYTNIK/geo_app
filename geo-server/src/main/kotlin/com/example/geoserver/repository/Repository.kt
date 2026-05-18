@@ -12,7 +12,7 @@ interface ReportTemplateRepository : JpaRepository<ReportTemplate, Long> {
 }
 
 interface UserRepository : JpaRepository<User, Long> {
-    fun findByUsername(username: String): Optional<User>
+    fun findByLogin(login: String): Optional<User>
 }
 
 // Справочники

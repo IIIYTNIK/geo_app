@@ -87,13 +87,11 @@ class ReferenceEditorController {
         colAlias.isVisible = showAlias
         aliasField.isVisible = showAlias
 
-        // ====== Блокировка кнопки при пустом названии (как в UserListController) ======
+    
         nameField.textProperty().addListener { _, _, _ -> updateButtons() }
 
-        // ====== Биндинг для кнопки удаления ======
         deleteButton.disableProperty().bind(referenceTable.selectionModel.selectedItemProperty().isNull)
 
-        // ====== Слушатель выделения (динамическая кнопка) ======
         referenceTable.selectionModel.selectedItemProperty().addListener { _, _, selected ->
             if (selected != null) {
                 // Режим редактирования
@@ -148,13 +146,11 @@ class ReferenceEditorController {
         }
     }
 
-    // ====== Универсальная очистка формы ======
     private fun clearForm() {
         nameField.clear()
         aliasField.clear()
         contractorCombo.value = null
         errorLabel.text = ""
-        // Текст кнопки зависит от типа справочника (как в UserListController)
         saveButton.text = when (currentType) {
             RefType.AREA -> "Добавить участок"
             RefType.WORK_TYPE -> "Добавить тип"
@@ -165,7 +161,6 @@ class ReferenceEditorController {
         updateButtons()
     }
 
-    // ====== Проверка доступности кнопки сохранения ======
     private fun updateButtons() {
         saveButton.isDisable = nameField.text.trim().isBlank()
     }
