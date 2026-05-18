@@ -17,7 +17,7 @@ class UserController(
 
     @GetMapping
     fun getAllUsers(): List<UserDto> {
-        return userRepository.findAll().map { UserDto(it.id, it.login, it.fullName, it.role, it.position) }
+        return userRepository.findAll().map { UserDto(it.id, it.username, it.fullName, it.role, it.position) }
     }
 
     @PostMapping
@@ -32,7 +32,7 @@ class UserController(
             role = req.role.removePrefix("ROLE_"), // UserService сам добавляет ROLE_
             position = req.position?.ifBlank { null }
         )
-        return ResponseEntity.ok(UserDto(user.id, user.login, user.fullName, user.role, user.position))
+        return ResponseEntity.ok(UserDto(user.id, user.username, user.fullName, user.role, user.position))
     }
 
     @PutMapping("/{id}")
@@ -48,7 +48,7 @@ class UserController(
         }
         userRepository.save(user)
 
-        return ResponseEntity.ok(UserDto(user.id, user.login, user.fullName, user.role, user.position))
+        return ResponseEntity.ok(UserDto(user.id, user.username, user.fullName, user.role, user.position))
     }
 
     @DeleteMapping("/{id}")

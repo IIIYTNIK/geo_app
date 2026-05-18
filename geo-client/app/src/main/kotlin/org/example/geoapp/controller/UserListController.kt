@@ -20,11 +20,13 @@ class UserListController {
 
     @FXML private lateinit var usersTable: TableView<UserDto>
     @FXML private lateinit var colId: TableColumn<UserDto, Long>
-    @FXML private lateinit var colUsername: TableColumn<UserDto, String>
+    @FXML private lateinit var colLogin: TableColumn<UserDto, String>
+    @FXML private lateinit var colFullName: TableColumn<UserDto, String>
     @FXML private lateinit var colRole: TableColumn<UserDto, String>
     @FXML private lateinit var colPosition: TableColumn<UserDto, String>
 
-    @FXML private lateinit var usernameField: TextField
+    @FXML private lateinit var loginField: TextField
+    @FXML private lateinit var fullNameField: TextField
     @FXML private lateinit var passwordField: PasswordField
     @FXML private lateinit var roleCombo: ComboBox<String>
     @FXML private lateinit var positionField: TextField
@@ -48,7 +50,8 @@ class UserListController {
 
     private fun setupTable() {
         colId.setCellValueFactory { SimpleObjectProperty(it.value.id) }
-        colUsername.setCellValueFactory { SimpleStringProperty(it.value.username) }
+        colLogin.setCellValueFactory { SimpleStringProperty(it.value.login) }
+        colFullName.setCellValueFactory { SimpleStringProperty(it.value.fullName) }
         colRole.setCellValueFactory { SimpleStringProperty(roleToRu(it.value.role)) }
         colPosition.setCellValueFactory { SimpleStringProperty(it.value.position ?: "") }
 
@@ -75,7 +78,8 @@ class UserListController {
 
         roleCombo.selectionModel.select("ROLE_USER")
 
-        usernameField.textProperty().addListener { _, _, _ -> updateButtons() }
+        loginField.textProperty().addListener { _, _, _ -> updateButtons() }
+        fullNameField.textProperty().addListener { _, _, _ -> updateButtons() }
         passwordField.textProperty().addListener { _, _, _ -> updateButtons() }
         positionField.textProperty().addListener { _, _, _ -> updateButtons() }
     }
@@ -88,12 +92,18 @@ class UserListController {
 
     @FXML
     fun onSave() {
-        val username = usernameField.text.trim()
+        val login = loginField.text.trim()
+        val fullName = fullNameField.text.trim()
         val role = roleCombo.value
         val password = passwordField.text
 
-        if (username.isBlank()) {
-            showAlert("Ошибка", "Введите имя пользователя")
+        if (login.isBlank()) {
+            showAlert("Ошибка", "Введите логин")
+            return
+        }
+
+        if (fullName.isBlank()) {
+            showAlert("Ошибка", "Введите ФИО")
             return
         }
 
@@ -116,10 +126,11 @@ class UserListController {
                     api.createUser(
                         tokenStr,
                         UserCreateDto(
-                            username = username,
+                            login = login,
+                            fullName = fullName,
                             password = password,
                             role = role.removePrefix("ROLE_"),
-                            position = positionField.text.trim() ?: ""
+                            position = positionField.text.trim().ifBlank { null }
                         )
                     ).await()
                 } else {
@@ -127,10 +138,11 @@ class UserListController {
                         tokenStr,
                         current.id,
                         UserUpdateDto(
-                            username = username,
+                            login = login,
+                            fullName = fullName,
                             role = role,
                             password = password.trim().ifBlank { null },
-                            position = positionField.text.trim() ?: ""
+                            position = positionField.text.trim().ifBlank { null }
                         )
                     ).await()
                 }
@@ -151,7 +163,7 @@ class UserListController {
 
         val confirm = Alert(
             Alert.AlertType.CONFIRMATION,
-            "Удалить пользователя '${selected.username}'?",
+            "Удалить пользователя '${selected.fullName}'?",
             ButtonType.YES,
             ButtonType.NO
         )
@@ -188,7 +200,8 @@ class UserListController {
             return
         }
 
-        usernameField.text = user.username
+        loginField.text = user.login
+        fullNameField.text = user.fullName
         passwordField.clear()
         positionField.text = user.position ?: ""
         roleCombo.value = user.role
@@ -198,7 +211,8 @@ class UserListController {
 
     private fun clearForm() {
         selectedUser = null
-        usernameField.clear()
+        loginField.clear()
+        fullNameField.clear()
         passwordField.clear()
         positionField.clear()
         roleCombo.value = "ROLE_USER"
@@ -209,7 +223,8 @@ class UserListController {
 
     private fun updateButtons() {
         saveButton.isDisable =
-            usernameField.text.trim().isBlank() ||
+            loginField.text.trim().isBlank() ||
+            fullNameField.text.trim().isBlank() ||
             roleCombo.value.isNullOrBlank()
     }
 

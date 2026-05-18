@@ -15,7 +15,7 @@ import org.example.geoapp.util.await
 
 class LoginController {
 
-    @FXML private lateinit var usernameField: TextField
+    @FXML private lateinit var loginField: TextField
     @FXML private lateinit var passwordField: PasswordField
     @FXML private lateinit var loginButton: Button
     @FXML private lateinit var errorLabel: Label
@@ -33,10 +33,10 @@ class LoginController {
 
     @FXML
     fun onLogin() {
-        val username = usernameField.text.trim()
+        val login = loginField.text.trim()
         val password = passwordField.text.trim()
 
-        if (username.isEmpty() || password.isEmpty()) {
+        if (login.isEmpty() || password.isEmpty()) {
             errorLabel.text = "Заполните все поля"
             return
         }
@@ -47,7 +47,7 @@ class LoginController {
 
         runOnFx {
             try {
-                val response = api.login(LoginRequest(username, password)).await()
+                val response = api.login(LoginRequest(login, password)).await()
                 openMainWindow(response.token, response.role, response.user)
             } catch (e: Exception) {
                 errorLabel.text = when {

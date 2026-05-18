@@ -1,7 +1,7 @@
 plugins {
     alias(libs.plugins.kotlin.jvm)
-    id("org.openjfx.javafxplugin") version "0.1.0"
-    id("org.beryx.jlink") version "4.0.0"
+    id("org.openjfx.javafxplugin") version "0.1.0" 
+    id("org.beryx.runtime") version "2.0.1"
     application
 }
 
@@ -12,9 +12,7 @@ repositories {
 dependencies {
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-
-    implementation("org.openjfx:javafx-controls:21")
-    implementation("org.openjfx:javafx-fxml:21")
+    
     implementation("org.controlsfx:controlsfx:11.2.2")
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
     implementation("com.squareup.retrofit2:converter-gson:2.11.0")
@@ -40,30 +38,19 @@ javafx {
 }
 
 application {
-    mainClass.set("org.example.geoapp.MainApp")
+    // Плагин runtime автоматически подхватит этот класс!
+    mainClass.set("org.example.geoapp.AppLauncherKt")
 }
 
-jlink {
-    imageZip.set(project.file("${layout.buildDirectory.get()}/distributions/app.zip"))
-
-    options.set(listOf(
-        "--strip-debug",
-        "--compress", "2",
-        "--no-header-files",
-        "--no-man-pages"
-    ))
-
-    addExtraDependencies("kotlinx-coroutines-core", "kotlinx-coroutines-javafx")
-
-    launcher {
-        name = "GeoApp"
-        moduleName = "org.example.geoapp"
-        mainClass = "org.example.geoapp.MainApp"
-    }
+runtime {
+    options.set(listOf("--strip-debug", "--compress", "2", "--no-header-files", "--no-man-pages"))
+    
+    // Блок launcher удален за ненадобностью
 
     jpackage {
+        // Именно эта строка задает имя "GeoApp.exe" и название папки установки
+        imageName = "GeoApp"
         installerType = "exe"
-
         installerOptions.addAll(listOf(
             "--app-version", "1.0.0",
             "--win-menu",
@@ -72,7 +59,6 @@ jlink {
         ))
     }
 }
-
 
 tasks.named<Test>("test") {
     useJUnitPlatform()

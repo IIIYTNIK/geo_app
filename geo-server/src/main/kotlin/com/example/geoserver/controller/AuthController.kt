@@ -45,7 +45,7 @@ class AuthController(
 
             val userDto = UserDto(
                 id = dbUser.id,
-                login = dbUser.login,
+                login = dbUser.username,
                 fullName = dbUser.fullName,
                 role = role,
                 position = dbUser.position

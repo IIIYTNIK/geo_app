@@ -16,7 +16,8 @@
     <TableView fx:id="usersTable" VBox.vgrow="ALWAYS">
         <columns>
             <TableColumn fx:id="colId" text="ID" prefWidth="70"/>
-            <TableColumn fx:id="colUsername" text="Имя пользователя" prefWidth="220"/>
+            <TableColumn fx:id="colLogin" text="Логин" prefWidth="170"/>
+            <TableColumn fx:id="colFullName" text="ФИО" prefWidth="220"/>
             <TableColumn fx:id="colRole" text="Роль" prefWidth="160"/>
             <TableColumn fx:id="colPosition" text="Должность" prefWidth="220"/>
         </columns>
@@ -30,20 +31,23 @@
             <ColumnConstraints hgrow="ALWAYS"/>
         </columnConstraints>
 
-        <Label text="Имя пользователя:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
-        <TextField fx:id="usernameField" GridPane.rowIndex="0" GridPane.columnIndex="1" maxWidth="Infinity"/>
+        <Label text="Логин:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+        <TextField fx:id="loginField" GridPane.rowIndex="0" GridPane.columnIndex="1" maxWidth="Infinity"/>
 
-        <Label text="Пароль:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
-        <PasswordField fx:id="passwordField" GridPane.rowIndex="1" GridPane.columnIndex="1" maxWidth="Infinity"/>
+        <Label text="ФИО:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+        <TextField fx:id="fullNameField" GridPane.rowIndex="1" GridPane.columnIndex="1" maxWidth="Infinity"/>
+
+        <Label text="Пароль:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+        <PasswordField fx:id="passwordField" GridPane.rowIndex="2" GridPane.columnIndex="1" maxWidth="Infinity"/>
         <Label text="Оставьте пустым, если пароль менять не нужно"
                style="-fx-text-fill: #777; -fx-font-size: 10px;"
-               GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+               GridPane.rowIndex="3" GridPane.columnIndex="1"/>
 
-        <Label text="Роль:" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
-        <ComboBox fx:id="roleCombo" GridPane.rowIndex="3" GridPane.columnIndex="1" maxWidth="Infinity"/>
+        <Label text="Роль:" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
+        <ComboBox fx:id="roleCombo" GridPane.rowIndex="4" GridPane.columnIndex="1" maxWidth="Infinity"/>
 
-        <Label text="Должность:" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
-        <TextField fx:id="positionField" GridPane.rowIndex="4" GridPane.columnIndex="1" maxWidth="Infinity"/>
+        <Label text="Должность:" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
+        <TextField fx:id="positionField" GridPane.rowIndex="5" GridPane.columnIndex="1" maxWidth="Infinity"/>
     </GridPane>
 
     <Label fx:id="errorLabel" textFill="red" wrapText="true"/>

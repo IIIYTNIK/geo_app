@@ -74,7 +74,7 @@ interface GeoApi {
 
 }
 
-data class LoginRequest(val username: String, val password: String)
+data class LoginRequest(val login: String, val password: String)
 data class LoginResponse(val token: String, val role: String, val user: UserDto)
 
 // Модели справочников
@@ -85,9 +85,9 @@ data class RefWorkType(val id: Long = 0, val name: String, val comment: String? 
 data class RefGeologist(val id: Long = 0, val name: String, val alias: String? = null, var contractor: RefContractor? = null, val comment: String? = null)
 
 // Модели для работы с пользователями
-data class UserDto(val id: Long, val username: String, val role: String, val position: String?)
-data class UserCreateDto(val username: String, val password: String, val role: String, val position: String? = null)
-data class UserUpdateDto(val username: String, val role: String, val password: String?, val position: String? = null)
+data class UserDto(val id: Long, val login: String, val fullName: String, val role: String, val position: String?)
+data class UserCreateDto(val login: String, val fullName: String, val password: String, val role: String, val position: String? = null)
+data class UserUpdateDto(val login: String, val fullName: String, val role: String, val password: String?, val position: String? = null)
 
 // Модель выработки (Working) - основная сущность, с которой будем работать в приложении
 data class Working(

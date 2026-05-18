@@ -551,7 +551,7 @@ class ReportDialogController {
     }
 
     private fun formatOperatorName(user: UserDto): String {
-        return user.username.trim().ifBlank { "Неизвестно" }
+        return user.fullName.trim().ifBlank { "Неизвестно" }
     }
 
 
