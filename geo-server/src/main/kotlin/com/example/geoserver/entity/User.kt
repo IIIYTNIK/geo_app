@@ -12,7 +12,7 @@ class User(
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     val id: Long = 0,
 
-    @Column(name = "login", unique = true, nullable = false)
+    @Column(name = "username", unique = true, nullable = false)
     private var login: String = "",
 
     @Column(name = "full_name", nullable = false)

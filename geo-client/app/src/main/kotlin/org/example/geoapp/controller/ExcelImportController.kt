@@ -414,7 +414,10 @@ class ExcelImportController {
         if (!isProjectImport) {
             if (contractor == null) throw Exception("Для фактической скважины обязателен 'Подрядчик'")
             if (geologist == null) throw Exception("Для фактической скважины обязателен 'Геолог'")
-            if (rig == null) throw Exception("Для фактической скважины обязательна 'Буровая'")
+            val isWell = workType?.name?.equals("скважина", ignoreCase = true) == true
+            if (isWell && rig == null) {
+                throw Exception("Для скважины обязательна 'Буровая'")
+            }
         }
 
         return Working(
