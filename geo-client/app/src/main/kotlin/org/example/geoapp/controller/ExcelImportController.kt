@@ -418,9 +418,8 @@ class ExcelImportController {
         }
 
         return Working(
-            number = parsedNumber, 
-            area = area, 
-            isProject = isProjectImport,
+            number = parsedNumber,
+            area = area,
             workType = workType, 
             contractor = contractor, 
             geologist = geologist, 

@@ -92,6 +92,19 @@ class ImportCorrectionController {
             col.setOnEditCommit { event ->
                 val row = event.tableView.items[event.tablePosition.row]
                 row.rawValues[field] = event.newValue
+                try {
+                    val working = parentController.validateAndParse(row.rawValues)
+                    if (working != null) {
+                        correctionTable.items.remove(row)
+                        validWorkingsToSend = validWorkingsToSend + working
+                    } else {
+                        correctionTable.items.remove(row)
+                    }
+                } catch (e: Exception) {
+                    row.errorMsg = e.message ?: "Ошибка валидации"
+                    correctionTable.refresh()
+                }
+                statusLabel.text = "Осталось ошибок: ${correctionTable.items.size}"
             }
             col.prefWidth = 120.0
             correctionTable.columns.add(col)
@@ -120,13 +133,13 @@ class ImportCorrectionController {
         }
     }
 
-    // КНОПКА 1: Выйти обратно в Excel
+    // Выйти обратно в Excel
     @FXML fun onExitBack() {
         onCancelCallback.invoke()
         close()
     }
 
-    // КНОПКА 2: Пропустить ошибки (импорт только целых)
+    // Пропустить ошибки (импорт только целых)
     @FXML fun onSkipAndImport() {
         val readyToImport = validWorkingsToSend.toMutableList()
         for (item in correctionTable.items) {
@@ -135,6 +148,7 @@ class ImportCorrectionController {
                 if (w != null) readyToImport.add(w)
             } catch (e: Exception) {
                 // Ошибка – пропускаем строку, не добавляем в импорт
+                item.errorMsg = e.message ?: "Ошибка валидации"
                 // Ничего не выводим в консоль, просто игнорируем
             }
         }
@@ -145,7 +159,7 @@ class ImportCorrectionController {
         sendData(readyToImport)
     }
 
-    // КНОПКА 3: Повторить импорт (перепроверка)
+    // Повторить импорт (перепроверка)
     @FXML fun onRetryCheck() {
         val stillInvalid = mutableListOf<CorrectionRow>()
         val fixed = mutableListOf<Working>()
@@ -158,12 +172,13 @@ class ImportCorrectionController {
             try {
                 val w = parentController.validateAndParse(item.rawValues)
                 if (w != null) {
-                    fixed.add(w)          // исправленная строка – добавляем к отправке
+                    fixed.add(w)          
                 } else {
-                    stillInvalid.add(item) // строка пустая или не содержит данных
+                    stillInvalid.add(item) 
                 }
             } catch (e: Exception) {
                 // Ошибка – строка остаётся в таблице коррекции
+                item.errorMsg = e.message ?: "Ошибка валидации"
                 stillInvalid.add(item)
             }
         }

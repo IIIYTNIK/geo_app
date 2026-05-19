@@ -313,7 +313,7 @@ class MainController {
                     styleClass.removeAll(listOf("project-filled", "project-empty", "actual"))
                     if (item == null || empty) return
                     when {
-                        item.isProject && item.contractor != null && item.geologist != null && item.drillingRig != null -> 
+                        item.isProject != true -> 
                             styleClass.add("project-filled")
                         item.isProject -> 
                             styleClass.add("project-empty")

@@ -24,7 +24,7 @@ class WorkingController(
     fun getById(@PathVariable id: Long): Working? = repo.findById(id).orElse(null)
 
     @PostMapping
-    fun create(@RequestBody working: Working) = workingService.saveWorking(working)
+    fun create(@RequestBody working: Working) = workingService.saveWorking(calculateComputedFields(working))
 
     @PostMapping("/batch")
     fun createBatch(@RequestBody workings: List<Working>): List<Working> {
@@ -36,7 +36,7 @@ class WorkingController(
             if (existing != null) {
                 throw ResponseStatusException(HttpStatus.CONFLICT, "Duplicate: ${processedWorking.number} on area ${processedWorking.area?.name}")
             }
-            savedWorkings.add(repo.save(processedWorking))
+            savedWorkings.add(workingService.saveWorking(processedWorking))
         }
         return savedWorkings
     }
@@ -44,12 +44,9 @@ class WorkingController(
     @PutMapping("/{id}")
     fun update(@PathVariable id: Long, @RequestBody working: Working): Working {
         if (!repo.existsById(id)) throw ResponseStatusException(HttpStatus.NOT_FOUND, "Working not found")
-        val toSave = if (working.contractor != null && working.drillingRig != null && working.number.isNotBlank()) {
-            calculateComputedFields(working).copy(id = id, plannedContractor = null)
-        } else {
-            calculateComputedFields(working).copy(id = id)
-        }
-        return repo.save(toSave)
+        val processed = calculateComputedFields(working)
+        val toSave = if (processed.contractor != null) processed.copy(id = id, plannedContractor = null) else processed.copy(id = id)
+        return workingService.saveWorking(toSave)
     }
 
     @DeleteMapping("/{id}")
@@ -59,6 +56,13 @@ class WorkingController(
 
     // ЛОГИКА РАСЧЕТОВ И ОКРУГЛЕНИЙ 
     private fun calculateComputedFields(w: Working): Working {
+        /**
+         * Вычисляет вспомогательные поля для записи `Working` перед сохранением:
+         * - округляет координаты до 3 знаков
+         * - рассчитывает смещение `deltaS`
+         * - рассчитывает `gwStableAbs`
+         * Также возвращает копию объекта с обновлёнными значениями.
+         */
         // Округление до 3 знаков
         fun round3(value: Double?): Double? {
             return value?.let { round(it * 1000.0) / 1000.0 }

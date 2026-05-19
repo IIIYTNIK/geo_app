@@ -334,7 +334,6 @@ class WorkingFormController {
             hasCore = existing?.hasCore ?: false,
             hasStake = existing?.hasStake ?: false,
             emergency = existing?.emergency ?: false,
-            isProject = existing?.isProject ?: true,
             structure = existing?.structure,
             plannedContractor = existing?.plannedContractor,
             cat1_4 = existing?.cat1_4,
