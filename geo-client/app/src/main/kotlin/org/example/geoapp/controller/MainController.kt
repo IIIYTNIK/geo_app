@@ -7,8 +7,11 @@ import org.example.geoapp.api.RefContractor
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleStringProperty
 import javafx.beans.property.SimpleObjectProperty
+import javafx.beans.binding.Bindings
+import javafx.beans.value.ChangeListener
 import javafx.collections.FXCollections
 import javafx.collections.ObservableList
+import javafx.collections.ListChangeListener
 import javafx.fxml.FXML
 import javafx.fxml.FXMLLoader
 import javafx.scene.Scene
@@ -17,8 +20,11 @@ import javafx.scene.input.KeyCode
 import javafx.scene.input.KeyCodeCombination
 import javafx.scene.input.KeyCombination
 import javafx.scene.layout.VBox
+import javafx.scene.layout.Pane
+import javafx.scene.layout.HBox
 import javafx.scene.control.cell.TextFieldTableCell
 import javafx.scene.control.TableColumn.SortType
+import javafx.scene.shape.Rectangle
 import javafx.animation.KeyFrame
 import javafx.animation.Timeline
 import javafx.util.Duration
@@ -29,6 +35,8 @@ import javafx.stage.FileChooser
 import javafx.stage.Modality
 import javafx.stage.Stage
 import javafx.application.Platform
+import javafx.geometry.Bounds
+import javafx.geometry.Orientation
 import org.controlsfx.control.table.TableFilter
 import org.example.geoapp.MainApp
 import org.example.geoapp.util.FilterParser
@@ -40,12 +48,16 @@ import org.example.geoapp.controller.UserListController
 
 class MainController {
 
+    @FXML private lateinit var summaryContainer: Pane
+    @FXML private lateinit var summaryHBox: HBox
+    
     @FXML private lateinit var adminMenu: Menu
     @FXML private lateinit var filterAreaCombo: ComboBox<String>
     @FXML private lateinit var workingsTable: TableView<Working>
 
     @FXML private lateinit var colRowNumber: TableColumn<Working, Number>
     @FXML private lateinit var colName: TableColumn<Working, String>
+    @FXML private lateinit var colWorkType: TableColumn<Working, String>
     @FXML private lateinit var colArea: TableColumn<Working, String>
     @FXML private lateinit var colGeologist: TableColumn<Working, String>
     @FXML private lateinit var colContractor: TableColumn<Working, String>
@@ -108,6 +120,12 @@ class MainController {
     private val workingsList: ObservableList<Working> = FXCollections.observableArrayList()
 
     private lateinit var tableFilter: TableFilter<Working>
+
+    // Хранилище ярлыков (Label) для каждой колонки
+    private val summaryLabels = mutableMapOf<TableColumn<Working, *>, Label>()
+
+    private var summaryScrollBar: ScrollBar? = null
+    private var summaryScrollListener: ChangeListener<Number>? = null
 
     fun initData(token: String, role: String, user: UserDto) {
         this.token = token
@@ -198,6 +216,7 @@ class MainController {
 
         //colRowNumber.setCellValueFactory { SimpleObjectProperty(it.value.orderNum) }
         colArea.setCellValueFactory { SimpleStringProperty(it.value.area?.name ?: "") }
+        colWorkType.setCellValueFactory { SimpleStringProperty(it.value.workType?.name ?: "") }
         colGeologist.setCellValueFactory { SimpleStringProperty(it.value.geologist?.name ?: "") }
         colContractor.setCellValueFactory { SimpleStringProperty(it.value.contractor?.name ?: "") }
         colDrillingRig.setCellValueFactory { SimpleStringProperty(it.value.drillingRig?.name ?: "") }
@@ -226,12 +245,12 @@ class MainController {
         setupDoubleColumn(colCat9_12) { it.cat9_12 }
 
         // Интерактивные чекбоксы в таблице
-        createInteractiveCheckbox(colHasVideo, { it.hasVideo }, { w, v -> w.hasVideo = v }, false)
-        createInteractiveCheckbox(colHasDrilling, { it.hasDrilling }, { w, v -> w.hasDrilling = v }, false)
-        createInteractiveCheckbox(colHasJournal, { it.hasJournal }, { w, v -> w.hasJournal = v }, false)
-        createInteractiveCheckbox(colHasCore, { it.hasCore }, { w, v -> w.hasCore = v }, false)
-        createInteractiveCheckbox(colHasStake, { it.hasStake }, { w, v -> w.hasStake = v }, false)
-        createInteractiveCheckbox(colEmergency, { it.emergency }, { w, v -> w.emergency = v }, true)
+        createInteractiveCheckbox(colHasVideo, { it.hasVideo }, { w, v -> w.hasVideo = v }, false, true)
+        createInteractiveCheckbox(colHasDrilling, { it.hasDrilling }, { w, v -> w.hasDrilling = v }, false, true)
+        createInteractiveCheckbox(colHasJournal, { it.hasJournal }, { w, v -> w.hasJournal = v }, false, false)
+        createInteractiveCheckbox(colHasCore, { it.hasCore }, { w, v -> w.hasCore = v }, false, false)
+        createInteractiveCheckbox(colHasStake, { it.hasStake }, { w, v -> w.hasStake = v }, false, true)
+        createInteractiveCheckbox(colEmergency, { it.emergency }, { w, v -> w.emergency = v }, true, false)
         
         colSamplesThawed.setCellValueFactory { SimpleObjectProperty(it.value.samplesThawed) }
         colSamplesFrozen.setCellValueFactory { SimpleObjectProperty(it.value.samplesFrozen) }
@@ -310,9 +329,10 @@ class MainController {
             object : TableRow<Working>() {
                 override fun updateItem(item: Working?, empty: Boolean) {
                     super.updateItem(item, empty)
-                    styleClass.removeAll(listOf("project-filled", "project-empty", "actual"))
+                    styleClass.removeAll(listOf("project-filled", "project-empty", "actual", "emergency-row"))
                     if (item == null || empty) return
                     when {
+                        item.emergency -> styleClass.add("emergency-row")
                         item.isProject != true -> 
                             styleClass.add("project-filled")
                         item.isProject -> 
@@ -323,6 +343,7 @@ class MainController {
                 }
             }
         }
+        setupSummaryRow()
     }
 
     private fun setupDoubleColumn(col: TableColumn<Working, Double?>, getter: (Working) -> Double?) {
@@ -337,7 +358,7 @@ class MainController {
         }
     }
 
-    private fun createInteractiveCheckbox(col: TableColumn<Working, Boolean>, getter: (Working) -> Boolean, setter: (Working, Boolean) -> Unit, Colors: Boolean = false) {
+    private fun createInteractiveCheckbox(col: TableColumn<Working, Boolean>, getter: (Working) -> Boolean, setter: (Working, Boolean) -> Unit, Colors: Boolean = false, checkType: Boolean = false) {
         col.setCellValueFactory { SimpleBooleanProperty(getter(it.value)) }
         col.setCellFactory {
             object : TableCell<Working, Boolean>() {
@@ -345,13 +366,17 @@ class MainController {
                 init {
                     checkBox.setOnAction {
                         val working = tableView.items[index]
-                        setter(working, checkBox.isSelected)
-                        runOnFx {
-                            try {
-                                api.updateWorking("Bearer $token", working.id, working).await()
-                                updateStyle(checkBox.isSelected)
-                            } catch(e: Exception) {
-                                checkBox.isSelected = !checkBox.isSelected // Откат при ошибке
+                        if (!checkBox.isDisabled) {
+                            setter(working, checkBox.isSelected)
+                            runOnFx {
+                                try {
+                                    api.updateWorking("Bearer $token", working.id, working).await()
+                                    updateStyle(checkBox.isSelected)
+                                    tableView.refresh()
+                                    recalculateSummaries()
+                                } catch(e: Exception) {
+                                    checkBox.isSelected = !checkBox.isSelected // Откат при ошибке
+                                }
                             }
                         }
                     }
@@ -367,11 +392,23 @@ class MainController {
                         checkBox.isSelected = item
                         graphic = checkBox
                         updateStyle(item)
+                        // Проверяем, нужно ли блокировать чекбокс для не-скважин
+                        if (checkType) {
+                            val working = tableView.items[index]
+                            val isWell = working.workType?.name?.equals("скважина", ignoreCase = true) == true
+                            checkBox.isDisable = !isWell
+                            
+                        } else {
+                            checkBox.isDisable = false
+                        }
                     }
                 }
 
-                private fun updateStyle(isChecked: Boolean) {
-                    style = if (isChecked != Colors) "-fx-background-color: #a5d6a7;" else "-fx-background-color: #ef9a9a;"
+                private fun updateStyle(isChecked: Boolean) {//Вначале проверка на не выделение для шурфа и расчистки
+                    style = if (tableView.items[index].workType?.name?.equals("скважина", ignoreCase = true) != true && checkType){"-fx-background-color: #e0e0e0;"}
+                    else{ //После проверка на значение чекбокса и выделение
+                        if (isChecked != Colors) "-fx-background-color: #a5d6a7;" else "-fx-background-color: #ef9a9a;"
+                    }
                 }
             }
         }
@@ -393,8 +430,7 @@ class MainController {
                 filterAreaCombo.setOnAction { applyFilter() }
 
                 if (!::tableFilter.isInitialized) {
-                    tableFilter = TableFilter.forTableView(workingsTable).lazy(false).apply()
-                    tableFilter.setSearchStrategy { input: String, target: String -> FilterParser.parse(input, target) }
+                    rebuildTableFilter()
                 }
                 
                 autoResizeColumns()
@@ -407,10 +443,39 @@ class MainController {
         }
     }
 
+    private fun rebuildTableFilter() {
+        if (::tableFilter.isInitialized) {
+            return
+        }
+
+        tableFilter = TableFilter.forTableView(workingsTable)
+            .lazy(false)
+            .apply()
+
+        tableFilter.setSearchStrategy { input: String, target: String ->
+            FilterParser.parse(input, target)
+        }
+
+        tableFilter.filteredList.addListener { _: ListChangeListener.Change<out Working>? ->
+            recalculateSummaries()
+        }
+    }
+
     private fun applyFilter() {
+
         val selected = filterAreaCombo.value
-        val filtered = if (selected == null || selected == "ВСЕ") allWorkings else allWorkings.filter { it.area?.name == selected }
-        workingsList.setAll(filtered)
+
+        val filtered =
+            if (selected == null || selected == "ВСЕ") {
+                allWorkings
+            } else {
+                allWorkings.filter {
+                    it.area?.name == selected
+                }
+            }
+
+        workingsList.clear()
+        workingsList.addAll(filtered)
     }
 
     @FXML fun onAdd() = showWorkingForm(null)
@@ -633,6 +698,7 @@ class MainController {
             val working = event.rowValue
             val newValue = event.newValue
             setter(working, newValue)
+            recalculateSummaries()
               
             // Сразу сохраняем изменения на сервер
             runOnFx {
@@ -654,6 +720,7 @@ class MainController {
             val working = event.rowValue
             val newValue = event.newValue
             setter(working, newValue)
+            recalculateSummaries()
             runOnFx {
                 try {
                     api.updateWorking("Bearer $token", working.id, working).await()
@@ -710,4 +777,141 @@ class MainController {
         autoRefreshTimeline?.stop()
     }
 
+    private fun setupSummaryRow() {
+        val clipRect = Rectangle().apply {
+            widthProperty().bind(summaryContainer.widthProperty())
+            heightProperty().bind(summaryContainer.heightProperty())
+        }
+        summaryContainer.clip = clipRect
+
+        workingsTable.visibleLeafColumns.addListener(ListChangeListener {
+            rebuildSummaryUI()
+            recalculateSummaries()
+            Platform.runLater {
+                bindSummaryScroll() 
+            }
+        })
+
+        rebuildSummaryUI()
+        bindSummaryScroll() 
+
+        workingsTable.items.addListener(ListChangeListener {
+            recalculateSummaries()
+        })
+    }
+
+    private fun bindSummaryScroll() {
+        // Удаляем предыдущие слушатели, если они были (борьба с утечкой памяти)
+        summaryScrollListener?.let { oldListener ->
+            summaryScrollBar?.valueProperty()?.removeListener(oldListener)
+        }
+        summaryScrollBar = null
+        summaryScrollListener = null
+
+        // Функция для попытки поиска и привязки скроллбара
+        fun tryFindAndBindScrollBar() {
+            val scrollBars = workingsTable.lookupAll(".scroll-bar").filterIsInstance<ScrollBar>()
+            val hBar = scrollBars.find { it.orientation == Orientation.HORIZONTAL }
+
+            if (hBar != null) {
+                summaryScrollBar = hBar
+                // Создаем слушатель один раз
+                val listener = ChangeListener<Number> { _, _, _ -> updateScroll(hBar) }
+                summaryScrollListener = listener
+
+                // Привязываем слушатели
+                hBar.valueProperty().addListener(listener)
+                hBar.maxProperty().addListener { _, _, _ -> updateScroll(hBar) }
+                summaryHBox.layoutBoundsProperty().addListener { _, _, _ -> updateScroll(hBar) }
+                summaryContainer.widthProperty().addListener { _, _, _ -> updateScroll(hBar) }
+
+                // Инициализируем начальную позицию
+                updateScroll(hBar)
+            } else {
+                // Скроллбар еще не найден, планируем повторную попытку
+                Platform.runLater { tryFindAndBindScrollBar() }
+            }
+        }
+
+        // Запускаем первоначальную попытку
+        Platform.runLater { tryFindAndBindScrollBar() }
+    }
+
+    // Вынесенная логика обновления, принимающая конкретный ScrollBar
+    private fun updateScroll(hBar: ScrollBar) {
+        val max = hBar.max
+        val viewportWidth = summaryContainer.width
+        val contentWidth = summaryHBox.layoutBounds.width
+        val scrollRange = (contentWidth - viewportWidth).coerceAtLeast(0.0)
+
+        summaryHBox.translateX = if (max > 0.0 && scrollRange > 0.0) {
+            -(hBar.value / max) * scrollRange
+        } else {
+            0.0
+        }
+    }
+
+    private fun rebuildSummaryUI() {
+        summaryHBox.children.clear()
+        summaryLabels.clear()
+
+        for (col in workingsTable.visibleLeafColumns) {
+            val label = Label().apply {
+                style = "-fx-font-weight: bold; -fx-text-fill: #333333; -fx-padding: 0 5 0 5; -fx-alignment: center;"
+                prefWidthProperty().bind(col.widthProperty())
+                minWidthProperty().bind(col.widthProperty())
+                maxWidthProperty().bind(col.widthProperty())
+            }
+            summaryLabels[col] = label
+            summaryHBox.children.add(label)
+        }
+    }
+
+    private fun recalculateSummaries() {
+        // Определяем источник данных: отфильтрованный список или базовый
+        val items: List<Working> = if (::tableFilter.isInitialized) {
+            tableFilter.filteredList.toList() // Используем отфильтрованный список
+        } else {
+            workingsTable.items // Fallback на базовый список
+        }
+
+        var sumFactH = 0.0
+        var sumPlanH = 0.0
+        var sumCat1_4 = 0.0
+        var sumCat5_8 = 0.0
+        var sumCat9_12 = 0.0
+        var sumThawed = 0
+        var sumFrozen = 0
+        var sumRocky = 0
+        var countThermal = 0
+
+        // Пробегаем только по отфильтрованным (видимым) строкам
+        for (w in items) {
+            sumFactH += w.actualDepth ?: 0.0
+            sumPlanH += w.plannedDepth ?: 0.0
+            sumCat1_4 += w.cat1_4 ?: 0.0
+            sumCat5_8 += w.cat5_8 ?: 0.0
+            sumCat9_12 += w.cat9_12 ?: 0.0
+            sumThawed += w.samplesThawed ?: 0
+            sumFrozen += w.samplesFrozen ?: 0
+            sumRocky += w.samplesRocky ?: 0
+            if (w.thermalTube) countThermal++
+        }
+
+        // Очищаем текст во всех ячейках
+        summaryLabels.values.forEach { it.text = "" }
+
+        // Заполняем нужные ячейки, проверяя их наличие в visibleLeafColumns
+        summaryLabels[colRowNumber]?.text = "Σ = ${items.size}"
+        summaryLabels[colActualDepth]?.text = formatDouble(sumFactH)
+        summaryLabels[colPlannedDepth]?.text = formatDouble(sumPlanH)
+        summaryLabels[colCat1_4]?.text = formatDouble(sumCat1_4)
+        summaryLabels[colCat5_8]?.text = formatDouble(sumCat5_8)
+        summaryLabels[colCat9_12]?.text = formatDouble(sumCat9_12)
+        
+        summaryLabels[colSamplesThawed]?.text = sumThawed.toString()
+        summaryLabels[colSamplesFrozen]?.text = sumFrozen.toString()
+        summaryLabels[colSamplesRocky]?.text = sumRocky.toString()
+        summaryLabels[colThermalTube]?.text = countThermal.toString()
+    }
 }

@@ -52,7 +52,7 @@ runtime {
         imageName = "GeoApp"
         installerType = "exe"
         installerOptions.addAll(listOf(
-            "--app-version", "1.0.0",
+            "--app-version", "1.0.1",
             "--win-menu",
             "--win-shortcut",
             "--win-dir-chooser"

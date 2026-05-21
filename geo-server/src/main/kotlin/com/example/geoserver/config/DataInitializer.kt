@@ -22,37 +22,9 @@ class DataInitializer(
     private val workingRepo: WorkingRepository
 ) {
 
-    private fun columnExists(tableName: String, columnName: String): Boolean {
-        val sql = """
-            SELECT column_name
-            FROM information_schema.columns
-            WHERE table_name = ?
-              AND column_name = ?
-        """.trimIndent()
-        return jdbcTemplate.queryForList(sql, String::class.java, tableName, columnName).isNotEmpty()
-    }
-
     @Bean
     fun initData(): CommandLineRunner = CommandLineRunner {
-        if (!columnExists("users", "login")) {
-            jdbcTemplate.execute(
-                "ALTER TABLE users ADD COLUMN IF NOT EXISTS login varchar(255) NOT NULL DEFAULT ''"
-            )
-        }
-        if (!columnExists("users", "full_name")) {
-            jdbcTemplate.execute(
-                "ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name varchar(255) NOT NULL DEFAULT ''"
-            )
-        }
 
-        if (columnExists("users", "username")) {
-            jdbcTemplate.execute(
-                "UPDATE users SET login = COALESCE(NULLIF(login, ''), username) WHERE username IS NOT NULL"
-            )
-            jdbcTemplate.execute(
-                "UPDATE users SET full_name = COALESCE(NULLIF(full_name, ''), username) WHERE username IS NOT NULL"
-            )
-        }
 
         if (userRepository.findByLogin("admin").isEmpty) {
             val admin = User(

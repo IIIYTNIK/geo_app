@@ -30,10 +30,15 @@
         <Button fx:id="deleteButton" text="Удалить" onAction="#onDelete"/>
     </HBox>
 
+    <Pane fx:id="summaryContainer" prefHeight="30" style="-fx-background-color: #e0e0e0; -fx-border-color: #c8c8c8; -fx-border-width: 1 0 1 0;">
+        <HBox fx:id="summaryHBox" alignment="CENTER_LEFT" prefHeight="30" />
+    </Pane>
+
     <TableView fx:id="workingsTable" VBox.vgrow="ALWAYS">
         <columns>
             <TableColumn fx:id="colRowNumber" text="№" prefWidth="40"/>
             <TableColumn fx:id="colName" text="Номер" prefWidth="120"/>
+            <TableColumn fx:id="colWorkType" text="Тип выработки" prefWidth="110"/>
             <TableColumn fx:id="colArea" text="Участок" prefWidth="100"/>
             <TableColumn fx:id="colContractor" text="Подрядчик" prefWidth="100"/>
             <TableColumn fx:id="colGeologist" text="Геолог" prefWidth="100"/>
