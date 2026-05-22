@@ -402,9 +402,9 @@ class ExcelImportController {
             val geo = cacheGeologists.find { it.name.equals(geologistName, true) }
                 ?: cacheGeologists.find { it.alias?.equals(geologistName, true) == true }
                 ?: throw Exception("Геолог '$geologistName' не найден в базе")
-            if (contractor != null && geo.contractor?.id != contractor.id) {
-                throw Exception("Геолог относится к другому подрядчику")
-            }
+            // if (contractor != null && geo.contractor?.id != contractor.id) {
+            //     throw Exception("Геолог относится к другому подрядчику")
+            // } // Проверка на привязку к подрядчику
             geo
         } else null
 
