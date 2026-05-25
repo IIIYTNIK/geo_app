@@ -343,6 +343,9 @@ class MainController {
                 }
             }
         }
+
+        disableColumnReordering(workingsTable.columns)
+        
         setupSummaryRow()
     }
 
@@ -474,8 +477,18 @@ class MainController {
                 }
             }
 
-        workingsList.clear()
-        workingsList.addAll(filtered)
+        workingsList.setAll(filtered)
+    }
+
+    // Функция блокировки перетаскивания колонок
+    private fun disableColumnReordering(columns: List<TableColumn<Working, *>>) {
+        for (col in columns) {
+            col.isReorderable = false // Запрещаем перетаскивание
+            if (col.columns.isNotEmpty()) {
+                // Рекурсивно отключаем для вложенных колонок (групп)
+                disableColumnReordering(col.columns)
+            }
+        }
     }
 
     @FXML fun onAdd() = showWorkingForm(null)
@@ -677,8 +690,8 @@ class MainController {
         workingsTable.columns.forEach { resizeColumn(it) }
     }
 
-    private fun formatDouble(value: Double?): String {
-        return if (value == null) "" else "%.3f".format(value).replace(",", ".")
+    private fun formatDouble(value: Double?, decimals: Int = 3): String {
+        return if (value == null) "" else "%.${decimals}f".format(value).replace(",", ".")
     }
 
     private fun formatColumn(column: TableColumn<Working, Double?>, decimals: Int) {
@@ -903,11 +916,11 @@ class MainController {
 
         // Заполняем нужные ячейки, проверяя их наличие в visibleLeafColumns
         summaryLabels[colRowNumber]?.text = "Σ = ${items.size}"
-        summaryLabels[colActualDepth]?.text = formatDouble(sumFactH)
-        summaryLabels[colPlannedDepth]?.text = formatDouble(sumPlanH)
-        summaryLabels[colCat1_4]?.text = formatDouble(sumCat1_4)
-        summaryLabels[colCat5_8]?.text = formatDouble(sumCat5_8)
-        summaryLabels[colCat9_12]?.text = formatDouble(sumCat9_12)
+        summaryLabels[colActualDepth]?.text = formatDouble(sumFactH, 1)
+        summaryLabels[colPlannedDepth]?.text = formatDouble(sumPlanH, 1)
+        summaryLabels[colCat1_4]?.text = formatDouble(sumCat1_4, 1)
+        summaryLabels[colCat5_8]?.text = formatDouble(sumCat5_8, 1)
+        summaryLabels[colCat9_12]?.text = formatDouble(sumCat9_12, 1)
         
         summaryLabels[colSamplesThawed]?.text = sumThawed.toString()
         summaryLabels[colSamplesFrozen]?.text = sumFrozen.toString()
