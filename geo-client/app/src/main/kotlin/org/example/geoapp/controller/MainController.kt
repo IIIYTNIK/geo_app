@@ -1,10 +1,13 @@
 package org.example.geoapp.controller
 
 import org.example.geoapp.api.UserDto
+import org.example.geoapp.api.UserAreaAccessDto
+import org.example.geoapp.api.AccessLevel
 import org.example.geoapp.api.GeoApi
 import org.example.geoapp.api.Working
 import org.example.geoapp.api.RefContractor
 import javafx.beans.property.SimpleBooleanProperty
+import javafx.scene.input.ContextMenuEvent
 import javafx.beans.property.SimpleStringProperty
 import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.binding.Bindings
@@ -44,6 +47,8 @@ import org.example.geoapp.util.await
 import org.example.geoapp.util.awaitUnit
 import org.example.geoapp.util.runOnFx
 import org.example.geoapp.controller.UserListController
+import org.example.geoapp.controller.HistoryController
+import org.example.geoapp.controller.RecycleBinController
 
 
 class MainController {
@@ -115,11 +120,16 @@ class MainController {
     private lateinit var currentUser: UserDto
     lateinit var token: String
     private lateinit var userRole: String
+    private var userAccessByAreaId: Map<Long, AccessLevel> = emptyMap()
+    private lateinit var rowContextMenu: ContextMenu
     private val api: GeoApi = MainApp.api
     private val allWorkings: MutableList<Working> = mutableListOf()
     private val workingsList: ObservableList<Working> = FXCollections.observableArrayList()
 
     private lateinit var tableFilter: TableFilter<Working>
+
+    private var tableFilterRebuildScheduled = false
+    private var tableFilterItemsListener: ListChangeListener<Working>? = null
 
     // Хранилище ярлыков (Label) для каждой колонки
     private val summaryLabels = mutableMapOf<TableColumn<Working, *>, Label>()
@@ -132,9 +142,13 @@ class MainController {
         this.userRole = role
         this.currentUser = user
         adminMenu.isVisible = (role == "ROLE_ADMIN")
+        updateAccessControls()
+        loadUserAccess()
         loadWorkings()
         startAutoRefresh()
     }
+
+    private fun authHeader(): String = if (token.startsWith("Bearer ")) token else "Bearer $token"
 
     // private fun setupTableNavigation() {
     //     workingsTable.addEventFilter(KeyEvent.KEY_PRESSED) { event ->
@@ -273,7 +287,8 @@ class MainController {
 
         workingsTable.items = workingsList
 
-        formatColumn(colActualDepth, 1) // Факт Н
+        formatColumn(colPlannedDepth, 1) // План Н
+        formatColumn(colActualDepth, 1)  // Факт Н
         formatColumn(colCoreRecovery, 0) // Выход керна
         formatColumn(colCasing, 1)       // Обсад
 
@@ -297,18 +312,26 @@ class MainController {
         setupEditableDoubleColumn(colCat9_12) { w, v -> w.cat9_12 = v }
 
         // Контекстное меню
-        val contextMenu = ContextMenu()
+        rowContextMenu = ContextMenu()
         val assignStructureItem = MenuItem("Присвоить сооружение").apply { setOnAction { onAssignStructure() } }
         val assignPlannedContractorItem = MenuItem("Назначить подрядчика").apply { setOnAction { onAssignPlannedContractor() } }
-        contextMenu.items.addAll(assignStructureItem, assignPlannedContractorItem) 
+        rowContextMenu.items.addAll(assignStructureItem, assignPlannedContractorItem)
         val editItem = MenuItem("Редактировать").apply { setOnAction { onEdit() } }
         val deleteItem = MenuItem("Удалить").apply { setOnAction { onDelete() } }
-        contextMenu.items.addAll(editItem, deleteItem)
+        rowContextMenu.items.addAll(editItem, deleteItem)
 
-        workingsTable.contextMenu = contextMenu
+        workingsTable.contextMenu = rowContextMenu
+        workingsTable.selectionModel.selectedItemProperty().addListener { _, _, _ -> updateAccessControls() }
 
-        editButton.disableProperty().bind(workingsTable.selectionModel.selectedItemProperty().isNull)
-        deleteButton.disableProperty().bind(workingsTable.selectionModel.selectedItemProperty().isNull)
+        editButton.isDisable = true
+        deleteButton.isDisable = true
+
+        workingsTable.addEventHandler(ContextMenuEvent.CONTEXT_MENU_REQUESTED) { event ->
+            val selected = workingsTable.selectionModel.selectedItem
+            if (!canWriteArea(selected?.area?.id)) {
+                event.consume()
+            }
+        }
 
         workingsTable.setOnKeyPressed { event ->
             if (event.code == javafx.scene.input.KeyCode.DELETE) {
@@ -329,10 +352,11 @@ class MainController {
             object : TableRow<Working>() {
                 override fun updateItem(item: Working?, empty: Boolean) {
                     super.updateItem(item, empty)
-                    styleClass.removeAll(listOf("project-filled", "project-empty", "actual", "emergency-row"))
+                    styleClass.removeAll(listOf("project-filled", "project-empty", "actual", "emergency-row", "read-only-row"))
                     if (item == null || empty) return
                     when {
                         item.emergency -> styleClass.add("emergency-row")
+                        isRowReadOnly(item) -> styleClass.add("read-only-row")
                         item.isProject != true -> 
                             styleClass.add("project-filled")
                         item.isProject -> 
@@ -344,6 +368,47 @@ class MainController {
             }
         }
         setupSummaryRow()
+    }
+
+    private fun loadUserAccess() {
+        runOnFx {
+            try {
+                val accessList = api.getCurrentUserAccess(authHeader()).await()
+                userAccessByAreaId = accessList.associate { it.areaId to it.accessLevel }
+            } catch (e: Exception) {
+                if (userRole != "ROLE_ADMIN") {
+                    showAlert("Ошибка доступа", "Не удалось загрузить права текущего пользователя: ${e.message}")
+                }
+            } finally {
+                updateAccessControls()
+                workingsTable.refresh()
+            }
+        }
+    }
+
+    private fun getAreaAccessLevel(areaId: Long?): AccessLevel? =
+        if (userRole == "ROLE_ADMIN") AccessLevel.WRITE else areaId?.let { userAccessByAreaId[it] }
+
+    private fun canWriteArea(areaId: Long?): Boolean =
+        getAreaAccessLevel(areaId) == AccessLevel.WRITE
+
+    private fun canWriteSelectedRow(): Boolean =
+        canWriteArea(workingsTable.selectionModel.selectedItem?.area?.id)
+
+    private fun canWriteAnyArea(): Boolean =
+        userRole == "ROLE_ADMIN" || userAccessByAreaId.values.any { it == AccessLevel.WRITE }
+
+    private fun canOpenContextMenu(): Boolean =
+        canWriteAnyArea() && canWriteSelectedRow()
+
+    private fun isRowReadOnly(item: Working?): Boolean =
+        item != null && !canWriteArea(item.area?.id)
+
+    private fun updateAccessControls() {
+        addButton.isDisable = !canWriteAnyArea()
+        editButton.isDisable = !canWriteSelectedRow()
+        deleteButton.isDisable = !canWriteSelectedRow()
+        workingsTable.contextMenu = if (canOpenContextMenu()) rowContextMenu else null
     }
 
     private fun setupDoubleColumn(col: TableColumn<Working, Double?>, getter: (Working) -> Double?) {
@@ -363,18 +428,19 @@ class MainController {
         col.setCellFactory {
             object : TableCell<Working, Boolean>() {
                 val checkBox = CheckBox()
+
                 init {
                     checkBox.setOnAction {
-                        val working = tableView.items[index]
+                        val working = tableView.items.getOrNull(index) ?: return@setOnAction
                         if (!checkBox.isDisabled) {
                             setter(working, checkBox.isSelected)
                             runOnFx {
                                 try {
-                                    api.updateWorking("Bearer $token", working.id, working).await()
+                                    api.updateWorking(authHeader(), working.id, working).await()
                                     updateStyle(checkBox.isSelected)
                                     tableView.refresh()
                                     recalculateSummaries()
-                                } catch(e: Exception) {
+                                } catch (e: Exception) {
                                     checkBox.isSelected = !checkBox.isSelected // Откат при ошибке
                                 }
                             }
@@ -392,21 +458,21 @@ class MainController {
                         checkBox.isSelected = item
                         graphic = checkBox
                         updateStyle(item)
-                        // Проверяем, нужно ли блокировать чекбокс для не-скважин
+                        val working = tableView.items.getOrNull(index)
+                        // Проверяем, нужно ли блокировать чекбокс для не-скважин или для зон только для чтения
                         if (checkType) {
-                            val working = tableView.items[index]
-                            val isWell = working.workType?.name?.equals("скважина", ignoreCase = true) == true
-                            checkBox.isDisable = !isWell
-                            
+                            val isWell = working?.workType?.name?.equals("скважина", ignoreCase = true) == true
+                            checkBox.isDisable = !isWell || !canWriteArea(working?.area?.id)
                         } else {
-                            checkBox.isDisable = false
+                            checkBox.isDisable = !canWriteArea(working?.area?.id)
                         }
                     }
                 }
 
-                private fun updateStyle(isChecked: Boolean) {//Вначале проверка на не выделение для шурфа и расчистки
-                    style = if (tableView.items[index].workType?.name?.equals("скважина", ignoreCase = true) != true && checkType){"-fx-background-color: #e0e0e0;"}
-                    else{ //После проверка на значение чекбокса и выделение
+                private fun updateStyle(isChecked: Boolean) {
+                    style = if (tableView.items.getOrNull(index)?.workType?.name?.equals("скважина", ignoreCase = true) != true && checkType) {
+                        "-fx-background-color: #e0e0e0;"
+                    } else {
                         if (isChecked != Colors) "-fx-background-color: #a5d6a7;" else "-fx-background-color: #ef9a9a;"
                     }
                 }
@@ -417,7 +483,7 @@ class MainController {
     fun loadWorkings(onComplete: (() -> Unit)? = null) {
         runOnFx {
             try {
-                val fetched = api.getWorkings("Bearer $token").await().sortedBy { it.id }
+                val fetched = api.getWorkings(authHeader()).await().sortedBy { it.id }
                 allWorkings.clear()
                 allWorkings.addAll(fetched)
                 
@@ -434,6 +500,7 @@ class MainController {
                 }
                 
                 autoResizeColumns()
+                updateAccessControls()
 
                 // Вызываем колбэк после завершения всех обновлений
                 onComplete?.invoke()
@@ -443,9 +510,24 @@ class MainController {
         }
     }
 
+    private fun scheduleTableFilterRebuild() {
+        if (tableFilterRebuildScheduled) return
+
+        tableFilterRebuildScheduled = true
+        Platform.runLater {
+            tableFilterRebuildScheduled = false
+            rebuildTableFilter()
+        }
+    }
+
     private fun rebuildTableFilter() {
         if (::tableFilter.isInitialized) {
-            return
+            tableFilterItemsListener?.let { listener ->
+                try {
+                    tableFilter.filteredList.removeListener(listener)
+                } catch (_: Exception) {
+                }
+            }
         }
 
         tableFilter = TableFilter.forTableView(workingsTable)
@@ -456,9 +538,12 @@ class MainController {
             FilterParser.parse(input, target)
         }
 
-        tableFilter.filteredList.addListener { _: ListChangeListener.Change<out Working>? ->
+        tableFilterItemsListener = ListChangeListener<Working> {
             recalculateSummaries()
         }
+        tableFilter.filteredList.addListener(tableFilterItemsListener)
+
+        recalculateSummaries()
     }
 
     private fun applyFilter() {
@@ -474,26 +559,40 @@ class MainController {
                 }
             }
 
-        workingsList.clear()
-        workingsList.addAll(filtered)
+        workingsList.setAll(filtered)
     }
 
-    @FXML fun onAdd() = showWorkingForm(null)
+    @FXML fun onAdd() {
+        if (!canWriteAnyArea()) {
+            showAlert("Нет прав", "У вас нет прав на создание выработок ни в одной из доступных зон")
+            return
+        }
+        showWorkingForm(null)
+    }
 
     @FXML fun onEdit() {
         val selected = workingsTable.selectionModel.selectedItem
-        if (selected != null) showWorkingForm(selected)
+        if (selected == null) return
+        if (!canWriteArea(selected.area?.id)) {
+            showAlert("Нет прав", "Для этой зоны доступны только права чтения")
+            return
+        }
+        showWorkingForm(selected)
     }
 
     @FXML fun onDelete() {
         val selectedItems = workingsTable.selectionModel.selectedItems.toList()
         if (selectedItems.isNotEmpty()) {
+            if (selectedItems.any { !canWriteArea(it.area?.id) }) {
+                showAlert("Нет прав", "Выбранные выработки содержат зоны только для чтения")
+                return
+            }
             val alert = Alert(Alert.AlertType.CONFIRMATION, "Удалить ${selectedItems.size} записей?", ButtonType.YES, ButtonType.NO)
             if (alert.showAndWait().get() == ButtonType.YES) {
                 val lastSelectedIndex = workingsTable.selectionModel.selectedIndex
                 runOnFx {
                     try {
-                        selectedItems.forEach { api.deleteWorking("Bearer $token", it.id).awaitUnit() }
+                        selectedItems.forEach { api.deleteWorking(authHeader(), it.id).awaitUnit() }
                         // Передаём колбэк для выделения строки после обновления таблицы
                         loadWorkings {
                             if (workingsList.isNotEmpty()) {
@@ -513,6 +612,10 @@ class MainController {
     private fun onAssignStructure() {
         val selectedItems = workingsTable.selectionModel.selectedItems
         if (selectedItems.isEmpty()) return
+        if (selectedItems.any { !canWriteArea(it.area?.id) }) {
+            showAlert("Нет прав", "Выбранные выработки содержат зоны только для чтения")
+            return
+        }
 
         val currentStructure = selectedItems.first().structure 
         val textInput = TextInputDialog(currentStructure)
@@ -525,7 +628,7 @@ class MainController {
                 try {
                     for (working in selectedItems) {
                         working.structure = if (structure.isBlank()) null else structure
-                        api.updateWorking("Bearer $token", working.id, working).await()
+                        api.updateWorking(authHeader(), working.id, working).await()
                     }
                     loadWorkings()
                 } catch (e: Exception) {
@@ -536,10 +639,14 @@ class MainController {
     }
 
     private fun onAssignPlannedContractor() {
-    val selectedItems = workingsTable.selectionModel.selectedItems
-    if (selectedItems.isEmpty()) return
+        val selectedItems = workingsTable.selectionModel.selectedItems
+        if (selectedItems.isEmpty()) return
+        if (selectedItems.any { !canWriteArea(it.area?.id) }) {
+            showAlert("Нет прав", "Выбранные выработки содержат зоны только для чтения")
+            return
+        }
 
-    val actualWorkings = selectedItems.filter { it.contractor != null }
+        val actualWorkings = selectedItems.filter { it.contractor != null }
     if (actualWorkings.isNotEmpty()) {
         val numbers = actualWorkings.joinToString(", ") { it.number }
         showAlert("Внимание!", "Скважины $numbers невозможно поставить в план (уже назначен фактический подрядчик)")
@@ -583,7 +690,7 @@ class MainController {
                         try {
                             for (working in selectedItems) {
                                 working.plannedContractor = contractor
-                                api.updateWorking("Bearer $token", working.id, working).await()
+                                api.updateWorking(authHeader(), working.id, working).await()
                             }
                             loadWorkings()
                         } catch (e: Exception) {
@@ -677,8 +784,8 @@ class MainController {
         workingsTable.columns.forEach { resizeColumn(it) }
     }
 
-    private fun formatDouble(value: Double?): String {
-        return if (value == null) "" else "%.3f".format(value).replace(",", ".")
+    private fun formatDouble(value: Double?, decimals: Int = 3): String {
+        return if (value == null) "" else "%.${decimals}f".format(value).replace(",", ".")
     }
 
     private fun formatColumn(column: TableColumn<Working, Double?>, decimals: Int) {
@@ -696,6 +803,10 @@ class MainController {
         column.cellFactory = TextFieldTableCell.forTableColumn(IntegerStringConverter())
         column.setOnEditCommit { event ->
             val working = event.rowValue
+            if (!canWriteArea(working.area?.id)) {
+                showAlert("Нет прав", "Выбранная выработка находится в зоне только для чтения")
+                return@setOnEditCommit
+            }
             val newValue = event.newValue
             setter(working, newValue)
             recalculateSummaries()
@@ -703,7 +814,7 @@ class MainController {
             // Сразу сохраняем изменения на сервер
             runOnFx {
                 try {
-                    api.updateWorking("Bearer $token", working.id, working).await()
+                    api.updateWorking(authHeader(), working.id, working).await()
                 } catch (e: Exception) {
                     //showAlert("Ошибка", "Не удалось сохранить значение: ${e.message}")
                 }
@@ -718,12 +829,16 @@ class MainController {
         })
         column.setOnEditCommit { event ->
             val working = event.rowValue
+            if (!canWriteArea(working.area?.id)) {
+                showAlert("Нет прав", "Выбранная выработка находится в зоне только для чтения")
+                return@setOnEditCommit
+            }
             val newValue = event.newValue
             setter(working, newValue)
             recalculateSummaries()
             runOnFx {
                 try {
-                    api.updateWorking("Bearer $token", working.id, working).await()
+                    api.updateWorking(authHeader(), working.id, working).await()
                 } catch (e: Exception) { /* show error */ }
             }
         }
@@ -786,14 +901,12 @@ class MainController {
 
         workingsTable.visibleLeafColumns.addListener(ListChangeListener {
             rebuildSummaryUI()
+            scheduleTableFilterRebuild()
             recalculateSummaries()
-            Platform.runLater {
-                bindSummaryScroll() 
-            }
         })
 
         rebuildSummaryUI()
-        bindSummaryScroll() 
+        rebuildTableFilter()
 
         workingsTable.items.addListener(ListChangeListener {
             recalculateSummaries()
@@ -902,16 +1015,42 @@ class MainController {
         summaryLabels.values.forEach { it.text = "" }
 
         // Заполняем нужные ячейки, проверяя их наличие в visibleLeafColumns
-        summaryLabels[colRowNumber]?.text = "Σ = ${items.size}"
-        summaryLabels[colActualDepth]?.text = formatDouble(sumFactH)
-        summaryLabels[colPlannedDepth]?.text = formatDouble(sumPlanH)
-        summaryLabels[colCat1_4]?.text = formatDouble(sumCat1_4)
-        summaryLabels[colCat5_8]?.text = formatDouble(sumCat5_8)
-        summaryLabels[colCat9_12]?.text = formatDouble(sumCat9_12)
+        summaryLabels[colRowNumber]?.text = "${items.size}"
+        summaryLabels[colActualDepth]?.text = formatDouble(sumFactH, 1)
+        summaryLabels[colPlannedDepth]?.text = formatDouble(sumPlanH, 1)
+        summaryLabels[colCat1_4]?.text = formatDouble(sumCat1_4, 1)
+        summaryLabels[colCat5_8]?.text = formatDouble(sumCat5_8, 1)
+        summaryLabels[colCat9_12]?.text = formatDouble(sumCat9_12, 1)
         
         summaryLabels[colSamplesThawed]?.text = sumThawed.toString()
         summaryLabels[colSamplesFrozen]?.text = sumFrozen.toString()
         summaryLabels[colSamplesRocky]?.text = sumRocky.toString()
         summaryLabels[colThermalTube]?.text = countThermal.toString()
+    }
+
+    @FXML fun openHistoryDialog() {
+        val loader = FXMLLoader(javaClass.getResource("/history_dialog.fxml"))
+        val root = loader.load<VBox>()
+        val controller = loader.getController<HistoryController>()
+        controller.initData(api, token)
+        val stage = Stage()
+        stage.title = "История изменений"
+        stage.initModality(Modality.APPLICATION_MODAL)
+        stage.initOwner(workingsTable.scene.window)
+        stage.scene = Scene(root, 900.0, 500.0)
+        stage.showAndWait()
+    }
+
+    @FXML fun openRecycleBinDialog() {
+        val loader = FXMLLoader(javaClass.getResource("/recycle_bin_dialog.fxml"))
+        val root = loader.load<VBox>()
+        val controller = loader.getController<RecycleBinController>()
+        controller.initData(api, token)
+        val stage = Stage()
+        stage.title = "Корзина удалённых"
+        stage.initModality(Modality.APPLICATION_MODAL)
+        stage.initOwner(workingsTable.scene.window)
+        stage.scene = Scene(root, 600.0, 400.0)
+        stage.showAndWait()
     }
 }

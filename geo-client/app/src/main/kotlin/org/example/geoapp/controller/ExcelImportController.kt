@@ -17,6 +17,7 @@ import org.example.geoapp.util.DbField
 import org.example.geoapp.util.CorrectionRow
 import org.example.geoapp.util.await
 import org.example.geoapp.util.runOnFx
+import org.example.geoapp.util.toBearerAuthorization
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -83,7 +84,7 @@ class ExcelImportController {
         runOnFx {
             try {
                 statusLabel.text = "Отправка данных..."
-                api.createBatch("Bearer $token", workings).await()
+                api.createBatch(token.toBearerAuthorization(), workings).await()
                 updateNextOrderNum()
                 onCompleteCallback()
                 close()
@@ -104,7 +105,7 @@ class ExcelImportController {
                 cacheDrillingRigs = api.getDrillingRigs().await()
                 
                 // Загружаем все выработки, чтобы определить следующий orderNum
-                existingWorkings = api.getWorkings("Bearer $token").await()
+                existingWorkings = api.getWorkings(token.toBearerAuthorization()).await()
                 val maxOrderNum = existingWorkings.mapNotNull { it.orderNum }.maxOrNull() ?: 0
                 nextOrderNum = maxOrderNum + 1
 
@@ -475,7 +476,7 @@ class ExcelImportController {
     fun updateNextOrderNum() {
         runOnFx {
             try {
-                val allWorkings = api.getWorkings("Bearer $token").await()
+                val allWorkings = api.getWorkings(token.toBearerAuthorization()).await()
                 existingWorkings = allWorkings
                 val maxOrderNum = allWorkings.mapNotNull { it.orderNum }.maxOrNull() ?: 0
                 nextOrderNum = maxOrderNum + 1

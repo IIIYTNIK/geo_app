@@ -8,21 +8,31 @@
 package com.example.geoserver.entity
 
 import jakarta.persistence.*
-import java.time.LocalDate
+import org.hibernate.annotations.SQLDelete
+import org.hibernate.annotations.Where
+import org.hibernate.envers.Audited
+import org.hibernate.envers.RelationTargetAuditMode
 import java.time.Instant
+import java.time.LocalDate
 
 @Entity
+@Audited
+@SQLDelete(sql = "UPDATE workings SET is_deleted = true WHERE id=?")
+@Where(clause = "is_deleted=false")
 @Table(name = "workings")
 data class Working(
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     val id: Long = 0,
 
+    @Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
     @ManyToOne @JoinColumn(name = "area_id")
     val area: RefArea? = null,
 
+    @Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
     @ManyToOne @JoinColumn(name = "work_type_id")
     val workType: RefWorkType? = null,
 
+    @Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
     @ManyToOne @JoinColumn(name = "planned_contractor_id")
     val plannedContractor: RefContractor? = null,
 
@@ -49,8 +59,11 @@ data class Working(
     @Column(name = "start_date") val startDate: LocalDate? = null,
     @Column(name = "end_date") val endDate: LocalDate? = null,
 
+    @Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
     @ManyToOne @JoinColumn(name = "geologist_id") val geologist: RefGeologist? = null,
+    @Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
     @ManyToOne @JoinColumn(name = "contractor_id") val contractor: RefContractor? = null,
+    @Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
     @ManyToOne @JoinColumn(name = "drilling_rig_id") val drillingRig: RefDrillingRig? = null,
 
     @Column(name = "additional_info", columnDefinition = "TEXT")
@@ -78,6 +91,8 @@ data class Working(
 
     // чекбоксы наличия материалов/журналов
     @Column(name = "has_video") val hasVideo: Boolean = false,
+    @Column(name = "is_deleted", nullable = false, columnDefinition = "boolean NOT NULL DEFAULT false")
+    var isDeleted: Boolean = false,
     @Column(name = "has_drilling") val hasDrilling: Boolean = false,
     @Column(name = "has_journal") val hasJournal: Boolean = false,
     @Column(name = "has_core") val hasCore: Boolean = false,

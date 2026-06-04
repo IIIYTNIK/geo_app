@@ -10,6 +10,7 @@ import org.example.geoapp.MainApp
 import org.example.geoapp.util.await
 import org.example.geoapp.util.awaitUnit
 import org.example.geoapp.util.runOnFx
+import org.example.geoapp.util.toBearerAuthorization
 
 enum class RefType(val title: String) {
     AREA("Участки"), WORK_TYPE("Типы выработок"), DRILLING_RIG("Буровые"),
@@ -49,7 +50,7 @@ class ReferenceEditorController {
             uiModel.comment = newComment
             runOnFx {
                 try {
-                    val tokenStr = "Bearer $token"
+                    val tokenStr = token.toBearerAuthorization()
                     when (currentType) {
                         RefType.AREA -> api.updateArea(tokenStr, uiModel.id, (uiModel.originalObj as RefArea).copy(comment = newComment)).await()
                         RefType.WORK_TYPE -> api.updateWorkType(tokenStr, uiModel.id, (uiModel.originalObj as RefWorkType).copy(comment = newComment)).await()
@@ -174,7 +175,7 @@ class ReferenceEditorController {
 
         val selected = referenceTable.selectionModel.selectedItem
         val id = selected?.id ?: 0L
-        val tokenStr = "Bearer $token"
+        val tokenStr = token.toBearerAuthorization()
 
         runOnFx {
             try {
@@ -204,7 +205,7 @@ class ReferenceEditorController {
         val selected = referenceTable.selectionModel.selectedItem ?: return
         runOnFx {
             try {
-                val tokenStr = "Bearer $token"
+                val tokenStr = token.toBearerAuthorization()
                 when (currentType) {
                     RefType.AREA -> api.deleteArea(tokenStr, selected.id).awaitUnit()
                     RefType.WORK_TYPE -> api.deleteWorkType(tokenStr, selected.id).awaitUnit()

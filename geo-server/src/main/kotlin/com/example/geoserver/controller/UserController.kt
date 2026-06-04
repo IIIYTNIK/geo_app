@@ -1,9 +1,13 @@
 package com.example.geoserver.controller
 
+import com.example.geoserver.entity.AccessLevel
 import com.example.geoserver.entity.User
 import com.example.geoserver.repository.UserRepository
+import com.example.geoserver.security.SecurityUtils
+import com.example.geoserver.service.UserAreaAccessService
 import com.example.geoserver.service.UserService
 import org.springframework.http.ResponseEntity
+import org.springframework.security.access.AccessDeniedException
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.web.bind.annotation.*
 
@@ -12,6 +16,7 @@ import org.springframework.web.bind.annotation.*
 class UserController(
     private var userRepository: UserRepository,
     private val userService: UserService,
+    private val userAreaAccessService: UserAreaAccessService,
     private val passwordEncoder: BCryptPasswordEncoder
 ) {
 
@@ -56,9 +61,18 @@ class UserController(
         userRepository.deleteById(id)
         return ResponseEntity.ok().build()
     }
+
+    @GetMapping("/me/access")
+    fun getMyAccess(): List<UserAreaAccessDto> {
+        val userId = SecurityUtils.currentUserId() ?: throw AccessDeniedException("Unauthorized")
+        return userAreaAccessService.getAccessList(userId).map {
+            UserAreaAccessDto(it.areaId, it.accessLevel)
+        }
+    }
 }
 
 // DTO классы для контроллера
 data class UserDto(val id: Long, val login: String, val fullName: String, val role: String, val position: String?)
 data class UserCreateDto(val login: String, val fullName: String, val password: String, val role: String, val position: String?)
 data class UserUpdateDto(val login: String, val fullName: String, val role: String, val password: String?, val position: String?)
+data class UserAreaAccessDto(val areaId: Long, val accessLevel: AccessLevel)

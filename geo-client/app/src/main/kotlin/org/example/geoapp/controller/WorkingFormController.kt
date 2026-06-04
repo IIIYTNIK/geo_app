@@ -15,6 +15,7 @@ import org.example.geoapp.util.await
 import org.example.geoapp.util.runOnFx
 import org.example.geoapp.util.NumericFieldUtil
 import org.example.geoapp.util.NumberParsers.toDoubleSafe
+import org.example.geoapp.util.toBearerAuthorization
 
 class WorkingFormController {
 
@@ -148,22 +149,22 @@ class WorkingFormController {
         deltaSLabel.text = "Смещение от проекта: ${w.deltaS?.let { "%.3f".format(it).replace(",", ".") } ?: "не определено"} м"
 
         plannedDepthField.text = w.plannedDepth?.let { "%.3f".format(it).replace(",", ".") } ?: ""
-        actualDepthField.text = w.actualDepth?.let { "%.3f".format(it).replace(",", ".") } ?: ""
-        casingField.text = w.casing?.let { "%.3f".format(it).replace(",", ".") } ?: ""
-        coreRecoveryField.text = w.coreRecovery?.let { "%.3f".format(it).replace(",", ".") } ?: ""
+        actualDepthField.text = w.actualDepth?.let { "%.1f".format(it).replace(",", ".") } ?: ""
+        casingField.text = w.casing?.let { "%.1f".format(it).replace(",", ".") } ?: ""
+        coreRecoveryField.text = w.coreRecovery?.let { "%.0f".format(it).replace(",", ".") } ?: ""
 
         startDatePicker.value = w.startDate?.let { LocalDate.parse(it) }
         endDatePicker.value = w.endDate?.let { LocalDate.parse(it) }
 
         additionalInfoArea.text = w.additionalInfo ?: ""
 
-        mmg1TopField.text = w.mmg1Top?.let { "%.3f".format(it).replace(",", ".") } ?: ""
-        mmg1BottomField.text = w.mmg1Bottom?.let { "%.3f".format(it).replace(",", ".") } ?: ""
-        mmg2TopField.text = w.mmg2Top?.let { "%.3f".format(it).replace(",", ".") } ?: ""
-        mmg2BottomField.text = w.mmg2Bottom?.let { "%.3f".format(it).replace(",", ".") } ?: ""
+        mmg1TopField.text = w.mmg1Top?.let { "%.1f".format(it).replace(",", ".") } ?: ""
+        mmg1BottomField.text = w.mmg1Bottom?.let { "%.1f".format(it).replace(",", ".") } ?: ""
+        mmg2TopField.text = w.mmg2Top?.let { "%.1f".format(it).replace(",", ".") } ?: ""
+        mmg2BottomField.text = w.mmg2Bottom?.let { "%.1f".format(it).replace(",", ".") } ?: ""
 
-        gwAppearLogField.text = w.gwAppearLog?.let { "%.3f".format(it).replace(",", ".") } ?: ""
-        gwStableLogField.text = w.gwStableLog?.let { "%.3f".format(it).replace(",", ".") } ?: ""
+        gwAppearLogField.text = w.gwAppearLog?.let { "%.1f".format(it).replace(",", ".") } ?: ""
+        gwStableLogField.text = w.gwStableLog?.let { "%.1f".format(it).replace(",", ".") } ?: ""
         gwStableAbsLabel.text = "УУГВ абс: ${w.gwStableAbs?.let { "%.3f".format(it).replace(",", ".") } ?: "не определено"}"
 
         actCheckBox.isSelected = w.act == true
@@ -190,7 +191,7 @@ class WorkingFormController {
         }
         runOnFx {
             try {
-                val geologists = api.getGeologistsByContractor("Bearer $token", contractorId).await()
+                val geologists = api.getGeologistsByContractor(token.toBearerAuthorization(), contractorId).await()
                 geologistCombo.items.setAll(geologists)
                 if (selectedGeologistId != null) {
                     val found = geologists.find { it.id == selectedGeologistId }
@@ -211,11 +212,11 @@ class WorkingFormController {
         runOnFx {
             try {
                 // Загружаем геологов для выбранного подрядчика
-                val mainGeologists = api.getGeologistsByContractor("Bearer $token", contractorId).await().toMutableList()
+                val mainGeologists = api.getGeologistsByContractor(token.toBearerAuthorization(), contractorId).await().toMutableList()
 
                 // Если выбран не ВГСП и ВГСП существует, добавляем геологов ВГСП (без дубликатов)
                 if (vgspContractorId != null && vgspContractorId != contractorId) {
-                    val vgspGeologists = api.getGeologistsByContractor("Bearer $token", vgspContractorId!!).await()
+                    val vgspGeologists = api.getGeologistsByContractor(token.toBearerAuthorization(), vgspContractorId!!).await()
                     // Добавляем только тех, кого ещё нет в списке (по id)
                     for (geo in vgspGeologists) {
                         if (mainGeologists.none { it.id == geo.id }) {
@@ -351,8 +352,8 @@ class WorkingFormController {
         saveButton.isDisable = true
         runOnFx {
             try {
-                if (existing == null) api.createWorking("Bearer $token", finalWorking).await()
-                else api.updateWorking("Bearer $token", existing.id, finalWorking).await()
+                if (existing == null) api.createWorking(token.toBearerAuthorization(), finalWorking).await()
+                else api.updateWorking(token.toBearerAuthorization(), existing.id, finalWorking).await()
                 onSaveCallback()
                 close()
             } catch (e: Exception) {

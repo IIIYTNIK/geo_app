@@ -1,15 +1,36 @@
 package com.example.geoserver.service
 
+import org.springframework.security.access.AccessDeniedException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import com.example.geoserver.repository.WorkingRepository
 import com.example.geoserver.entity.Working
+import com.example.geoserver.service.UserAreaAccessService
 
 @Service
-class WorkingService(private val workingRepository: WorkingRepository) {
+class WorkingService(
+    private val workingRepository: WorkingRepository,
+    private val userAreaAccessService: UserAreaAccessService
+) {
 
     @Transactional
-    fun saveWorking(working: Working): Working {
+    fun saveWorking(userId: Long, working: Working): Working {
+        val area = working.area
+        val areaId = area?.id
+        if (areaId == null) {
+            throw AccessDeniedException("Access denied: area is required")
+        }
+
+        if (working.id == 0L) {
+            userAreaAccessService.requireWriteAccess(userId, areaId)
+        } else {
+            val existing = workingRepository.findById(working.id).orElseThrow { RuntimeException("Working not found") }
+            userAreaAccessService.requireWriteAccess(userId, existing.area?.id)
+            if (area.id != existing.area?.id) {
+                userAreaAccessService.requireWriteAccess(userId, area.id)
+            }
+        }
+
         // Вычисляем корректный флаг isProject перед сохранением
         val withProjectFlag = working.copy(isProject = computeIsProject(working))
 
@@ -23,10 +44,11 @@ class WorkingService(private val workingRepository: WorkingRepository) {
     }
 
     @Transactional
-    fun deleteWorking(id: Long) {
+    fun deleteWorking(userId: Long, id: Long) {
         val working = workingRepository.findById(id).orElse(null) ?: return
+        userAreaAccessService.requireWriteAccess(userId, working.area?.id)
         val deletedOrderNum = working.orderNum
-        
+
         // Удаляем запись
         workingRepository.deleteById(id)
 
@@ -35,6 +57,16 @@ class WorkingService(private val workingRepository: WorkingRepository) {
             workingRepository.shiftOrderNums(deletedOrderNum)
         }
     }
+
+    @Transactional
+    fun restoreWorking(userId: Long, id: Long): Working {
+        val working = workingRepository.findByIdIncludingDeleted(id) ?: throw RuntimeException("Working not found")
+        userAreaAccessService.requireWriteAccess(userId, working.area?.id)
+        working.isDeleted = false
+        return workingRepository.save(working)
+    }
+
+    fun getDeletedWorkings(): List<Working> = workingRepository.findDeletedWorkings()
 
     /**
      * Определяет, считать ли выработку проектной.

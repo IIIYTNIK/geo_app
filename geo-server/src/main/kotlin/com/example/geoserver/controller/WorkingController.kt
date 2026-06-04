@@ -1,10 +1,12 @@
 package com.example.geoserver.controller
 
+import org.springframework.security.access.AccessDeniedException
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.server.ResponseStatusException
 import org.springframework.http.HttpStatus
 import com.example.geoserver.entity.*
 import com.example.geoserver.repository.*
+import com.example.geoserver.security.SecurityUtils
 import com.example.geoserver.service.WorkingService
 import kotlin.math.sqrt
 import kotlin.math.round
@@ -17,6 +19,10 @@ class WorkingController(
     private val workingService: WorkingService
 ) {
 
+    private fun currentUserId(): Long {
+        return SecurityUtils.currentUserId() ?: throw AccessDeniedException("Unauthorized")
+    }
+
     @GetMapping
     fun getAll(): List<Working> = repo.findAll()
 
@@ -24,7 +30,7 @@ class WorkingController(
     fun getById(@PathVariable id: Long): Working? = repo.findById(id).orElse(null)
 
     @PostMapping
-    fun create(@RequestBody working: Working) = workingService.saveWorking(calculateComputedFields(working))
+    fun create(@RequestBody working: Working) = workingService.saveWorking(currentUserId(), calculateComputedFields(working))
 
     @PostMapping("/batch")
     fun createBatch(@RequestBody workings: List<Working>): List<Working> {
@@ -36,7 +42,7 @@ class WorkingController(
             if (existing != null) {
                 throw ResponseStatusException(HttpStatus.CONFLICT, "Duplicate: ${processedWorking.number} on area ${processedWorking.area?.name}")
             }
-            savedWorkings.add(workingService.saveWorking(processedWorking))
+            savedWorkings.add(workingService.saveWorking(currentUserId(), processedWorking))
         }
         return savedWorkings
     }
@@ -46,13 +52,19 @@ class WorkingController(
         if (!repo.existsById(id)) throw ResponseStatusException(HttpStatus.NOT_FOUND, "Working not found")
         val processed = calculateComputedFields(working)
         val toSave = if (processed.contractor != null) processed.copy(id = id, plannedContractor = null) else processed.copy(id = id)
-        return workingService.saveWorking(toSave)
+        return workingService.saveWorking(currentUserId(), toSave)
     }
 
     @DeleteMapping("/{id}")
     fun delete(@PathVariable id: Long) {
-        repo.deleteById(id)
+        workingService.deleteWorking(currentUserId(), id)
     }
+
+    @GetMapping("/recycle-bin")
+    fun getRecycleBin(): List<Working> = workingService.getDeletedWorkings()
+
+    @PostMapping("/{id}/restore")
+    fun restore(@PathVariable id: Long): Working = workingService.restoreWorking(currentUserId(), id)
 
     // ЛОГИКА РАСЧЕТОВ И ОКРУГЛЕНИЙ 
     private fun calculateComputedFields(w: Working): Working {

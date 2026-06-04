@@ -18,6 +18,7 @@ import org.example.geoapp.util.CorrectionRow
 import org.example.geoapp.util.DbField
 import org.example.geoapp.util.await
 import org.example.geoapp.util.runOnFx
+import org.example.geoapp.util.toBearerAuthorization
 
 class ImportCorrectionController {
 
@@ -199,7 +200,7 @@ class ImportCorrectionController {
         runOnFx {
             try {
                 statusLabel.text = "Сохранение..."
-                MainApp.api.createBatch("Bearer $token", workings).await()
+                MainApp.api.createBatch(token.toBearerAuthorization(), workings).await()
                 onCompleteCallback.invoke()
                 close()
             } catch (e: Exception) {

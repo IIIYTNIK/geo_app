@@ -15,6 +15,7 @@ interface GeoApi {
 
     // --- Пользователи ---
     @GET("api/users") fun getUsers(@Header("Authorization") token: String): Call<List<UserDto>>
+    @GET("api/users/me/access") fun getCurrentUserAccess(@Header("Authorization") token: String): Call<List<UserAreaAccessDto>>
     @POST("api/users") fun createUser(@Header("Authorization") token: String, @Body user: UserCreateDto): Call<UserDto>
     @PUT("api/users/{id}") fun updateUser(@Header("Authorization") token: String, @Path("id") id: Long, @Body user: UserUpdateDto): Call<UserDto>
     @DELETE("api/users/{id}") fun deleteUser(@Header("Authorization") token: String, @Path("id") id: Long): Call<Void>
@@ -54,6 +55,9 @@ interface GeoApi {
     @POST("api/workings") fun createWorking(@Header("Authorization") token: String, @Body working: Working): Call<Working>
     @PUT("api/workings/{id}") fun updateWorking(@Header("Authorization") token: String, @Path("id") id: Long, @Body working: Working): Call<Working>
     @DELETE("api/workings/{id}") fun deleteWorking(@Header("Authorization") token: String, @Path("id") id: Long): Call<Void>
+    @GET("api/workings/recycle-bin") fun getRecycleBin(@Header("Authorization") token: String): Call<List<Working>>
+    @POST("api/workings/{id}/restore") fun restoreWorking(@Header("Authorization") token: String, @Path("id") id: Long): Call<Working>
+    @GET("api/audit/workings") fun getWorkingAuditHistory(@Header("Authorization") token: String): Call<List<WorkingAuditEntry>>
 
     // Метод для массовой загрузки выработок
     @POST("api/workings/batch") fun createBatch(@Header("Authorization") token: String, @Body workings: List<Working>): Call<List<Working>>
@@ -88,6 +92,8 @@ data class RefGeologist(val id: Long = 0, val name: String, val alias: String? =
 data class UserDto(val id: Long, val login: String, val fullName: String, val role: String, val position: String?)
 data class UserCreateDto(val login: String, val fullName: String, val password: String, val role: String, val position: String? = null)
 data class UserUpdateDto(val login: String, val fullName: String, val role: String, val password: String?, val position: String? = null)
+data class UserAreaAccessDto(val areaId: Long, val accessLevel: AccessLevel)
+enum class AccessLevel { READ, WRITE }
 
 // Модель выработки (Working) - основная сущность, с которой будем работать в приложении
 data class Working(
@@ -153,5 +159,14 @@ data class Working(
     var cat1_4: Double? = null,
     var cat5_8: Double? = null,
     var cat9_12: Double? = null,
+)
+
+data class WorkingAuditEntry(
+    val workingId: Long,
+    val revisionType: String,
+    val revisionTimestamp: String,
+    val username: String?,
+    val objectName: String,
+    val details: Working
 )
 

@@ -16,7 +16,7 @@ ext {
 group = 'com.example'
 version = '0.0.1-SNAPSHOT'
 description = 'Demo project for Spring Boot'
-
+ 
 java {
 	sourceCompatibility = '17'
 	targetCompatibility = '17'
@@ -37,6 +37,7 @@ repositories {
 
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.hibernate:hibernate-envers:6.4.7.Final'
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'com.fasterxml.jackson.module:jackson-module-kotlin'
