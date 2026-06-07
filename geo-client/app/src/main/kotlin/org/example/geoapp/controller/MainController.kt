@@ -385,6 +385,9 @@ class MainController {
                 }
             }
         }
+
+        disableColumnReordering(workingsTable.columns)
+        
         setupSummaryRow()
     }
 
@@ -542,6 +545,17 @@ class MainController {
             }
 
         workingsList.setAll(filtered)
+    }
+
+    // Функция блокировки перетаскивания колонок
+    private fun disableColumnReordering(columns: List<TableColumn<Working, *>>) {
+        for (col in columns) {
+            col.isReorderable = false // Запрещаем перетаскивание
+            if (col.columns.isNotEmpty()) {
+                // Рекурсивно отключаем для вложенных колонок (групп)
+                disableColumnReordering(col.columns)
+            }
+        }
     }
 
     @FXML fun onAdd() {
@@ -968,7 +982,7 @@ class MainController {
         summaryLabels.values.forEach { it.text = "" }
 
         // Заполняем нужные ячейки, проверяя их наличие в visibleLeafColumns
-        summaryLabels[colRowNumber]?.text = "${items.size}"
+        summaryLabels[colRowNumber]?.text = "Σ = ${items.size}"
         summaryLabels[colActualDepth]?.text = formatDouble(sumFactH, 1)
         summaryLabels[colPlannedDepth]?.text = formatDouble(sumPlanH, 1)
         summaryLabels[colCat1_4]?.text = formatDouble(sumCat1_4, 1)
