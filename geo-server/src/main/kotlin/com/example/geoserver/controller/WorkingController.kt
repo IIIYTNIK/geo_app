@@ -8,6 +8,7 @@ import com.example.geoserver.repository.*
 import com.example.geoserver.service.WorkingService
 import kotlin.math.sqrt
 import kotlin.math.round
+import org.springframework.transaction.annotation.Transactional
 
 
 @RestController
@@ -51,7 +52,7 @@ class WorkingController(
 
     @DeleteMapping("/{id}")
     fun delete(@PathVariable id: Long) {
-        repo.deleteById(id)
+        workingService.deleteWorking(id)
     }
 
     // ЛОГИКА РАСЧЕТОВ И ОКРУГЛЕНИЙ 
@@ -99,4 +100,19 @@ class WorkingController(
             gwStableAbs = gwAbs
         )
     }
+
+    @GetMapping("/recycle-bin")
+    fun getRecycleBin(): List<Working> {
+        return repo.findDeletedWorkings()
+    }
+
+    @Transactional
+    @PostMapping("/{id}/restore")
+    fun restore(@PathVariable id: Long): Working {
+        val working = repo.findByIdIncludingDeleted(id) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
+        working.isDeleted = false
+        return repo.saveAndFlush(working) // или repo.save(working)
+    }
+
+
 }

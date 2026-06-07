@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+      fx:controller="org.example.geoapp.controller.HistoryController"
+      spacing="10" style="-fx-padding: 10;" prefWidth="800" prefHeight="500">
+
+    <TableView fx:id="historyTable" VBox.vgrow="ALWAYS">
+        <columns>
+            <TableColumn fx:id="colWorkingId" text="ID выработки" prefWidth="80"/>
+            <TableColumn fx:id="colWorkingName" text="Номер" prefWidth="150"/>
+            <TableColumn fx:id="colRevisionType" text="Действие" prefWidth="100"/>
+            <TableColumn fx:id="colUsername" text="Пользователь" prefWidth="150"/>
+            <TableColumn fx:id="colTimestamp" text="Дата/время" prefWidth="200"/>
+            <TableColumn fx:id="colChanges" text="Изменения" prefWidth="300"/>
+        </columns>
+    </TableView>
+
+    <HBox spacing="10" alignment="CENTER_RIGHT">
+        <Button text="Закрыть" onAction="#close"/>
+        <Button text="Восстановить" onAction="#restoreRevision"/>
+    </HBox>
+</VBox>

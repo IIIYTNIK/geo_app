@@ -63,4 +63,30 @@ interface WorkingRepository : JpaRepository<Working, Long> {
         contractorId: Long?,
         areaId: Long?
     ): List<Working>
+
+    @Query(
+        value = """
+            SELECT * 
+            FROM workings
+            WHERE is_deleted = true
+        """,
+        nativeQuery = true
+    )
+    fun findDeletedWorkings(): List<Working>
+
+    @Query(
+        value = """
+            SELECT *
+            FROM workings
+            WHERE id = :id
+        """,
+        nativeQuery = true
+    )
+    fun findByIdIncludingDeleted(id: Long): Working?
+    
+}
+
+interface UserAreaAccessRepository : JpaRepository<UserAreaAccess, Long> {
+    fun findByUser_Id(userId: Long): List<UserAreaAccess>
+    fun findByUser_IdAndArea_Id(userId: Long, areaId: Long): UserAreaAccess?
 }

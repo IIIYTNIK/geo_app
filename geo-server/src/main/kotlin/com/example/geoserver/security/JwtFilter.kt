@@ -9,6 +9,7 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component
 import org.springframework.web.filter.OncePerRequestFilter
 import com.example.geoserver.service.UserService
+import com.example.geoserver.entity.User
 
 @Component
 class JwtFilter(
@@ -52,5 +53,12 @@ class JwtFilter(
         }
 
         filterChain.doFilter(request, response)
+    }
+}
+
+object SecurityUtils {
+    fun currentUser(): User? {
+        val authentication = SecurityContextHolder.getContext().authentication
+        return authentication?.principal as? User
     }
 }

@@ -13,7 +13,7 @@
         <Insets top="16" right="16" bottom="16" left="16"/>
     </padding>
 
-    <TableView fx:id="usersTable" VBox.vgrow="ALWAYS">
+    <TableView fx:id="usersTable" VBox.vgrow="ALWAYS" editable="true">
         <columns>
             <TableColumn fx:id="colId" text="ID" prefWidth="70"/>
             <TableColumn fx:id="colLogin" text="Логин" prefWidth="170"/>

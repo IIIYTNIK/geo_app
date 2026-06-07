@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+      fx:controller="org.example.geoapp.controller.RecycleBinController"
+      spacing="10" style="-fx-padding: 10;" prefWidth="600" prefHeight="400">
+
+    <Label text="Корзина удалённых выработок" style="-fx-font-size: 14px; -fx-font-weight: bold;"/>
+
+    <TableView fx:id="recycleBinTable" VBox.vgrow="ALWAYS">
+        <columns>
+            <TableColumn fx:id="colId" text="ID" prefWidth="60"/>
+            <TableColumn fx:id="colNumber" text="Номер" prefWidth="150"/>
+            <TableColumn fx:id="colArea" text="Участок" prefWidth="150"/>
+            <TableColumn fx:id="colWorkType" text="Тип" prefWidth="150"/>
+        </columns>
+    </TableView>
+
+    <HBox spacing="10" alignment="CENTER_RIGHT">
+        <Button fx:id="restoreButton" text="Восстановить" onAction="#onRestore"/>
+        <Button text="Закрыть" onAction="#close"/>
+    </HBox>
+</VBox>

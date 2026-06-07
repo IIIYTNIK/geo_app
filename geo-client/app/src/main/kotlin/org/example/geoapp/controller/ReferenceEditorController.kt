@@ -16,7 +16,7 @@ enum class RefType(val title: String) {
     CONTRACTOR("Подрядчики"), GEOLOGIST("Геологи")
 }
 
-data class RefUiModel(val id: Long, val name: String, val alias: String?, val parent: RefContractor?, var comment: String?, val originalObj: Any)
+data class RefUiModel(val id: Long, val name: String, val alias: String?, val position: String?, val parent: RefContractor?, var comment: String?, val originalObj: Any)
 
 class ReferenceEditorController {
 
@@ -24,12 +24,15 @@ class ReferenceEditorController {
     @FXML private lateinit var colId: TableColumn<RefUiModel, String>
     @FXML private lateinit var colName: TableColumn<RefUiModel, String>
     @FXML private lateinit var colAlias: TableColumn<RefUiModel, String>
+    @FXML private lateinit var colPosition: TableColumn<RefUiModel, String>
     @FXML private lateinit var colParent: TableColumn<RefUiModel, String>
     @FXML private lateinit var colComment: TableColumn<RefUiModel, String>
 
     @FXML private lateinit var nameField: TextField
+    @FXML private lateinit var positionLabel: Label
     @FXML private lateinit var contractorLabel: Label
     @FXML private lateinit var aliasField: TextField
+    @FXML private lateinit var positionField: TextField
     @FXML private lateinit var contractorCombo: ComboBox<RefContractor>
     @FXML private lateinit var errorLabel: Label
     @FXML private lateinit var deleteButton: Button
@@ -72,22 +75,29 @@ class ReferenceEditorController {
         colName.setCellValueFactory { SimpleStringProperty(it.value.name) }
         colComment.setCellValueFactory { SimpleStringProperty(it.value.comment ?: "") }
         colAlias.setCellValueFactory { SimpleStringProperty(it.value.alias ?: "") }
+        
 
         if (type == RefType.GEOLOGIST) {
             colParent.isVisible = true
             colParent.setCellValueFactory { SimpleStringProperty(it.value.parent?.name ?: "") }
+            colPosition.isVisible = true
+            colPosition.setCellValueFactory { SimpleStringProperty(it.value.position ?: "") }
             contractorLabel.isVisible = true
             contractorLabel.isManaged = true
             contractorCombo.isVisible = true
             contractorCombo.isManaged = true
+            positionLabel.isVisible = true
+            positionLabel.isManaged = true
+            positionField.isVisible = true
+            positionField.isManaged = true
             loadContractorsForCombo()
         }
-
+        
         val showAlias = type == RefType.GEOLOGIST || type == RefType.DRILLING_RIG
         colAlias.isVisible = showAlias
         aliasField.isVisible = showAlias
 
-    
+
         nameField.textProperty().addListener { _, _, _ -> updateButtons() }
 
         deleteButton.disableProperty().bind(referenceTable.selectionModel.selectedItemProperty().isNull)
@@ -98,13 +108,13 @@ class ReferenceEditorController {
                 nameField.text = selected.name
                 if (type == RefType.GEOLOGIST) {
                     contractorCombo.value = selected.parent
+                    positionField.text = selected.position ?: ""
                 }
                 aliasField.text = when (selected.originalObj) {
                     is RefGeologist -> selected.originalObj.alias ?: ""
                     is RefDrillingRig -> selected.originalObj.alias ?: ""
                     else -> ""
                 }
-                deleteButton.isDisable = false       // уже не нужно из-за биндинга, но оставим для совместимости
                 saveButton.text = "Сохранить изменения"
             } else {
                 // Режим создания
@@ -121,11 +131,11 @@ class ReferenceEditorController {
         runOnFx {
             try {
                 val items = when (currentType) {
-                    RefType.AREA -> api.getAreas().await().map { RefUiModel(it.id, it.name, null, null, it.comment, it) }
-                    RefType.WORK_TYPE -> api.getWorkTypes().await().map { RefUiModel(it.id, it.name, null, null, it.comment, it) }
-                    RefType.DRILLING_RIG -> api.getDrillingRigs().await().map { RefUiModel(it.id, it.name, it.alias, null, it.comment, it) }
-                    RefType.CONTRACTOR -> api.getContractors().await().map { RefUiModel(it.id, it.name, null, null, it.comment, it) }
-                    RefType.GEOLOGIST -> api.getGeologists().await().map { RefUiModel(it.id, it.name, it.alias, it.contractor, it.comment, it) }
+                    RefType.AREA -> api.getAreas().await().map { RefUiModel(it.id, it.name, null, null, null, it.comment, it) }
+                    RefType.WORK_TYPE -> api.getWorkTypes().await().map { RefUiModel(it.id, it.name, null, null, null, it.comment, it) }
+                    RefType.DRILLING_RIG -> api.getDrillingRigs().await().map { RefUiModel(it.id, it.name, it.alias, null, null, it.comment, it) }
+                    RefType.CONTRACTOR -> api.getContractors().await().map { RefUiModel(it.id, it.name, null, null, null, it.comment, it) }
+                    RefType.GEOLOGIST -> api.getGeologists().await().map { RefUiModel(it.id, it.name, it.alias, it.position, it.contractor, it.comment, it) }
                 }.sortedBy { it.id }
                 referenceTable.items = FXCollections.observableArrayList(items)
                 autoSizeColumnsAndWindow()
@@ -150,6 +160,7 @@ class ReferenceEditorController {
         nameField.clear()
         aliasField.clear()
         contractorCombo.value = null
+        positionField.text = ""
         errorLabel.text = ""
         saveButton.text = when (currentType) {
             RefType.AREA -> "Добавить участок"
@@ -190,8 +201,8 @@ class ReferenceEditorController {
                     RefType.GEOLOGIST -> {
                         val c = contractorCombo.value
                         if (c == null) { errorLabel.text = "Выберите подрядчика!"; return@runOnFx }
-                        if (id == 0L) api.createGeologist(tokenStr, RefGeologist(name = name, contractor = c, alias = aliasStr)).await()
-                        else api.updateGeologist(tokenStr, id, RefGeologist(name = name, contractor = c, alias = aliasStr)).await()
+                        if (id == 0L) api.createGeologist(tokenStr, RefGeologist(name = name, contractor = c, alias = aliasStr, position = positionField.text.trim())).await()
+                        else api.updateGeologist(tokenStr, id, RefGeologist(name = name, contractor = c, alias = aliasStr, position = positionField.text.trim())).await()
                     }
                 }
                 onClearSelection()

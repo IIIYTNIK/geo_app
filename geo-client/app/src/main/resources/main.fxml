@@ -8,6 +8,9 @@
             <MenuItem text="Импорт проектных скважин" onAction="#openProjectExcelImport"/>
             <MenuItem text="Импорт фактических скважин" onAction="#openActualExcelImport"/>
             <MenuItem text="Сформировать отчёт" onAction="#openReportDialog"/>
+            <SeparatorMenuItem/>
+            <MenuItem text="Корзина удалённых" onAction="#openRecycleBinDialog"/>
+            <MenuItem text="История изменений" onAction="#openHistoryDialog"/>
         </Menu>
         <Menu fx:id="adminMenu" text="Справочники" visible="false">
             <MenuItem text="Участки" onAction="#openAreasEditor"/>
@@ -77,9 +80,9 @@
 
             <TableColumn text="Образцы (шт)">
                 <columns>
-                    <TableColumn fx:id="colSamplesThawed" text="Талые" prefWidth="50"/>
-                    <TableColumn fx:id="colSamplesFrozen" text="Мерзл" prefWidth="50"/>
-                    <TableColumn fx:id="colSamplesRocky" text="Скал" prefWidth="50"/>
+                    <TableColumn fx:id="colSamplesThawed" text="Т" prefWidth="50"/>
+                    <TableColumn fx:id="colSamplesFrozen" text="М" prefWidth="50"/>
+                    <TableColumn fx:id="colSamplesRocky" text="С" prefWidth="50"/>
                 </columns>
             </TableColumn>
 

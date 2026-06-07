@@ -4,12 +4,33 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import com.example.geoserver.repository.WorkingRepository
 import com.example.geoserver.entity.Working
+import org.springframework.security.access.AccessDeniedException
+import org.springframework.security.core.context.SecurityContextHolder
 
 @Service
-class WorkingService(private val workingRepository: WorkingRepository) {
+class WorkingService(
+    private val workingRepository: WorkingRepository,
+    private val areaPermissionService: AreaPermissionService) {
 
     @Transactional
     fun saveWorking(working: Working): Working {
+        // Если запись новая – проверяем права на её участок
+        if (working.id == 0L) {
+            checkWritePermission(working)
+        } else {
+            // При обновлении загружаем существующую запись
+            val existing = workingRepository.findById(working.id)
+                .orElseThrow { RuntimeException("Working not found") }
+            // Проверяем права на старый участок
+            checkWritePermission(existing)
+            // Если участок изменился – проверяем права на новый
+            if (existing.area?.id != working.area?.id) {
+                checkWritePermission(working)
+            }
+        }
+        
+        //checkWritePermission(working)
+        
         // Вычисляем корректный флаг isProject перед сохранением
         val withProjectFlag = working.copy(isProject = computeIsProject(working))
 
@@ -25,6 +46,8 @@ class WorkingService(private val workingRepository: WorkingRepository) {
     @Transactional
     fun deleteWorking(id: Long) {
         val working = workingRepository.findById(id).orElse(null) ?: return
+        checkWritePermission(working)
+
         val deletedOrderNum = working.orderNum
         
         // Удаляем запись
@@ -60,5 +83,18 @@ class WorkingService(private val workingRepository: WorkingRepository) {
 
         val isFactual = hasArea && hasContractor && hasGeologist && hasActualCoords && (!requiresRig || hasRig)
         return !isFactual
+    }
+
+    private fun checkWritePermission(working: Working) {
+
+        val areaId = working.area?.id
+        val username = SecurityContextHolder.getContext().authentication ?.name ?: return
+
+        if (!areaPermissionService.canWrite(username, areaId)) {
+            print("Пользователь $username не имеет прав на запись для участка $areaId")
+            throw AccessDeniedException(
+                "Нет прав на изменение участка"
+            )
+        }
     }
 }

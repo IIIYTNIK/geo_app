@@ -9,6 +9,11 @@
     -fx-background-color: #c8e6c9 !important; /* зелёный */
 }
 
+.table-row-cell.read-only-row {
+    -fx-background-color: #f5f5f5 !important;
+    -fx-text-fill: #888888 !important;
+}
+
 /* Вся выделенная строка становится серой (перекрывает статусы) */
 .table-row-cell:selected,
 .table-view:focused .table-row-cell:selected {

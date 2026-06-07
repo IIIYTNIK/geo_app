@@ -15,9 +15,12 @@ interface GeoApi {
 
     // --- Пользователи ---
     @GET("api/users") fun getUsers(@Header("Authorization") token: String): Call<List<UserDto>>
+    @GET("api/users/me/access") fun getCurrentUserAccess(@Header("Authorization") token: String): Call<List<UserAreaAccessDto>>
     @POST("api/users") fun createUser(@Header("Authorization") token: String, @Body user: UserCreateDto): Call<UserDto>
     @PUT("api/users/{id}") fun updateUser(@Header("Authorization") token: String, @Path("id") id: Long, @Body user: UserUpdateDto): Call<UserDto>
     @DELETE("api/users/{id}") fun deleteUser(@Header("Authorization") token: String, @Path("id") id: Long): Call<Void>
+    @GET("api/users/access/all") fun getAllUsersAccess(@Header("Authorization") token: String): Call<List<UserAreaAccessDto>>
+    @PUT("api/users/{userId}/access/{areaId}") fun updateUserAccess(@Header("Authorization") token: String, @Path("userId") userId: Long, @Path("areaId") areaId: Long, @Query("level") level: String): Call<Void>
 
     // --- Чтение (GET) ---
     @GET("api/references/contractors") fun getContractors(): Call<List<RefContractor>>
@@ -54,6 +57,10 @@ interface GeoApi {
     @POST("api/workings") fun createWorking(@Header("Authorization") token: String, @Body working: Working): Call<Working>
     @PUT("api/workings/{id}") fun updateWorking(@Header("Authorization") token: String, @Path("id") id: Long, @Body working: Working): Call<Working>
     @DELETE("api/workings/{id}") fun deleteWorking(@Header("Authorization") token: String, @Path("id") id: Long): Call<Void>
+    @GET("api/workings/recycle-bin") fun getRecycleBin(@Header("Authorization") token: String): Call<List<Working>>
+    @POST("api/workings/{id}/restore") fun restoreWorking(@Header("Authorization") token: String, @Path("id") id: Long): Call<Working>
+    @GET("api/audit/workings") fun getWorkingAuditHistory(@Header("Authorization") token: String): Call<List<WorkingAuditEntry>>
+    @POST("api/audit/workings/{workingId}/restore-revision/{revision}") fun restoreRevision(@Header("Authorization") token: String, @Path("workingId") workingId: Long, @Path("revision") revision: Int): Call<Working>
 
     // Метод для массовой загрузки выработок
     @POST("api/workings/batch") fun createBatch(@Header("Authorization") token: String, @Body workings: List<Working>): Call<List<Working>>
@@ -64,13 +71,7 @@ interface GeoApi {
     @DELETE("api/report-templates/{id}") fun deleteTemplate(@Header("Authorization") token: String, @Path("id") id: Long): Call<Void>
     @GET("api/report-templates/{id}/metadata") fun getReportTemplateMetadata(@Header("Authorization") token: String, @Path("id") id: Long): Call<ReportTemplateMetadataDto>
     @POST("api/reports/generate") fun generateReport(@Header("Authorization") token: String, @Body request: ReportGenerateRequest): Call<ResponseBody>
-    @Multipart @POST("api/report-templates/upload") fun uploadTemplate(
-        @Header("Authorization") token: String,
-        @Part("name") name: RequestBody,
-        @Part("description") description: RequestBody?, 
-        @Part file: MultipartBody.Part,
-        @Part("overwrite") overwrite: RequestBody?
-    ): Call<ReportTemplateSummaryDto>
+    @Multipart @POST("api/report-templates/upload") fun uploadTemplate(@Header("Authorization") token: String, @Part("name") name: RequestBody, @Part("description") description: RequestBody?,  @Part file: MultipartBody.Part, @Part("overwrite") overwrite: RequestBody? ): Call<ReportTemplateSummaryDto>
 
 }
 
@@ -82,12 +83,20 @@ data class RefArea(val id: Long = 0, val name: String, val comment: String? = nu
 data class RefContractor(val id: Long = 0, val name: String, val comment: String? = null)
 data class RefDrillingRig(val id: Long = 0, val name: String, val alias: String? = null, val comment: String? = null)
 data class RefWorkType(val id: Long = 0, val name: String, val comment: String? = null)
-data class RefGeologist(val id: Long = 0, val name: String, val alias: String? = null, var contractor: RefContractor? = null, val comment: String? = null)
+data class RefGeologist(val id: Long = 0, val name: String, val alias: String? = null, var contractor: RefContractor? = null, val position: String? = null, val comment: String? = null)
 
 // Модели для работы с пользователями
 data class UserDto(val id: Long, val login: String, val fullName: String, val role: String, val position: String?)
 data class UserCreateDto(val login: String, val fullName: String, val password: String, val role: String, val position: String? = null)
 data class UserUpdateDto(val login: String, val fullName: String, val role: String, val password: String?, val position: String? = null)
+data class UserAreaAccessDto(val areaId: Long, val accessLevel: AccessLevel, val userId: Long? = null)
+enum class AccessLevel { READ, WRITE }
+
+// DTO для изменённых полей
+data class ChangedFieldDto(val field: String, val oldValue: String?, val newValue: String?)
+data class WorkingAuditEntry(val workingId: Long, val revisionNumber: Int, val revisionType: String, val revisionTimestamp: String, val username: String?, val objectName: String, val details: WorkingAuditDetailsDto, val changesText: String)
+data class WorkingAuditDetailsDto(val id: Long, val number: String?, val areaName: String?, val contractorName: String?, val geologistName: String?, val workTypeName: String?) // Краткая информация о выработке для аудита
+
 
 // Модель выработки (Working) - основная сущность, с которой будем работать в приложении
 data class Working(

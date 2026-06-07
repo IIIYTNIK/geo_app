@@ -62,7 +62,7 @@ class WorkingFormController {
 
     private lateinit var token: String
     private var working: Working? = null
-    private var onSaveCallback: () -> Unit = {}
+    private var onSaveCallback: (Working) -> Unit = {}
     private val api = MainApp.api
 
     private var vgspContractorId: Long? = null
@@ -80,7 +80,7 @@ class WorkingFormController {
         }
     }
 
-    fun initData(token: String, working: Working?, onSave: () -> Unit) {
+    fun initData(token: String, working: Working?, onSave: (Working) -> Unit) {
         this.token = token
         this.working = working
         this.onSaveCallback = onSave
@@ -148,22 +148,22 @@ class WorkingFormController {
         deltaSLabel.text = "Смещение от проекта: ${w.deltaS?.let { "%.3f".format(it).replace(",", ".") } ?: "не определено"} м"
 
         plannedDepthField.text = w.plannedDepth?.let { "%.3f".format(it).replace(",", ".") } ?: ""
-        actualDepthField.text = w.actualDepth?.let { "%.3f".format(it).replace(",", ".") } ?: ""
-        casingField.text = w.casing?.let { "%.3f".format(it).replace(",", ".") } ?: ""
-        coreRecoveryField.text = w.coreRecovery?.let { "%.3f".format(it).replace(",", ".") } ?: ""
+        actualDepthField.text = w.actualDepth?.let { "%.1f".format(it).replace(",", ".") } ?: ""
+        casingField.text = w.casing?.let { "%.1f".format(it).replace(",", ".") } ?: ""
+        coreRecoveryField.text = w.coreRecovery?.let { "%.0f".format(it).replace(",", ".") } ?: ""
 
         startDatePicker.value = w.startDate?.let { LocalDate.parse(it) }
         endDatePicker.value = w.endDate?.let { LocalDate.parse(it) }
 
         additionalInfoArea.text = w.additionalInfo ?: ""
 
-        mmg1TopField.text = w.mmg1Top?.let { "%.3f".format(it).replace(",", ".") } ?: ""
-        mmg1BottomField.text = w.mmg1Bottom?.let { "%.3f".format(it).replace(",", ".") } ?: ""
-        mmg2TopField.text = w.mmg2Top?.let { "%.3f".format(it).replace(",", ".") } ?: ""
-        mmg2BottomField.text = w.mmg2Bottom?.let { "%.3f".format(it).replace(",", ".") } ?: ""
+        mmg1TopField.text = w.mmg1Top?.let { "%.1f".format(it).replace(",", ".") } ?: ""
+        mmg1BottomField.text = w.mmg1Bottom?.let { "%.1f".format(it).replace(",", ".") } ?: ""
+        mmg2TopField.text = w.mmg2Top?.let { "%.1f".format(it).replace(",", ".") } ?: ""
+        mmg2BottomField.text = w.mmg2Bottom?.let { "%.1f".format(it).replace(",", ".") } ?: ""
 
-        gwAppearLogField.text = w.gwAppearLog?.let { "%.3f".format(it).replace(",", ".") } ?: ""
-        gwStableLogField.text = w.gwStableLog?.let { "%.3f".format(it).replace(",", ".") } ?: ""
+        gwAppearLogField.text = w.gwAppearLog?.let { "%.1f".format(it).replace(",", ".") } ?: ""
+        gwStableLogField.text = w.gwStableLog?.let { "%.1f".format(it).replace(",", ".") } ?: ""
         gwStableAbsLabel.text = "УУГВ абс: ${w.gwStableAbs?.let { "%.3f".format(it).replace(",", ".") } ?: "не определено"}"
 
         actCheckBox.isSelected = w.act == true
@@ -351,9 +351,9 @@ class WorkingFormController {
         saveButton.isDisable = true
         runOnFx {
             try {
-                if (existing == null) api.createWorking("Bearer $token", finalWorking).await()
+                val saved = if (existing == null) api.createWorking("Bearer $token", finalWorking).await() 
                 else api.updateWorking("Bearer $token", existing.id, finalWorking).await()
-                onSaveCallback()
+                onSaveCallback(saved)
                 close()
             } catch (e: Exception) {
                 errorLabel.text = "Ошибка: ${e.message}"

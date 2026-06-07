@@ -20,7 +20,10 @@ class AuthController(
     private val userService: UserService
 ) {
 
-    data class LoginRequest(val login: String, val password: String)
+    data class LoginRequest(
+        val login: String,
+        val password: String
+    )
     data class LoginResponse(val token: String, val role: String, val user: UserDto)
 
     @PostMapping("/login")

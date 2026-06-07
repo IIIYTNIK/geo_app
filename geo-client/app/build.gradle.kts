@@ -38,21 +38,21 @@ javafx {
 }
 
 application {
-    // Плагин runtime автоматически подхватит этот класс!
     mainClass.set("org.example.geoapp.AppLauncherKt")
+    applicationDefaultJvmArgs = listOf(
+        "--add-opens", "javafx.controls/javafx.scene.control.skin=ALL-UNNAMED"
+    )
 }
 
 runtime {
     options.set(listOf("--strip-debug", "--compress", "2", "--no-header-files", "--no-man-pages"))
     
-    // Блок launcher удален за ненадобностью
 
     jpackage {
-        // Именно эта строка задает имя "GeoApp.exe" и название папки установки
         imageName = "GeoApp"
         installerType = "exe"
         installerOptions.addAll(listOf(
-            "--app-version", "1.0.1",
+            "--app-version", "1.0.2",
             "--win-menu",
             "--win-shortcut",
             "--win-dir-chooser"

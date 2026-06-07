@@ -4,6 +4,8 @@ import org.example.geoapp.api.UserDto
 import org.example.geoapp.api.GeoApi
 import org.example.geoapp.api.Working
 import org.example.geoapp.api.RefContractor
+import org.example.geoapp.api.AccessLevel
+import org.example.geoapp.api.UserAreaAccessDto
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleStringProperty
 import javafx.beans.property.SimpleObjectProperty
@@ -121,21 +123,59 @@ class MainController {
 
     private lateinit var tableFilter: TableFilter<Working>
 
+    private var tableFilterRebuildScheduled = false
+    private var tableFilterItemsListener: ListChangeListener<Working>? = null
+
     // Хранилище ярлыков (Label) для каждой колонки
     private val summaryLabels = mutableMapOf<TableColumn<Working, *>, Label>()
 
     private var summaryScrollBar: ScrollBar? = null
     private var summaryScrollListener: ChangeListener<Number>? = null
 
+    private var userAccessByAreaId: Map<Long, AccessLevel> = emptyMap()
+    private val undoStack = ArrayDeque<UndoAction>(10)
+    private val maxUndoSize = 10
+    private var onSaveCallback: (Working) -> Unit = {}
+
     fun initData(token: String, role: String, user: UserDto) {
         this.token = token
         this.userRole = role
         this.currentUser = user
         adminMenu.isVisible = (role == "ROLE_ADMIN")
-        loadWorkings()
-        startAutoRefresh()
+        loadUserAccess {
+            updateAccessControls()
+            loadWorkings()
+            startAutoRefresh()
+        }
     }
 
+    private sealed class UndoAction {
+        abstract suspend fun undo(api: GeoApi, token: String)
+        data class Create(val working: Working) : UndoAction() {
+            override suspend fun undo(api: GeoApi, token: String) {
+                api.deleteWorking("Bearer $token", working.id).awaitUnit()
+            }
+        }
+        data class Update(val oldWorking: Working, val newWorking: Working) : UndoAction() {
+            override suspend fun undo(api: GeoApi, token: String) {
+                api.updateWorking("Bearer $token", oldWorking.id, oldWorking).await()
+            }
+        }
+        data class Delete(val working: Working) : UndoAction() {
+            override suspend fun undo(api: GeoApi, token: String) {
+                api.restoreWorking("Bearer $token", working.id).await()
+            }
+        }
+        data class BatchUpdate(val updates: List<Pair<Working, Working>>) : UndoAction() {
+        override suspend fun undo(api: GeoApi, token: String) {
+            updates.forEach { (oldWorking, _) ->
+                api.updateWorking("Bearer $token", oldWorking.id, oldWorking).await()
+            }
+        }
+    }
+    }
+
+    
     // private fun setupTableNavigation() {
     //     workingsTable.addEventFilter(KeyEvent.KEY_PRESSED) { event ->
     //         if (event.code == KeyCode.ENTER) {
@@ -273,7 +313,8 @@ class MainController {
 
         workingsTable.items = workingsList
 
-        formatColumn(colActualDepth, 1) // Факт Н
+        formatColumn(colPlannedDepth, 1) // План Н
+        formatColumn(colActualDepth, 1)  // Факт Н
         formatColumn(colCoreRecovery, 0) // Выход керна
         formatColumn(colCasing, 1)       // Обсад
 
@@ -307,8 +348,10 @@ class MainController {
 
         workingsTable.contextMenu = contextMenu
 
-        editButton.disableProperty().bind(workingsTable.selectionModel.selectedItemProperty().isNull)
-        deleteButton.disableProperty().bind(workingsTable.selectionModel.selectedItemProperty().isNull)
+        // Слушатель на выделение и обновление состояния кнопок
+        workingsTable.selectionModel.selectedItemProperty().addListener { _, _, _ ->
+            updateAccessControls()
+        }
 
         workingsTable.setOnKeyPressed { event ->
             if (event.code == javafx.scene.input.KeyCode.DELETE) {
@@ -322,6 +365,7 @@ class MainController {
 
         workingsTable.sceneProperty().addListener { _, _, newScene ->
             newScene?.accelerators?.put(KeyCodeCombination(KeyCode.E, KeyCombination.CONTROL_DOWN), Runnable { if (!editButton.isDisable) onEdit() })
+            newScene?.accelerators?.put(KeyCodeCombination(KeyCode.Z, KeyCombination.CONTROL_DOWN)) {undoLastAction()}
         }
 
         //Цветовая раскраска строк (Оранжевый / Зеленый)
@@ -329,16 +373,14 @@ class MainController {
             object : TableRow<Working>() {
                 override fun updateItem(item: Working?, empty: Boolean) {
                     super.updateItem(item, empty)
-                    styleClass.removeAll(listOf("project-filled", "project-empty", "actual", "emergency-row"))
+                    styleClass.removeAll(listOf("project-filled", "project-empty", "actual", "emergency-row", "read-only-row"))
                     if (item == null || empty) return
                     when {
                         item.emergency -> styleClass.add("emergency-row")
-                        item.isProject != true -> 
-                            styleClass.add("project-filled")
-                        item.isProject -> 
-                            styleClass.add("project-empty")
-                        else -> 
-                            styleClass.add("actual")
+                        !canWriteArea(item.area?.id) -> styleClass.add("read-only-row")
+                        item.isProject != true -> styleClass.add("project-filled")
+                        item.isProject -> styleClass.add("project-empty")
+                        else -> styleClass.add("actual")
                     }
                 }
             }
@@ -367,15 +409,22 @@ class MainController {
                     checkBox.setOnAction {
                         val working = tableView.items[index]
                         if (!checkBox.isDisabled) {
+                            val oldCopy = working.copy()
                             setter(working, checkBox.isSelected)
+                            val newCopy = working.copy()
                             runOnFx {
                                 try {
                                     api.updateWorking("Bearer $token", working.id, working).await()
+                                    undoStack.addLast(UndoAction.Update(oldWorking = oldCopy, newWorking = newCopy))
+                                    if (undoStack.size > maxUndoSize) {
+                                        undoStack.removeFirst()
+                                    }
+
                                     updateStyle(checkBox.isSelected)
                                     tableView.refresh()
                                     recalculateSummaries()
-                                } catch(e: Exception) {
-                                    checkBox.isSelected = !checkBox.isSelected // Откат при ошибке
+                                } catch (e: Exception) {
+                                    checkBox.isSelected = !checkBox.isSelected
                                 }
                             }
                         }
@@ -443,9 +492,24 @@ class MainController {
         }
     }
 
+    private fun scheduleTableFilterRebuild() {
+        if (tableFilterRebuildScheduled) return
+
+        tableFilterRebuildScheduled = true
+        Platform.runLater {
+            tableFilterRebuildScheduled = false
+            rebuildTableFilter()
+        }
+    }
+
     private fun rebuildTableFilter() {
         if (::tableFilter.isInitialized) {
-            return
+            tableFilterItemsListener?.let { listener ->
+                try {
+                    tableFilter.filteredList.removeListener(listener)
+                } catch (_: Exception) {
+                }
+            }
         }
 
         tableFilter = TableFilter.forTableView(workingsTable)
@@ -456,9 +520,12 @@ class MainController {
             FilterParser.parse(input, target)
         }
 
-        tableFilter.filteredList.addListener { _: ListChangeListener.Change<out Working>? ->
+        tableFilterItemsListener = ListChangeListener<Working> {
             recalculateSummaries()
         }
+        tableFilter.filteredList.addListener(tableFilterItemsListener)
+
+        recalculateSummaries()
     }
 
     private fun applyFilter() {
@@ -474,26 +541,46 @@ class MainController {
                 }
             }
 
-        workingsList.clear()
-        workingsList.addAll(filtered)
+        workingsList.setAll(filtered)
     }
 
-    @FXML fun onAdd() = showWorkingForm(null)
+    @FXML fun onAdd() {
+        if (!canWriteAnyArea()) return
+        showWorkingForm(null) { created ->
+            undoStack.addLast(UndoAction.Create(created))
+            if (undoStack.size > maxUndoSize) undoStack.removeFirst()
+        }
+    }
 
     @FXML fun onEdit() {
-        val selected = workingsTable.selectionModel.selectedItem
-        if (selected != null) showWorkingForm(selected)
+        val selected = workingsTable.selectionModel.selectedItem ?: return
+        if (!canWriteArea(selected.area?.id)) return
+        val oldCopy = selected.copy()   // сохраняем состояние до редактирования
+        showWorkingForm(selected) { updated ->
+            undoStack.addLast(UndoAction.Update(oldCopy, updated))
+            if (undoStack.size > maxUndoSize) undoStack.removeFirst()
+        }
     }
 
     @FXML fun onDelete() {
         val selectedItems = workingsTable.selectionModel.selectedItems.toList()
         if (selectedItems.isNotEmpty()) {
+            // Проверяем, есть ли среди выбранных хотя бы одна без прав WRITE
+            val forbidden = selectedItems.any { !canWriteArea(it.area?.id) }
+            if (forbidden) {
+                //showAlert("Нет прав", "Выбранные выработки содержат зоны только для чтения")
+                return
+            }
             val alert = Alert(Alert.AlertType.CONFIRMATION, "Удалить ${selectedItems.size} записей?", ButtonType.YES, ButtonType.NO)
             if (alert.showAndWait().get() == ButtonType.YES) {
                 val lastSelectedIndex = workingsTable.selectionModel.selectedIndex
                 runOnFx {
                     try {
-                        selectedItems.forEach { api.deleteWorking("Bearer $token", it.id).awaitUnit() }
+                        selectedItems.forEach { 
+                            undoStack.addLast(UndoAction.Delete(it.copy()))
+                            api.deleteWorking("Bearer $token", it.id).awaitUnit() 
+                        }
+                        if (undoStack.size > maxUndoSize) undoStack.removeFirst()
                         // Передаём колбэк для выделения строки после обновления таблицы
                         loadWorkings {
                             if (workingsList.isNotEmpty()) {
@@ -510,154 +597,147 @@ class MainController {
         }
     }
 
+
     private fun onAssignStructure() {
-        val selectedItems = workingsTable.selectionModel.selectedItems
+        val selectedItems = workingsTable.selectionModel.selectedItems.toList()
         if (selectedItems.isEmpty()) return
 
-        val currentStructure = selectedItems.first().structure 
+        val currentStructure = selectedItems.first().structure ?: ""
+
         val textInput = TextInputDialog(currentStructure)
         textInput.title = "Присвоить сооружение"
         textInput.headerText = "Введите название сооружения (оставьте пустым для удаления)"
         textInput.contentText = "Сооружение:"
         textInput.dialogPane.graphic = null
-        textInput.showAndWait().ifPresent { structure ->
-            runOnFx {
-                try {
-                    for (working in selectedItems) {
-                        working.structure = if (structure.isBlank()) null else structure
-                        api.updateWorking("Bearer $token", working.id, working).await()
-                    }
-                    loadWorkings()
-                } catch (e: Exception) {
-                    showAlert("Ошибка", "Не удалось обновить сооружение: ${e.message}")
+
+        val result = textInput.showAndWait()
+        if (result.isEmpty) return
+
+        val newStructure = result.get().trim().ifBlank { null } // Пустая строка превращается в null
+
+        runOnFx {
+            try {
+                val changes = mutableListOf<Pair<Working, Working>>()
+
+                for (working in selectedItems) {
+                    val oldCopy = working.copy()
+                    working.structure = newStructure
+                    api.updateWorking("Bearer $token", working.id, working).await()
+                    changes += oldCopy to working.copy()
                 }
+
+                undoStack.addLast( UndoAction.BatchUpdate(changes))
+                loadWorkings()
+            } catch (e: Exception) {
+                showAlert( "Ошибка", "Не удалось обновить сооружение: ${e.message}"
+                )
             }
         }
     }
 
     private fun onAssignPlannedContractor() {
-    val selectedItems = workingsTable.selectionModel.selectedItems
-    if (selectedItems.isEmpty()) return
+        val selectedItems = workingsTable.selectionModel.selectedItems.toList()
+        if (selectedItems.isEmpty()) return
 
-    val actualWorkings = selectedItems.filter { it.contractor != null }
-    if (actualWorkings.isNotEmpty()) {
-        val numbers = actualWorkings.joinToString(", ") { it.number }
-        showAlert("Внимание!", "Скважины $numbers невозможно поставить в план (уже назначен фактический подрядчик)")
-        return
-    }
+        val actualWorkings = selectedItems.filter { it.contractor != null }
+        if (actualWorkings.isNotEmpty()) {
+            val numbers = actualWorkings.joinToString(", ") { it.number }
+            showAlert("Внимание!", "Скважины $numbers невозможно поставить в план (уже назначен фактический подрядчик)")
+            return
+        }
 
         runOnFx {
-            try {
-                val contractors = api.getContractors().await()
-                // Создаём кастомный диалог
-                val dialog = Dialog<RefContractor>()
-                dialog.title = "Назначить подрядчика"
-                dialog.headerText = "Выберите подрядчика для плановых работ"
-                dialog.dialogPane.graphic = null
+    try {
+        val contractors = api.getContractors().await()
 
-                val comboBox = ComboBox<RefContractor>()
-                comboBox.items = FXCollections.observableArrayList(contractors)
-                comboBox.converter = object : StringConverter<RefContractor>() {
-                    override fun toString(obj: RefContractor?) = obj?.name ?: ""
-                    override fun fromString(string: String?) = contractors.find { it.name == string }
-                }
-                comboBox.selectionModel.selectFirst()
+        // 1. Меняем тип диалога с RefContractor? на ButtonType
+        val dialog = Dialog<ButtonType>() 
+        dialog.title = "Назначить подрядчика"
+        dialog.headerText = "Выберите планового подрядчика"
+        dialog.dialogPane.graphic = null
 
-                dialog.dialogPane.content = VBox(10.0, Label("Подрядчик:"), comboBox)
-                dialog.dialogPane.buttonTypes.addAll(ButtonType.OK, ButtonType.CANCEL)
+        val comboBox = ComboBox<RefContractor?>()
+        val values = mutableListOf<RefContractor?>()
+        values.add(null) // пункт очистки
+        values.addAll(contractors)
 
-                dialog.resultConverter = javafx.util.Callback { buttonType ->
-                    if (buttonType == ButtonType.OK) comboBox.value else null
-                }
+        comboBox.items = FXCollections.observableArrayList(values)
+        comboBox.converter = object : StringConverter<RefContractor?>() {
+            override fun toString(obj: RefContractor?): String {
+                return obj?.name ?: "<Не указано>"
+            }
+            override fun fromString(string: String?): RefContractor? {
+                return contractors.find { it.name == string }
+            }
+        }
+        comboBox.selectionModel.selectFirst()
+        dialog.dialogPane.content = VBox(10.0, Label("Подрядчик:"), comboBox)
+        dialog.dialogPane.buttonTypes.addAll(ButtonType.OK, ButtonType.CANCEL)
 
-                dialog.showAndWait().ifPresent { contractor ->
-                    val alreadyPlanned = selectedItems.filter { it.plannedContractor != null }
-                    if (alreadyPlanned.isNotEmpty()) {
-                        val confirm = Alert(Alert.AlertType.CONFIRMATION,
-                            "Выбранные скважины уже имеют планового подрядчика. Заменить на ${contractor.name}?",
-                            ButtonType.YES, ButtonType.NO)
-                        confirm.dialogPane.graphic = null
-                        if (confirm.showAndWait().get() != ButtonType.YES) return@ifPresent
+        val result = dialog.showAndWait()
+        if (result.isEmpty || result.get() != ButtonType.OK) return@runOnFx
+        val selectedContractor = comboBox.value
+
+        val alreadyPlanned = selectedItems.any { it.plannedContractor != null }
+
+                if (alreadyPlanned) {
+                    val message =
+                        if (selectedContractor == null)
+                            "У выбранных скважин уже есть плановый подрядчик. Очистить его?"
+                        else
+                            "У выбранных скважин уже есть плановый подрядчик. Заменить на ${selectedContractor.name}?"
+
+                    val confirm = Alert(Alert.AlertType.CONFIRMATION, message, ButtonType.YES, ButtonType.NO)
+                    confirm.dialogPane.graphic = null
+                    if (confirm.showAndWait().orElse(ButtonType.NO) != ButtonType.YES) {
+                        return@runOnFx
                     }
-                    runOnFx {
-                        try {
-                            for (working in selectedItems) {
-                                working.plannedContractor = contractor
-                                api.updateWorking("Bearer $token", working.id, working).await()
-                            }
-                            loadWorkings()
-                        } catch (e: Exception) {
-                            showAlert("Ошибка", "Не удалось назначить подрядчика: ${e.message}")
-                        }
-                    }
                 }
+
+                try {
+                    val changes = mutableListOf<Pair<Working, Working>>()
+                    for (working in selectedItems) {
+                        val oldCopy = working.copy()
+                        working.plannedContractor = selectedContractor
+                        api.updateWorking("Bearer $token", working.id, working).await()
+                        changes += oldCopy to working.copy()
+                    }
+                    undoStack.addLast(UndoAction.BatchUpdate(changes))
+                    loadWorkings()
+                } catch (e: Exception) {
+                    showAlert("Ошибка", "Не удалось назначить подрядчика: ${e.message}")
+                }
+
             } catch (e: Exception) {
                 showAlert("Ошибка", "Не удалось загрузить список подрядчиков")
             }
         }
     }
 
-    private fun showWorkingForm(working: Working?) {
+    private fun showWorkingForm(working: Working?, onSuccess: ((Working) -> Unit)? = null) {
         val loader = FXMLLoader(javaClass.getResource("/workingForm.fxml"))
         val root = loader.load<VBox>()
         val controller = loader.getController<WorkingFormController>()
-        
-        controller.initData(token, working, this::loadWorkings)
+        controller.initData(token, working) { savedWorking ->
+            loadWorkings()
+            onSuccess?.invoke(savedWorking)
+        }
 
         val stage = Stage()
         stage.initModality(Modality.WINDOW_MODAL)
         stage.initOwner(workingsTable.scene.window)
         stage.scene = Scene(root)
         stage.title = if (working == null) "Новая выработка" else "Редактирование"
-        stage.showAndWait()
+        pauseAutoRefresh()
+        try {
+            stage.showAndWait()
+        } finally {
+            resumeAutoRefresh()
+        }
     }
 
     private fun showAlert(title: String, message: String) {
         Alert(Alert.AlertType.ERROR).apply { this.title = title; headerText = null; contentText = message; showAndWait() }
-    }
-
-    @FXML fun openAreasEditor() = openRefEditor(RefType.AREA)
-    @FXML fun openWorkTypesEditor() = openRefEditor(RefType.WORK_TYPE)
-    @FXML fun openDrillingRigsEditor() = openRefEditor(RefType.DRILLING_RIG)
-    @FXML fun openContractorsEditor() = openRefEditor(RefType.CONTRACTOR)
-    @FXML fun openGeologistsEditor() = openRefEditor(RefType.GEOLOGIST)
-
-    private fun openRefEditor(type: RefType) {
-        val loader = FXMLLoader(javaClass.getResource("/referenceEditor.fxml"))
-        val root = loader.load<VBox>()
-        val controller = loader.getController<ReferenceEditorController>()
-        controller.initData(token, type)
-        val stage = Stage()
-        stage.initModality(Modality.WINDOW_MODAL)
-        stage.initOwner(workingsTable.scene.window)
-        stage.scene = Scene(root)
-        stage.title = "Справочник: ${type.title}"
-        stage.showAndWait()
-        loadWorkings() 
-    }
-
-    @FXML fun openProjectExcelImport() = openExcelImport(true)
-    @FXML fun openActualExcelImport() = openExcelImport(false)
-
-    private fun openExcelImport(isProject: Boolean) {
-        val fileChooser = FileChooser().apply {
-            title = "Выберите Excel файл"
-            extensionFilters.add(FileChooser.ExtensionFilter("Excel", "*.xls", "*.xlsx", "*.xlsm"))
-        }
-        val file = fileChooser.showOpenDialog(workingsTable.scene.window)
-        if (file != null) {
-            val loader = FXMLLoader(javaClass.getResource("/excelImport.fxml"))
-            val root = loader.load<VBox>()
-            // Передаем флаг isProject в контроллер импорта
-            loader.getController<ExcelImportController>().initData(token, userRole, file, isProject) { loadWorkings() }
-            Stage().apply {
-                initModality(Modality.WINDOW_MODAL)
-                initOwner(workingsTable.scene.window)
-                scene = Scene(root)
-                title = if (isProject) "Импорт ПРОЕКТНЫХ скважин" else "Импорт ФАКТИЧЕСКИХ скважин"
-                showAndWait()
-            }
-        }
     }
 
     private fun autoResizeColumns() {
@@ -677,8 +757,8 @@ class MainController {
         workingsTable.columns.forEach { resizeColumn(it) }
     }
 
-    private fun formatDouble(value: Double?): String {
-        return if (value == null) "" else "%.3f".format(value).replace(",", ".")
+    private fun formatDouble(value: Double?, decimals: Int = 3): String {
+        return if (value == null) "" else "%.${decimals}f".format(value).replace(",", ".")
     }
 
     private fun formatColumn(column: TableColumn<Working, Double?>, decimals: Int) {
@@ -697,6 +777,12 @@ class MainController {
         column.setOnEditCommit { event ->
             val working = event.rowValue
             val newValue = event.newValue
+
+            if (!canWriteArea(working.area?.id)) {
+                //showAlert("Нет прав", "Выбранная выработка находится в зоне только для чтения")
+                return@setOnEditCommit
+            }
+
             setter(working, newValue)
             recalculateSummaries()
               
@@ -719,6 +805,12 @@ class MainController {
         column.setOnEditCommit { event ->
             val working = event.rowValue
             val newValue = event.newValue
+
+            if (!canWriteArea(working.area?.id)) {
+                //showAlert("Нет прав", "Выбранная выработка находится в зоне только для чтения")
+                return@setOnEditCommit
+            }
+
             setter(working, newValue)
             recalculateSummaries()
             runOnFx {
@@ -727,34 +819,6 @@ class MainController {
                 } catch (e: Exception) { /* show error */ }
             }
         }
-    }
-
-    @FXML
-    fun openReportDialog() {
-        val loader = FXMLLoader(javaClass.getResource("/report_dialog.fxml"))
-        val root = loader.load<VBox>()
-        val controller = loader.getController<ReportDialogController>()
-
-        controller.initData(token, userRole, currentUser)
-
-        val stage = Stage()
-        stage.title = "Печать отчётов"
-        stage.initModality(Modality.APPLICATION_MODAL)
-        stage.scene = Scene(root)
-        stage.show()
-    }
-
-    @FXML fun openUsersEditor() {
-        val loader = FXMLLoader(javaClass.getResource("/user_list.fxml"))
-        val root = loader.load<VBox>()
-        val controller = loader.getController<UserListController>()
-        controller.initData(token)
-        val stage = Stage()
-        stage.initModality(Modality.WINDOW_MODAL)
-        stage.initOwner(workingsTable.scene.window)
-        stage.scene = Scene(root)
-        stage.title = "Управление пользователями"
-        stage.showAndWait()
     }
     
     private fun startAutoRefresh() {
@@ -773,8 +837,12 @@ class MainController {
         }
     }
 
-    private fun stopAutoRefresh() {
-        autoRefreshTimeline?.stop()
+    private fun pauseAutoRefresh() {
+        autoRefreshTimeline?.pause()
+    }
+
+    private fun resumeAutoRefresh() {
+        autoRefreshTimeline?.play()
     }
 
     private fun setupSummaryRow() {
@@ -786,14 +854,12 @@ class MainController {
 
         workingsTable.visibleLeafColumns.addListener(ListChangeListener {
             rebuildSummaryUI()
+            scheduleTableFilterRebuild()
             recalculateSummaries()
-            Platform.runLater {
-                bindSummaryScroll() 
-            }
         })
 
         rebuildSummaryUI()
-        bindSummaryScroll() 
+        rebuildTableFilter()
 
         workingsTable.items.addListener(ListChangeListener {
             recalculateSummaries()
@@ -902,16 +968,203 @@ class MainController {
         summaryLabels.values.forEach { it.text = "" }
 
         // Заполняем нужные ячейки, проверяя их наличие в visibleLeafColumns
-        summaryLabels[colRowNumber]?.text = "Σ = ${items.size}"
-        summaryLabels[colActualDepth]?.text = formatDouble(sumFactH)
-        summaryLabels[colPlannedDepth]?.text = formatDouble(sumPlanH)
-        summaryLabels[colCat1_4]?.text = formatDouble(sumCat1_4)
-        summaryLabels[colCat5_8]?.text = formatDouble(sumCat5_8)
-        summaryLabels[colCat9_12]?.text = formatDouble(sumCat9_12)
+        summaryLabels[colRowNumber]?.text = "${items.size}"
+        summaryLabels[colActualDepth]?.text = formatDouble(sumFactH, 1)
+        summaryLabels[colPlannedDepth]?.text = formatDouble(sumPlanH, 1)
+        summaryLabels[colCat1_4]?.text = formatDouble(sumCat1_4, 1)
+        summaryLabels[colCat5_8]?.text = formatDouble(sumCat5_8, 1)
+        summaryLabels[colCat9_12]?.text = formatDouble(sumCat9_12, 1)
         
         summaryLabels[colSamplesThawed]?.text = sumThawed.toString()
         summaryLabels[colSamplesFrozen]?.text = sumFrozen.toString()
         summaryLabels[colSamplesRocky]?.text = sumRocky.toString()
         summaryLabels[colThermalTube]?.text = countThermal.toString()
     }
+
+
+    private fun loadUserAccess(onComplete: () -> Unit) {
+        runOnFx {
+            try {
+                val accessList = api.getCurrentUserAccess("Bearer $token").await()
+                userAccessByAreaId = accessList.associate { it.areaId to it.accessLevel }
+                onComplete()
+            } catch (e: Exception) {
+                // Если не удалось загрузить права (например, старый токен), всё равно продолжаем
+                // но кнопки будут заблокированы
+                e.printStackTrace()
+                userAccessByAreaId = emptyMap()
+                onComplete()
+            }
+        }
+    }
+
+    private fun canWriteArea(areaId: Long?): Boolean {
+        if (areaId == null) return true // Если нет привязки к зоне, считаем, что это общая зона и права на неё есть
+        return userAccessByAreaId[areaId] == AccessLevel.WRITE
+    }
+
+    private fun canWriteSelectedRow(): Boolean {
+        val selected = workingsTable.selectionModel.selectedItem
+        return canWriteArea(selected?.area?.id)
+    }
+
+    private fun canWriteAnyArea(): Boolean {
+        return userAccessByAreaId.values.any { it == AccessLevel.WRITE }
+    }
+
+    private fun updateAccessControls() {
+        val canWrite = canWriteSelectedRow()
+        editButton.isDisable = !canWrite
+        deleteButton.isDisable = !canWrite
+        addButton.isDisable = !canWriteAnyArea()
+        // Контекстное меню показываем только если есть права на запись выбранной строки
+        //workingsTable.contextMenu?.setDisable(!canWrite)//TODO: ДОДЕЛАТЬ
+    }
+
+    @FXML fun openAreasEditor() = openRefEditor(RefType.AREA)
+    @FXML fun openWorkTypesEditor() = openRefEditor(RefType.WORK_TYPE)
+    @FXML fun openDrillingRigsEditor() = openRefEditor(RefType.DRILLING_RIG)
+    @FXML fun openContractorsEditor() = openRefEditor(RefType.CONTRACTOR)
+    @FXML fun openGeologistsEditor() = openRefEditor(RefType.GEOLOGIST)
+
+    private fun openRefEditor(type: RefType) {
+        val loader = FXMLLoader(javaClass.getResource("/referenceEditor.fxml"))
+        val root = loader.load<VBox>()
+        val controller = loader.getController<ReferenceEditorController>()
+        controller.initData(token, type)
+        val stage = Stage()
+        stage.initModality(Modality.WINDOW_MODAL)
+        stage.initOwner(workingsTable.scene.window)
+        stage.scene = Scene(root)
+        stage.title = "Справочник: ${type.title}"
+        pauseAutoRefresh()
+        try {
+            stage.showAndWait()
+        } finally {
+            resumeAutoRefresh()
+        }
+        loadWorkings() 
+    }
+
+    @FXML fun openProjectExcelImport() = openExcelImport(true)
+    @FXML fun openActualExcelImport() = openExcelImport(false)
+
+    private fun openExcelImport(isProject: Boolean) {
+        val fileChooser = FileChooser().apply {
+            title = "Выберите Excel файл"
+            extensionFilters.add(FileChooser.ExtensionFilter("Excel", "*.xls", "*.xlsx", "*.xlsm"))
+        }
+        val file = fileChooser.showOpenDialog(workingsTable.scene.window)
+        if (file != null) {
+            val loader = FXMLLoader(javaClass.getResource("/excelImport.fxml"))
+            val root = loader.load<VBox>()
+            // Передаем флаг isProject в контроллер импорта
+            loader.getController<ExcelImportController>().initData(token, userRole, file, isProject) { loadWorkings() }
+            
+            pauseAutoRefresh()
+            try {
+                Stage().apply {
+                    initModality(Modality.WINDOW_MODAL)
+                    initOwner(workingsTable.scene.window)
+                    scene = Scene(root)
+                    title = if (isProject) "Импорт ПРОЕКТНЫХ скважин" else "Импорт ФАКТИЧЕСКИХ скважин"
+                    showAndWait()
+                }
+            } finally {
+                resumeAutoRefresh()
+            }
+        }
+    }
+
+    @FXML
+    fun openReportDialog() {
+        val loader = FXMLLoader(javaClass.getResource("/report_dialog.fxml"))
+        val root = loader.load<VBox>()
+        val controller = loader.getController<ReportDialogController>()
+
+        controller.initData(token, userRole, currentUser)
+
+        val stage = Stage()
+        stage.title = "Печать отчётов"
+        stage.initModality(Modality.APPLICATION_MODAL)
+        stage.scene = Scene(root)
+        pauseAutoRefresh()
+        try {
+            stage.showAndWait()
+        } finally {
+            resumeAutoRefresh()
+        }
+    }
+
+    @FXML fun openUsersEditor() {
+        val loader = FXMLLoader(javaClass.getResource("/user_list.fxml"))
+        val root = loader.load<VBox>()
+        val controller = loader.getController<UserListController>()
+        controller.initData(token)
+        val stage = Stage()
+        stage.initModality(Modality.WINDOW_MODAL)
+        stage.initOwner(workingsTable.scene.window)
+        stage.scene = Scene(root)
+        stage.title = "Управление пользователями"
+        pauseAutoRefresh()
+        try {
+            stage.showAndWait()
+        } finally {
+            resumeAutoRefresh()
+        }
+        loadWorkings() // на случай, если были изменены права текущего пользователя
+    }
+
+    @FXML fun openRecycleBinDialog() {
+        val loader = FXMLLoader(javaClass.getResource("/recycle_bin.fxml"))
+        val root = loader.load<VBox>()
+        val controller = loader.getController<RecycleBinController>()
+        controller.initData(api, token)
+        val stage = Stage()
+        stage.initModality(Modality.WINDOW_MODAL)
+        stage.initOwner(workingsTable.scene.window)
+        stage.scene = Scene(root)
+        stage.title = "Корзина"
+        pauseAutoRefresh()
+        try {
+            stage.showAndWait()
+        } finally {
+            resumeAutoRefresh()
+        }
+        loadWorkings() // обновить таблицу после возможного восстановления
+    }
+
+    @FXML fun openHistoryDialog() {
+        val loader = FXMLLoader(javaClass.getResource("/history_dialog.fxml"))
+        val root = loader.load<VBox>()
+        val controller = loader.getController<HistoryController>()
+        controller.initData(api, token)
+        val stage = Stage()
+        stage.initModality(Modality.WINDOW_MODAL)
+        stage.initOwner(workingsTable.scene.window)
+        stage.scene = Scene(root)
+        stage.title = "История изменений"
+        pauseAutoRefresh()
+        try {
+            stage.showAndWait()
+        } finally {
+            resumeAutoRefresh()
+        }
+        loadWorkings()
+    }
+
+    private fun undoLastAction() {
+        if (undoStack.isEmpty()) return
+        val action = undoStack.removeLast()
+        runOnFx {
+            try {
+                action.undo(api, token)
+                loadWorkings()
+                //showAlert("Отмена", "Действие отменено")
+            } catch (e: Exception) {
+                showAlert("Ошибка", "Не удалось отменить действие: ${e.message}")
+            }
+        }
+    }
+
 }
