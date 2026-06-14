@@ -515,10 +515,7 @@ class MainController {
             }
         }
 
-        tableFilter = TableFilter.forTableView(workingsTable)
-            .lazy(false)
-            .apply()
-
+        tableFilter = TableFilter.forTableView(workingsTable).lazy(false).apply()
         tableFilter.setSearchStrategy { input: String, target: String ->
             FilterParser.parse(input, target)
         }
@@ -532,9 +529,7 @@ class MainController {
     }
 
     private fun applyFilter() {
-
         val selected = filterAreaCombo.value
-
         val filtered =
             if (selected == null || selected == "ВСЕ") {
                 allWorkings
@@ -664,7 +659,6 @@ class MainController {
     try {
         val contractors = api.getContractors().await()
 
-        // 1. Меняем тип диалога с RefContractor? на ButtonType
         val dialog = Dialog<ButtonType>() 
         dialog.title = "Назначить подрядчика"
         dialog.headerText = "Выберите планового подрядчика"
@@ -878,6 +872,8 @@ class MainController {
         workingsTable.items.addListener(ListChangeListener {
             recalculateSummaries()
         })
+
+        bindSummaryScroll()
     }
 
     private fun bindSummaryScroll() {
