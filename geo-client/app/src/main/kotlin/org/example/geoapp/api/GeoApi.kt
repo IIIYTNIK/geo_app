@@ -152,7 +152,7 @@ data class Working(
     var hasStake: Boolean = false,
     
     var emergency: Boolean = false, // Аварийная скважина
-
+    var mediaPath: String? = null, // Путь к медиафайлам (видео, фото) для отображения в карточке скважины
     var samplesThawed: Int? = null,
     var samplesFrozen: Int? = null,
     var samplesRocky: Int? = null,

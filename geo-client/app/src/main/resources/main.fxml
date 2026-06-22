@@ -70,6 +70,7 @@
                 </columns>
             </TableColumn>
             <TableColumn fx:id="colEmergency" text="Аварийная" prefWidth="80"/>
+            <TableColumn fx:id="colMedia" text="Медиа" prefWidth="60"/>
             <TableColumn text="Категория породы">
                 <columns>
                     <TableColumn fx:id="colCat1_4" text="1-4, п.м." prefWidth="70"/>

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox spacing="10" prefWidth="850" prefHeight="500" 
+      xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml" 
+      fx:controller="org.example.geoapp.controller.MediaWizardController">
+    
+    <padding>
+        <Insets top="15" right="15" bottom="15" left="15"/>
+    </padding>
+
+    <Label text="Привязка медиафайлов" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+    <Label text="Выберите корневую папку с медиафайлами. Система автоматически найдет подпапки, имена которых совпадают с номерами скважин. Пути, которые не удалось найти, можно указать вручную." wrapText="true"/>
+
+    <HBox spacing="10" alignment="CENTER_LEFT">
+        <TextField fx:id="rootPathField" editable="false" HBox.hgrow="ALWAYS" promptText="Корневая папка не выбрана..."/>
+        <Button text="Выбрать корень..." onAction="#onSelectRoot"/>
+    </HBox>
+
+    <TableView fx:id="mappingTable" VBox.vgrow="ALWAYS" editable="true">
+        <columns>
+            <TableColumn fx:id="colNumber" text="Скважина" prefWidth="100" editable="false"/>
+            <TableColumn fx:id="colCurrentPath" text="Текущий путь" prefWidth="200" editable="false"/>
+            <TableColumn fx:id="colNewPath" text="Новый путь (папка)" prefWidth="350"/>
+            <TableColumn fx:id="colStatus" text="Статус" prefWidth="150" editable="false"/>
+        </columns>
+    </TableView>
+
+    <HBox spacing="10" alignment="CENTER_LEFT">
+        <CheckBox fx:id="overwriteCheckBox" text="Перезаписать существующие пути"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button text="Отмена" onAction="#onCancel"/>
+        <Button fx:id="saveButton" text="Сохранить привязки" onAction="#onSave" 
+                style="-fx-base: #1976D2; -fx-text-fill: white; -fx-font-weight: bold;"/>
+    </HBox>
+</VBox>

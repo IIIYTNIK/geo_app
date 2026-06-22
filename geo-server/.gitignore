@@ -38,3 +38,6 @@ out/
 
 ### Kotlin ###
 .kotlin
+
+### Path properties ###
+geo-server/src/main/resources/path.properties

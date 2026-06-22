@@ -6,9 +6,11 @@ import org.springframework.context.annotation.Bean
 import org.springframework.data.domain.AuditorAware
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing
 import org.springframework.security.core.context.SecurityContextHolder
+import org.springframework.scheduling.annotation.EnableScheduling
 
 @SpringBootApplication
 @EnableJpaAuditing(auditorAwareRef = "auditorProvider")
+@EnableScheduling
 class GeoServerApplication {
 
     @Bean

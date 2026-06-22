@@ -129,6 +129,8 @@ class Working(
 
     @Column(name = "emergency") val emergency: Boolean = false, // Аварийная скважина
 
+    //Путь к медиафайлам (видео, фото) для отображения в карточке скважины
+    @Column(name = "media_path") var mediaPath: String? = null,
 
     // образцы
     val samplesThawed: Int? = null,
@@ -189,6 +191,7 @@ class Working(
         hasDrilling: Boolean = this.hasDrilling,
         hasJournal: Boolean = this.hasJournal,
         hasCore: Boolean = this.hasCore,
+        mediaPath: String? = this.mediaPath,
         hasStake: Boolean = this.hasStake,
         emergency: Boolean = this.emergency,
         samplesThawed: Int? = this.samplesThawed,
@@ -242,6 +245,7 @@ class Working(
         hasJournal = hasJournal,
         hasCore = hasCore,
         hasStake = hasStake,
+        mediaPath = mediaPath,
         emergency = emergency,
         samplesThawed = samplesThawed,
         samplesFrozen = samplesFrozen,

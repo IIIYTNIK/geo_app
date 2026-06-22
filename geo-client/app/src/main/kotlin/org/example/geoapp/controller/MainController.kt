@@ -45,7 +45,6 @@ import org.example.geoapp.util.FilterParser
 import org.example.geoapp.util.await
 import org.example.geoapp.util.awaitUnit
 import org.example.geoapp.util.runOnFx
-import org.example.geoapp.controller.UserListController
 
 
 class MainController {
@@ -85,6 +84,7 @@ class MainController {
     @FXML private lateinit var colHasStake: TableColumn<Working, Boolean>
 
     @FXML private lateinit var colEmergency: TableColumn<Working, Boolean>
+    @FXML private lateinit var colMedia: TableColumn<Working, String?>
 
     // Образцы
     @FXML private lateinit var colSamplesThawed: TableColumn<Working, Int?>
@@ -142,9 +142,8 @@ class MainController {
         this.userRole = role
         this.currentUser = user
         adminMenu.isVisible = (role == "ROLE_ADMIN")
-        loadUserAccess {
+        loadWorkings {
             updateAccessControls()
-            loadWorkings()
             startAutoRefresh()
         }
     }
@@ -292,6 +291,31 @@ class MainController {
         createInteractiveCheckbox(colHasStake, { it.hasStake }, { w, v -> w.hasStake = v }, false, true)
         createInteractiveCheckbox(colEmergency, { it.emergency }, { w, v -> w.emergency = v }, true, false)
         
+        colMedia.setCellValueFactory { SimpleStringProperty(it.value.mediaPath) }
+        colMedia.setCellFactory {
+            object : TableCell<Working, String?>() {
+                val button = Button("🗀").apply {
+                    style = "-fx-background-color: transparent; -fx-cursor: hand;"
+                    setOnAction {
+                        val path = item
+                        if (!path.isNullOrBlank()) {
+                            openFolderInExplorer(path)
+                        }
+                    }
+                }
+                override fun updateItem(item: String?, empty: Boolean) {
+                    super.updateItem(item, empty)
+                    if (empty || item.isNullOrBlank()) {
+                        graphic = null
+                    } else {
+                        graphic = button
+                        alignment = javafx.geometry.Pos.CENTER
+                        tooltip = Tooltip(item) // При наведении будет показывать полный путь
+                    }
+                }
+            }
+        }
+
         colSamplesThawed.setCellValueFactory { SimpleObjectProperty(it.value.samplesThawed) }
         colSamplesFrozen.setCellValueFactory { SimpleObjectProperty(it.value.samplesFrozen) }
         colSamplesRocky.setCellValueFactory { SimpleObjectProperty(it.value.samplesRocky) }
@@ -341,10 +365,21 @@ class MainController {
         val contextMenu = ContextMenu()
         val assignStructureItem = MenuItem("Присвоить сооружение").apply { setOnAction { onAssignStructure() } }
         val assignPlannedContractorItem = MenuItem("Назначить подрядчика").apply { setOnAction { onAssignPlannedContractor() } }
-        contextMenu.items.addAll(assignStructureItem, assignPlannedContractorItem) 
+        val assignMediaItem = MenuItem("Привязать медиафайлы").apply { setOnAction { openMediaWizard()}}
+        val openMediaItem = MenuItem("Открыть медиафайлы").apply { 
+            setOnAction {
+                val selected = workingsTable.selectionModel.selectedItem
+                if (selected?.mediaPath != null) {
+                    openFolderInExplorer(selected.mediaPath!!)
+                } else {
+                    showAlert("Ошибка", "Для этой выработки не привязана папка.")
+                }
+            } 
+        }
+        // contextMenu.items.addAll()
         val editItem = MenuItem("Редактировать").apply { setOnAction { onEdit() } }
         val deleteItem = MenuItem("Удалить").apply { setOnAction { onDelete() } }
-        contextMenu.items.addAll(editItem, deleteItem)
+        contextMenu.items.addAll(assignStructureItem, assignPlannedContractorItem, SeparatorMenuItem(), assignMediaItem, openMediaItem, SeparatorMenuItem(), editItem, deleteItem)
 
         workingsTable.contextMenu = contextMenu
 
@@ -411,6 +446,12 @@ class MainController {
                 init {
                     checkBox.setOnAction {
                         val working = tableView.items[index]
+
+                        if (!canWriteArea(working.area?.id)) {
+                            checkBox.isSelected = !checkBox.isSelected // Визуально возвращаем галочку на место
+                            return@setOnAction
+                        }
+
                         if (!checkBox.isDisabled) {
                             val oldCopy = working.copy()
                             setter(working, checkBox.isSelected)
@@ -428,6 +469,7 @@ class MainController {
                                     recalculateSummaries()
                                 } catch (e: Exception) {
                                     checkBox.isSelected = !checkBox.isSelected
+                                    setter(working, checkBox.isSelected)
                                 }
                             }
                         }
@@ -467,8 +509,17 @@ class MainController {
     }
 
     fun loadWorkings(onComplete: (() -> Unit)? = null) {
+        val selectedIds = workingsTable.selectionModel.selectedItems.mapNotNull { it?.id }.toSet() // Запоминаем ID выделенных элементов до того, как таблица обновится
         runOnFx {
             try {
+
+                try {
+                    val accessList = api.getCurrentUserAccess("Bearer $token").await()
+                    userAccessByAreaId = accessList.associate { it.areaId to it.accessLevel }
+                } catch (e: Exception) {
+                    e.printStackTrace() // Если сервер моргнул, оставляем права какие были
+                }
+
                 val fetched = api.getWorkings("Bearer $token").await().sortedBy { it.id }
                 allWorkings.clear()
                 allWorkings.addAll(fetched)
@@ -485,13 +536,32 @@ class MainController {
                     rebuildTableFilter()
                 }
                 
+                restoreSelection(selectedIds) // Восстанавливаем выделение после того, как новые данные отрисовались
                 autoResizeColumns()
+                updateAccessControls() // Обновляем доступность кнопок по новым правам
+                workingsTable.refresh() // Перерисовываем серые/зеленые строки
 
-                // Вызываем колбэк после завершения всех обновлений
-                onComplete?.invoke()
+                onComplete?.invoke() // Вызываем колбэк после завершения всех обновлений
             } catch (e: Exception) {
                 showAlert("Ошибка", "Не удалось загрузить: ${e.message}")
             }
+        }
+    }
+
+    private fun restoreSelection(savedIds: Set<Long>) {
+        if (savedIds.isEmpty()) return
+
+        val indicesToSelect = workingsTable.items.mapIndexedNotNull { index, working ->  // Находим индексы новых строк, чьи ID совпадают с сохраненными
+                if (savedIds.contains(working.id)) index else null 
+            }
+
+        if (indicesToSelect.isNotEmpty()) {
+            workingsTable.selectionModel.clearSelection() // На всякий случай очищаем текущее состояние
+            
+            val firstIndex = indicesToSelect[0]
+            val restIndices = indicesToSelect.drop(1).toIntArray()
+            
+            workingsTable.selectionModel.selectIndices(firstIndex, *restIndices)
         }
     }
 
@@ -656,37 +726,37 @@ class MainController {
         }
 
         runOnFx {
-    try {
-        val contractors = api.getContractors().await()
+            try {
+                val contractors = api.getContractors().await()
 
-        val dialog = Dialog<ButtonType>() 
-        dialog.title = "Назначить подрядчика"
-        dialog.headerText = "Выберите планового подрядчика"
-        dialog.dialogPane.graphic = null
+                val dialog = Dialog<ButtonType>() 
+                dialog.title = "Назначить подрядчика"
+                dialog.headerText = "Выберите планового подрядчика"
+                dialog.dialogPane.graphic = null
 
-        val comboBox = ComboBox<RefContractor?>()
-        val values = mutableListOf<RefContractor?>()
-        values.add(null) // пункт очистки
-        values.addAll(contractors)
+                val comboBox = ComboBox<RefContractor?>()
+                val values = mutableListOf<RefContractor?>()
+                values.add(null) // пункт очистки
+                values.addAll(contractors)
 
-        comboBox.items = FXCollections.observableArrayList(values)
-        comboBox.converter = object : StringConverter<RefContractor?>() {
-            override fun toString(obj: RefContractor?): String {
-                return obj?.name ?: "<Не указано>"
-            }
-            override fun fromString(string: String?): RefContractor? {
-                return contractors.find { it.name == string }
-            }
-        }
-        comboBox.selectionModel.selectFirst()
-        dialog.dialogPane.content = VBox(10.0, Label("Подрядчик:"), comboBox)
-        dialog.dialogPane.buttonTypes.addAll(ButtonType.OK, ButtonType.CANCEL)
+                comboBox.items = FXCollections.observableArrayList(values)
+                comboBox.converter = object : StringConverter<RefContractor?>() {
+                    override fun toString(obj: RefContractor?): String {
+                        return obj?.name ?: "<Не указано>"
+                    }
+                    override fun fromString(string: String?): RefContractor? {
+                        return contractors.find { it.name == string }
+                    }
+                }
+                comboBox.selectionModel.selectFirst()
+                dialog.dialogPane.content = VBox(10.0, Label("Подрядчик:"), comboBox)
+                dialog.dialogPane.buttonTypes.addAll(ButtonType.OK, ButtonType.CANCEL)
 
-        val result = dialog.showAndWait()
-        if (result.isEmpty || result.get() != ButtonType.OK) return@runOnFx
-        val selectedContractor = comboBox.value
+                val result = dialog.showAndWait()
+                if (result.isEmpty || result.get() != ButtonType.OK) return@runOnFx
+                val selectedContractor = comboBox.value
 
-        val alreadyPlanned = selectedItems.any { it.plannedContractor != null }
+                val alreadyPlanned = selectedItems.any { it.plannedContractor != null }
 
                 if (alreadyPlanned) {
                     val message =
@@ -1174,6 +1244,46 @@ class MainController {
             } catch (e: Exception) {
                 showAlert("Ошибка", "Не удалось отменить действие: ${e.message}")
             }
+        }
+    }
+
+    // Открытие папки средствами Windows
+    @FXML private fun openFolderInExplorer(path: String) {
+        val file = java.io.File(path)
+        if (file.exists() && file.isDirectory) {
+            try {
+                java.awt.Desktop.getDesktop().open(file)
+            } catch (e: Exception) {
+                showAlert("Ошибка", "Не удалось открыть папку: ${e.message}")
+            }
+        } else {
+            showAlert("Ошибка", "Путь не найден или недоступен:\n$path")
+        }
+    }
+
+    // Вызов окна Мастера привязки медиафайлов для выбранных выработок
+    @FXML private fun openMediaWizard() {
+        val selectedItems = workingsTable.selectionModel.selectedItems.toList()
+        if (selectedItems.isEmpty()) return
+
+        val loader = FXMLLoader(javaClass.getResource("/media_wizard.fxml"))
+        val root = loader.load<VBox>()
+        
+        // Пока мы передаем пустую логику, так как MediaWizardController создадим на следующем этапе
+        val controller = loader.getController<MediaWizardController>()
+        controller.initData(token, selectedItems) { loadWorkings() }
+
+        val stage = Stage()
+        stage.initModality(Modality.WINDOW_MODAL)
+        stage.initOwner(workingsTable.scene.window)
+        stage.scene = Scene(root)
+        stage.title = "Привязка медиафайлов (${selectedItems.size} шт.)"
+        
+        pauseAutoRefresh()
+        try {
+            stage.showAndWait()
+        } finally {
+            resumeAutoRefresh()
         }
     }
 
