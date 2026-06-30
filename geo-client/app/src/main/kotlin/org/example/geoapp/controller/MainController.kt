@@ -294,23 +294,31 @@ class MainController {
         colMedia.setCellValueFactory { SimpleStringProperty(it.value.mediaPath) }
         colMedia.setCellFactory {
             object : TableCell<Working, String?>() {
-                val button = Button("🗀").apply {
-                    style = "-fx-background-color: transparent; -fx-cursor: hand;"
-                    setOnAction {
+                private val icon = Label("🗀").apply {
+                    style = "-fx-padding: 0; -fx-cursor: hand; -fx-background-color: transparent;"
+                }
+
+                init {
+                    contentDisplay = ContentDisplay.GRAPHIC_ONLY
+                    alignment = javafx.geometry.Pos.CENTER
+                    setOnMouseClicked {
                         val path = item
                         if (!path.isNullOrBlank()) {
                             openFolderInExplorer(path)
                         }
                     }
                 }
+
                 override fun updateItem(item: String?, empty: Boolean) {
                     super.updateItem(item, empty)
                     if (empty || item.isNullOrBlank()) {
+                        text = null
                         graphic = null
+                        tooltip = null
                     } else {
-                        graphic = button
-                        alignment = javafx.geometry.Pos.CENTER
-                        tooltip = Tooltip(item) // При наведении будет показывать полный путь
+                        text = null
+                        graphic = icon
+                        tooltip = Tooltip(item)
                     }
                 }
             }

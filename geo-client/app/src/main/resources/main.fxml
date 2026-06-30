@@ -60,6 +60,7 @@
             <TableColumn fx:id="colStartDate" text="Дата нач" prefWidth="80"/>
             <TableColumn fx:id="colEndDate" text="Дата оконч" prefWidth="80"/>
             <TableColumn fx:id="colPlannedContractor" text="Запланировано" prefWidth="100"/>
+            <TableColumn fx:id="colMedia" text="Медиа" prefWidth="60"/>
             <TableColumn text="Материалы">
                 <columns>
                     <TableColumn fx:id="colHasVideo" text="Видео" prefWidth="60"/>
@@ -70,7 +71,6 @@
                 </columns>
             </TableColumn>
             <TableColumn fx:id="colEmergency" text="Аварийная" prefWidth="80"/>
-            <TableColumn fx:id="colMedia" text="Медиа" prefWidth="60"/>
             <TableColumn text="Категория породы">
                 <columns>
                     <TableColumn fx:id="colCat1_4" text="1-4, п.м." prefWidth="70"/>
